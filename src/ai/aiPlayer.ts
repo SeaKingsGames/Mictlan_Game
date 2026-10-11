@@ -1,30 +1,45 @@
 import type { CardInstance } from '../core/CardInstance.ts';
 import { FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
 import { opponentOf, type DuelState, type Intent, type PlayerIndex } from '../core/DuelState.ts';
+import type { FusionResolver } from '../core/fusion.ts';
 
 /**
  * IA sencilla: decide UNA intención a la vez (se llama en bucle hasta que termina el turno).
  * Solo usa información que un jugador puede ver: no espía cartas boca abajo ni la mano rival.
  */
-export function nextAiIntent(state: DuelState, me: PlayerIndex): Intent {
+export function nextAiIntent(state: DuelState, me: PlayerIndex, fusion?: FusionResolver): Intent {
   const mine = state.players[me];
   const foe = state.players[opponentOf(me)];
   const foeMonsters = foe.field.filter((c): c is CardInstance => c !== null);
   const strongestFoeAtk = Math.max(0, ...foeMonsters.filter(c => !c.faceDown && c.position === 'attack').map(c => c.atk));
 
-  // 1) Fase principal: jugar el monstruo más fuerte de la mano.
+  // 1) Fase principal: jugar el monstruo más fuerte de la mano, o una fusión de 2 si sale mejor.
   if (state.phase === 'main' && !state.hasPlayedThisTurn && mine.hand.length > 0) {
-    const best = [...mine.hand].filter(c => c.def.type === 'monster').sort((a, b) => b.atk - a.atk)[0];
-    if (best) {
+    const monsters = mine.hand.filter(c => c.def.type === 'monster');
+    const strongest = [...monsters].sort((a, b) => b.atk - a.atk)[0];
+    if (strongest) {
+      let play = { ids: [strongest.instanceId], atk: strongest.atk, fused: false };
+      if (fusion) {
+        for (const a of monsters) {
+          for (const b of monsters) {
+            if (a === b) continue;
+            const result = fusion.tryFuse(a.def, b.def);
+            if (result && result.atk > play.atk) play = { ids: [a.instanceId, b.instanceId], atk: result.atk, fused: true };
+          }
+        }
+      }
       let slot = mine.field.findIndex(c => c === null);
       if (slot < 0) {
-        // Campo lleno: reemplaza al más débil si la carta nueva es mejor.
+        // Campo lleno: el monstruo de la zona sería el primer material y cambiaría la fusión,
+        // así que aquí la IA solo juega una carta.
+        play = { ids: [strongest.instanceId], atk: strongest.atk, fused: false };
+        // Reemplaza al más débil si lo nuevo es mejor.
         const weakest = mine.field.reduce((w, c, i) => (c && c.atk < (mine.field[w]?.atk ?? Infinity) ? i : w), 0);
-        if ((mine.field[weakest]?.atk ?? 0) < best.atk) slot = weakest;
+        if ((mine.field[weakest]?.atk ?? 0) < play.atk) slot = weakest;
       }
       if (slot >= 0) {
-        const position = best.atk >= strongestFoeAtk ? 'attack' : 'defense';
-        return { type: 'play', player: me, handIds: [best.instanceId], slot, position, faceDown: position === 'defense' };
+        const position = play.atk >= strongestFoeAtk ? 'attack' : 'defense';
+        return { type: 'play', player: me, handIds: play.ids, slot, position, faceDown: position === 'defense' && !play.fused };
       }
     }
   }

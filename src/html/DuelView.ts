@@ -2,13 +2,27 @@ import { nextAiIntent } from '../ai/aiPlayer.ts';
 import type { BattlePosition, CardInstance } from '../core/CardInstance.ts';
 import { DuelEngine } from '../core/DuelEngine.ts';
 import { FIELD_SLOTS, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
-import { cardDb, getDeck } from '../data/index.ts';
-import { START_LIFE } from '../data/types.ts';
+import { cardDb, fusionDb, getDeck } from '../data/index.ts';
+import { START_LIFE, type CardDef } from '../data/types.ts';
 import { createCardElement } from './cardElement.ts';
 
 const HUMAN: PlayerIndex = 0;
 const AI: PlayerIndex = 1;
 const AI_STEP_MS = 750;
+
+const ALBUM_KEY = 'cartas.fusiones.v1';
+
+/** Fusiones que el jugador ya descubrió: "idA+idB" (ordenado) → id del resultado. Se guarda en el navegador. */
+function loadAlbum(): Map<string, number> {
+  try {
+    const raw = localStorage.getItem(ALBUM_KEY);
+    return new Map(raw ? (JSON.parse(raw) as [string, number][]) : []);
+  } catch { return new Map(); }
+}
+function saveAlbum(album: Map<string, number>): void {
+  try { localStorage.setItem(ALBUM_KEY, JSON.stringify([...album])); } catch { /* sin almacenamiento: no pasa nada */ }
+}
+const pairKey = (a: number, b: number) => (a < b ? `${a}+${b}` : `${b}+${a}`);
 
 const ATTR: Record<string, string> = { sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra' };
 
@@ -27,14 +41,16 @@ export class DuelView {
   private inspected: CardInstance | null = null;
   private lastLife: [number, number] = [START_LIFE, START_LIFE];
   private showLog = false;
+  private showAlbum = false;
+  private readonly album = loadAlbum();
   private surrenderArmed = false;
   private surrenderTimer = 0;
 
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay', HTMLElement>;
-  private readonly btn: Record<'log' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album', HTMLElement>;
+  private readonly btn: Record<'log' | 'album' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
 
   constructor(root: HTMLElement) {
     root.innerHTML = `
@@ -49,13 +65,17 @@ export class DuelView {
               <h2>Registro</h2>
               <ol class="log" data-ref="log"></ol>
             </div>
+            <div class="inspector__log" data-ref="albumPanel" hidden>
+              <h2>Fusiones descubiertas</h2>
+              <ol class="log album" data-ref="album"></ol>
+            </div>
             <p class="status" data-ref="status" role="status"></p>
           </section>
 
           <nav class="side-buttons">
             <button class="tag-btn" data-btn="log">Registro</button>
             <button class="tag-btn" data-btn="position"></button>
-            <button class="tag-btn" disabled title="Llega en la Fase 2">Fusiones</button>
+            <button class="tag-btn" data-btn="album">Fusiones</button>
             <span class="turn-tag" data-ref="turn"></span>
           </nav>
 
@@ -97,8 +117,9 @@ export class DuelView {
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
       myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
+      albumPanel: ref('albumPanel'), album: ref('album'),
     };
-    this.btn = { log: btn('log'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
+    this.btn = { log: btn('log'), album: btn('album'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
 
     // Zonas de apoyo (magia/equipo): decorativas hasta la Fase 3
     for (const row of [this.el.foeSupport, this.el.mySupport]) {
@@ -109,7 +130,8 @@ export class DuelView {
       }
     }
 
-    this.btn.log.addEventListener('click', () => { this.showLog = !this.showLog; this.render(); });
+    this.btn.log.addEventListener('click', () => { this.showLog = !this.showLog; this.showAlbum = false; this.render(); });
+    this.btn.album.addEventListener('click', () => { this.showAlbum = !this.showAlbum; this.showLog = false; this.render(); });
     this.btn.position.addEventListener('click', () => {
       this.playPosition = this.playPosition === 'attack' ? 'defense' : 'attack';
       this.render();
@@ -131,6 +153,7 @@ export class DuelView {
     const deck = getDeck('prueba').cards;
     this.engine = new DuelEngine({
       db: cardDb, decks: [deck, deck], seed: Math.floor(Math.random() * 2 ** 31), firstPlayer: HUMAN,
+      fusion: fusionDb,
     });
     this.log = [];
     this.selectedHand = [];
@@ -168,7 +191,7 @@ export class DuelView {
         this.render();
         return;
       }
-      let result = this.engine.apply(nextAiIntent(s, AI));
+      let result = this.engine.apply(nextAiIntent(s, AI, fusionDb));
       if (!result.ok) result = this.engine.apply({ type: 'endTurn', player: AI }); // nunca atorarse
       if (result.ok) this.record(result.events);
       this.render();
@@ -280,6 +303,8 @@ export class DuelView {
     this.btn.position.classList.toggle('tag-btn--def', this.playPosition === 'defense');
     this.btn.position.disabled = !myTurn;
     this.btn.log.classList.toggle('tag-btn--on', this.showLog);
+    this.btn.album.classList.toggle('tag-btn--on', this.showAlbum);
+    this.btn.album.textContent = `Fusiones ${this.album.size}`;
     this.btn.end.disabled = !myTurn;
     this.btn.surrender.classList.toggle('surrender-btn--armed', this.surrenderArmed);
     this.btn.surrender.innerHTML = this.surrenderArmed ? 'Rendirse<small>toca de nuevo</small>' : 'Rendirse';
@@ -297,6 +322,8 @@ export class DuelView {
       return li;
     }));
     this.el.log.scrollTop = this.el.log.scrollHeight;
+    this.el.albumPanel.hidden = !this.showAlbum;
+    if (this.showAlbum) this.renderAlbum();
 
     this.renderOverlay();
   }
@@ -394,11 +421,50 @@ export class DuelView {
     this.el.overlay.querySelector('button')!.addEventListener('click', () => this.newDuel());
   }
 
+  private renderAlbum(): void {
+    const items = [...this.album].map(([key, resultId]) => {
+      const [a, b] = key.split('+').map(Number);
+      return { a: cardDb.get(a), b: cardDb.get(b), r: cardDb.get(resultId) };
+    }).sort((x, y) => y.r.atk - x.r.atk);
+    if (items.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = 'Todavía no descubres ninguna. Elige 2 o más cartas de tu mano y juégalas juntas.';
+      this.el.album.replaceChildren(li);
+      return;
+    }
+    this.el.album.replaceChildren(...items.map(({ a, b, r }) => {
+      const li = document.createElement('li');
+      li.className = 'album__item';
+      li.textContent = `${a.name} + ${b.name} → ${r.name} (${r.atk})`;
+      return li;
+    }));
+  }
+
+  /** Texto de la cadena elegida. Solo revela resultados ya descubiertos, como en YGOFM. */
+  private chainPreview(): string {
+    const hand = this.engine.state.players[HUMAN].hand;
+    const defs = this.selectedHand
+      .map(id => hand.find(c => c.instanceId === id)?.def)
+      .filter((d): d is CardDef => d !== undefined);
+    const preview = fusionDb.previewChain(defs);
+    if (!preview) return '';
+    let current = defs[0];
+    const parts = [current.name];
+    for (const step of preview.steps) {
+      const known = step.result && this.album.get(pairKey(step.a.id, step.b.id)) === step.result.id;
+      parts.push(`+ ${step.b.name} → ${known ? step.result!.name : '¿?'}`);
+      if (!known) return parts.join(' ') + '. Juégala para descubrir el resultado.';
+      current = step.result!;
+    }
+    return `${parts.join(' ')} (ATK ${current.atk}). Toca una zona para jugarla.`;
+  }
+
   private statusMessage(): string {
     const s = this.engine.state;
     if (s.winner !== null) return '';
     if (this.aiThinking || s.turnPlayer === AI) return 'El rival está pensando...';
-    if (this.selectedHand.length > 0) return 'Toca una de tus zonas para jugar la carta (o la cadena de fusión).';
+    if (this.selectedHand.length > 1) return this.chainPreview();
+    if (this.selectedHand.length === 1) return 'Toca una zona para jugarla, o elige más cartas para fusionar.';
     if (this.selectedAttacker !== null) {
       return s.players[AI].field.every(c => c === null)
         ? 'Toca la barra del rival para atacar directo.'
@@ -412,6 +478,13 @@ export class DuelView {
 
   private record(events: DuelEvent[]): void {
     for (const e of events) {
+      if (e.type === 'fusion' && e.player === HUMAN) {
+        const [a, b] = e.materialIds.map(id => this.engine.getCard(id)!.def.id);
+        const result = this.engine.getCard(e.resultId)!;
+        this.album.set(pairKey(a, b), result.def.id);
+        saveAlbum(this.album);
+        this.inspected = result;
+      }
       const line = this.describe(e);
       if (line) this.log.push(line);
     }

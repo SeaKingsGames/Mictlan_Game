@@ -1,0 +1,17 @@
+{
+  "notes": "Recetas: carta A + carta B = carta exacta (se revisan primero). Reglas: etiqueta + etiqueta = la carta más débil con TODAS las etiquetas de 'result' cuyo ATK supere a ambos materiales. Las reglas se prueban en orden; si una no tiene resultado válido, se prueba la siguiente.",
+  "recipeOnly": [8],
+  "recipes": [
+    { "a": 15, "b": 4, "result": 8 }
+  ],
+  "rules": [
+    { "a": "guerrero",  "b": "jaguar",  "result": ["guerrero", "jaguar"] },
+    { "a": "guerrero",  "b": "ave",     "result": ["guerrero", "ave"] },
+    { "a": "guerrero",  "b": "muerte",  "result": ["guerrero", "muerte"] },
+    { "a": "serpiente", "b": "fuego",   "result": ["serpiente", "fuego"] },
+    { "a": "serpiente", "b": "ave",     "result": ["serpiente", "ave"] },
+    { "a": "bestia",    "b": "agua",    "result": ["bestia", "agua"] },
+    { "a": "agua",      "b": "muerte",  "result": ["agua", "muerte"] },
+    { "a": "ave",       "b": "muerte",  "result": ["ave", "muerte"] }
+  ]
+}

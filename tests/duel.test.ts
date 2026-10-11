@@ -3,7 +3,7 @@ import { nextAiIntent } from '../src/ai/aiPlayer.ts';
 import { DuelEngine } from '../src/core/DuelEngine.ts';
 import type { DuelEvent, PlayerIndex } from '../src/core/DuelState.ts';
 import type { FusionResolver } from '../src/core/fusion.ts';
-import { cardDb, getDeck } from '../src/data/index.ts';
+import { cardDb, fusionDb, getDeck } from '../src/data/index.ts';
 import { START_LIFE } from '../src/data/types.ts';
 
 // IDs del cards.json: 1 Ocelote 800/600 · 2 Macehual 900/700 · 3 Guerrero Jaguar 1800/1400
@@ -171,6 +171,24 @@ describe('mazo vacío', () => {
 });
 
 describe('IA', () => {
+  it('con fusiones también termina duelos y sí fusiona', () => {
+    let fusions = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const deck = getDeck('prueba').cards;
+      const e = new DuelEngine({ db: cardDb, decks: [deck, deck], seed, fusion: fusionDb });
+      e.start();
+      let steps = 0;
+      while (e.state.winner === null && steps < 3000) {
+        const r = e.apply(nextAiIntent(e.state, e.state.turnPlayer, fusionDb));
+        expect(r.ok, r.ok ? '' : r.error).toBe(true);
+        if (r.ok) fusions += r.events.filter(ev => ev.type === 'fusion').length;
+        steps++;
+      }
+      expect(e.state.winner, `semilla ${seed}`).not.toBeNull();
+    }
+    expect(fusions).toBeGreaterThan(0);
+  });
+
   it('dos IAs terminan un duelo sin errores', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const deck = getDeck('prueba').cards;

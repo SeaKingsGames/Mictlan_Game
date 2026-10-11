@@ -1,9 +1,12 @@
 import cardsJson from './cards.json';
 import decksJson from './decks.json';
+import fusionsJson from './fusions.json';
 import { CardDatabase } from './cardDatabase.ts';
+import { FusionDatabase, type FusionData } from './fusionDatabase.ts';
 import type { CardDef, DeckDef } from './types.ts';
 
 export const cardDb = new CardDatabase(cardsJson as CardDef[]);
+export const fusionDb = new FusionDatabase(fusionsJson as FusionData, cardDb);
 export const decks: readonly DeckDef[] = decksJson as DeckDef[];
 
 export function getDeck(id: string): DeckDef {
