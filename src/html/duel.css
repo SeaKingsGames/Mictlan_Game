@@ -245,6 +245,38 @@ button.pl { cursor: default; }
 .chooser__options { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(18 * var(--u)); --card-w: calc(170 * var(--u)); }
 .chooser__options .card:hover { transform: translateY(calc(-10 * var(--u))); box-shadow: 0 0 0 calc(4 * var(--u)) #f2c12e; }
 
+/* ---------- Fusión en pantalla (tuya o del rival) ---------- */
+.fusion-show {
+  left: calc(600 * var(--u)); top: calc(170 * var(--u)); width: calc(688 * var(--u));
+  z-index: 9; padding: calc(18 * var(--u)) calc(16 * var(--u)) calc(24 * var(--u));
+  display: flex; flex-direction: column; align-items: center; gap: calc(10 * var(--u));
+  background: radial-gradient(ellipse at center, rgb(31 111 99 / .95), rgb(10 30 27 / .97));
+  border: calc(3 * var(--u)) solid #f2c12e; border-radius: calc(16 * var(--u));
+  box-shadow: 0 0 calc(50 * var(--u)) rgb(242 193 46 / .45); cursor: pointer;
+  animation: fs-in .25s ease-out;
+}
+.fusion-show[hidden] { display: none; }
+.fusion-show--foe {
+  background: radial-gradient(ellipse at center, rgb(110 38 30 / .95), rgb(40 12 9 / .97));
+  border-color: #ff6a4d; box-shadow: 0 0 calc(50 * var(--u)) rgb(255 106 77 / .45);
+}
+.fusion-show__title { margin: 0; font: 700 calc(30 * var(--u)) 'Cinzel', Georgia, serif; color: #f2c12e; letter-spacing: .06em; }
+.fusion-show--foe .fusion-show__title { color: #ffb3a3; }
+.fusion-show__row { display: flex; align-items: center; gap: calc(12 * var(--u)); --card-w: calc(140 * var(--u)); }
+.fusion-show__op { font: 800 calc(44 * var(--u)) system-ui; color: #f3e7d3; opacity: 0; animation: fs-fade .3s .35s forwards; }
+.fusion-show .card { cursor: pointer; }
+.fs-a { animation: fs-left .45s ease-out both; }
+.fs-b { animation: fs-right .45s ease-out both; }
+.fs-r { opacity: 0; animation: fs-pop .5s .7s cubic-bezier(.2, 1.6, .4, 1) forwards; box-shadow: 0 0 calc(30 * var(--u)) #f2c12e; }
+@keyframes fs-in    { from { opacity: 0; transform: scale(.94); } }
+@keyframes fs-left  { from { opacity: 0; transform: translateX(calc(-60 * var(--u))); } }
+@keyframes fs-right { from { opacity: 0; transform: translateX(calc(60 * var(--u))); } }
+@keyframes fs-fade  { to { opacity: 1; } }
+@keyframes fs-pop   { from { opacity: 0; transform: scale(.4) rotate(-8deg); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fusion-show, .fs-a, .fs-b, .fs-r, .fusion-show__op { animation: none; opacity: 1; }
+}
+
 /* ---------- Fin del duelo ---------- */
 .overlay { inset: 0; z-index: 10; display: grid; place-items: center; background: rgb(0 0 0 / .72); }
 .overlay[hidden] { display: none; }

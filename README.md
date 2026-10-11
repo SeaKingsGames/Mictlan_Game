@@ -48,3 +48,4 @@ Si algo está mal (ID repetido, etiqueta inexistente, más de 3 copias en un maz
 - `/` — el duelo
 - `/cartas.html` — galería de cartas
 - `/fusiones.html` — editor de fusiones (descarga el `fusions.json`)
+- `/editor-cartas.html` — editor de cartas y arte (descarga el `cards.json` y las imágenes)

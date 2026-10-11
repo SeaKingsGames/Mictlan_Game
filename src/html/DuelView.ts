@@ -9,6 +9,7 @@ import { createCardElement } from './cardElement.ts';
 const HUMAN: PlayerIndex = 0;
 const AI: PlayerIndex = 1;
 const AI_STEP_MS = 750;
+const FUSION_SHOW_MS = 2200;
 
 const ALBUM_KEY = 'cartas.fusiones.v2';
 
@@ -43,6 +44,9 @@ export class DuelView {
   private lastLife: [number, number] = [START_LIFE, START_LIFE];
   private showLog = false;
   private showAlbum = false;
+  private fusionQueue: { player: PlayerIndex; a: CardDef; b: CardDef; r: CardDef }[] = [];
+  private fusionShowing = false;
+  private fusionTimer = 0;
   private readonly album = loadAlbum();
   private surrenderArmed = false;
   private surrenderTimer = 0;
@@ -50,7 +54,7 @@ export class DuelView {
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'chooser', HTMLElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'chooser' | 'fusionShow', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
 
   constructor(root: HTMLElement) {
@@ -103,6 +107,7 @@ export class DuelView {
           </aside>
 
           <div class="chooser" data-ref="chooser" hidden></div>
+          <div class="fusion-show" data-ref="fusionShow" hidden></div>
           <div class="overlay" data-ref="overlay" hidden></div>
         </div>
         <div class="rotate-hint">
@@ -119,7 +124,7 @@ export class DuelView {
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
       myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
-      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'),
+      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'),
     };
     this.btn = { log: btn('log'), album: btn('album'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
 
@@ -197,7 +202,9 @@ export class DuelView {
       if (!result.ok) result = this.engine.apply({ type: 'endTurn', player: AI }); // nunca atorarse
       if (result.ok) this.record(result.events);
       this.render();
-      setTimeout(step, AI_STEP_MS);
+      // Si el rival fusionó, espera a que se vea la fusión antes de seguir.
+      const fusions = result.ok ? result.events.filter(e => e.type === 'fusion').length : 0;
+      setTimeout(step, AI_STEP_MS + fusions * FUSION_SHOW_MS);
     };
     setTimeout(step, AI_STEP_MS);
   }
@@ -529,16 +536,53 @@ export class DuelView {
     return 'Toca uno de tus monstruos para atacar, o termina el turno.';
   }
 
+  // ---------------------------------------------------------------- fusión en pantalla
+
+  /** Muestra "A + B → resultado" unos segundos. Tocar la animación la salta. */
+  private showNextFusion(): void {
+    if (this.fusionShowing) return;
+    const next = this.fusionQueue.shift();
+    const box = this.el.fusionShow;
+    if (!next) { box.hidden = true; box.replaceChildren(); return; }
+    this.fusionShowing = true;
+
+    const title = document.createElement('p');
+    title.className = 'fusion-show__title';
+    title.textContent = next.player === HUMAN ? '¡Fusión!' : '¡El rival fusiona!';
+    const row = document.createElement('div');
+    row.className = 'fusion-show__row';
+    const op = (txt: string) => { const s2 = document.createElement('span'); s2.className = 'fusion-show__op'; s2.textContent = txt; return s2; };
+    const ca = createCardElement(next.a); ca.classList.add('fs-a');
+    const cb = createCardElement(next.b); cb.classList.add('fs-b');
+    const cr = createCardElement(next.r); cr.classList.add('fs-r');
+    row.append(ca, op('+'), cb, op('='), cr);
+    box.replaceChildren(title, row);
+    box.classList.toggle('fusion-show--foe', next.player === AI);
+    box.hidden = false;
+
+    const done = () => {
+      clearTimeout(this.fusionTimer);
+      box.onclick = null;
+      this.fusionShowing = false;
+      this.showNextFusion();
+    };
+    box.onclick = done;
+    this.fusionTimer = window.setTimeout(done, FUSION_SHOW_MS - 100);
+  }
+
   // ---------------------------------------------------------------- registro
 
   private record(events: DuelEvent[]): void {
     for (const e of events) {
-      if (e.type === 'fusion' && e.player === HUMAN) {
-        const [a, b] = e.materialIds.map(id => this.engine.getCard(id)!.def.id);
+      if (e.type === 'fusion') {
+        // Se aprende de TODAS las fusiones que se ven, tuyas y del rival.
+        const [a, b] = e.materialIds.map(id => this.engine.getCard(id)!.def);
         const result = this.engine.getCard(e.resultId)!;
-        this.album.add(albumKey(a, b, result.def.id));
+        this.album.add(albumKey(a.id, b.id, result.def.id));
         saveAlbum(this.album);
         this.inspected = result;
+        this.fusionQueue.push({ player: e.player, a, b, r: result.def });
+        this.showNextFusion();
       }
       const line = this.describe(e);
       if (line) this.log.push(line);
