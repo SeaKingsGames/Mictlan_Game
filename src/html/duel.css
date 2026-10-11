@@ -231,6 +231,20 @@ button.pl { cursor: default; }
 .surrender-btn small { font: 600 calc(12 * var(--u)) system-ui; letter-spacing: .1em; }
 .surrender-btn--armed { background: #5e2620; color: #fff; border-color: #ff6a4d; }
 
+/* ---------- Elegir resultado de fusión ---------- */
+.chooser {
+  left: calc(600 * var(--u)); top: calc(150 * var(--u)); width: calc(688 * var(--u));
+  z-index: 8; padding: calc(20 * var(--u));
+  display: flex; flex-direction: column; align-items: center; gap: calc(12 * var(--u));
+  background: rgb(13 21 28 / .96); border: calc(3 * var(--u)) solid #c9a24a; border-radius: calc(14 * var(--u));
+  box-shadow: 0 calc(10 * var(--u)) calc(40 * var(--u)) rgb(0 0 0 / .7);
+}
+.chooser[hidden] { display: none; }
+.chooser__title { margin: 0; font: 700 calc(22 * var(--u)) 'Cinzel', Georgia, serif; color: #f3e7d3; text-align: center; }
+.chooser__sub { margin: 0; color: #e8a33d; font-size: calc(17 * var(--u)); }
+.chooser__options { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(18 * var(--u)); --card-w: calc(170 * var(--u)); }
+.chooser__options .card:hover { transform: translateY(calc(-10 * var(--u))); box-shadow: 0 0 0 calc(4 * var(--u)) #f2c12e; }
+
 /* ---------- Fin del duelo ---------- */
 .overlay { inset: 0; z-index: 10; display: grid; place-items: center; background: rgb(0 0 0 / .72); }
 .overlay[hidden] { display: none; }

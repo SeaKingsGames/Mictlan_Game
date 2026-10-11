@@ -6,7 +6,7 @@ import {
   FIELD_SLOTS, opponentOf,
   type ApplyResult, type DuelEvent, type DuelState, type Intent, type PlayerIndex, type PlayerState,
 } from './DuelState.ts';
-import { noFusions, type FusionResolver } from './fusion.ts';
+import { noFusions, planChain, type FusionResolver } from './fusion.ts';
 import { createRng } from './rng.ts';
 
 /** Si el primer jugador puede atacar en el turno 1. */
@@ -106,21 +106,23 @@ export class DuelEngine {
       fromHand.push(card);
     }
 
+    // Como en YGOFM: si la zona tiene un monstruo, ese es el primer material.
+    const occupant = me.field[intent.slot];
+    const chain = occupant ? [occupant, ...fromHand] : fromHand;
+    const plan = planChain(this.fusion, chain.map(c => c.def), intent.fusionChoices ?? []);
+    if (!plan.ok) return plan.error;
+
     // Validado: ahora sí se modifica el estado.
     s.hasPlayedThisTurn = true;
     me.hand = me.hand.filter(c => !fromHand.includes(c));
-
-    // Como en YGOFM: si la zona tiene un monstruo, ese es el primer material.
-    const occupant = me.field[intent.slot];
     me.field[intent.slot] = null;
-    const chain = occupant ? [occupant, ...fromHand] : fromHand;
 
     let current = chain[0];
     let fused = false;
-    for (const next of chain.slice(1)) {
-      const result = this.fusion.tryFuse(current.def, next.def);
-      if (result) {
-        const fusedCard = new CardInstance(this.ids.take(), intent.player, result);
+    plan.steps.forEach((step, i) => {
+      const next = chain[i + 1];
+      if (step.result) {
+        const fusedCard = new CardInstance(this.ids.take(), intent.player, step.result);
         this.cards.set(fusedCard.instanceId, fusedCard);
         events.push({ type: 'fusion', player: intent.player, materialIds: [current.instanceId, next.instanceId], resultId: fusedCard.instanceId });
         this.sendToMictlan(current, 'material', events);
@@ -132,7 +134,7 @@ export class DuelEngine {
         this.sendToMictlan(current, 'fusionFailed', events);
         current = next;
       }
-    }
+    });
 
     if (current !== occupant) current.resetForZoneChange();
     current.zone = 'field';

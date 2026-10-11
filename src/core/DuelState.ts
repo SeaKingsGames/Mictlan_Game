@@ -31,6 +31,7 @@ export type Intent =
       slot: number;                 // 0-4; si está ocupada, ese monstruo es el primer material
       position: BattlePosition;
       faceDown?: boolean;
+      fusionChoices?: number[];     // IDs de carta elegidos cuando una fusión tiene varias opciones
     }
   | { type: 'attack'; player: PlayerIndex; attackerId: number; targetId: number | null }
   | { type: 'endTurn'; player: PlayerIndex }

@@ -133,9 +133,9 @@ describe('batalla', () => {
 describe('cadena de fusión (con un resolver de prueba)', () => {
   // Ocelote + Macehual = Guerrero Jaguar; nada más fusiona.
   const testFusion: FusionResolver = {
-    tryFuse: (a, b) => {
+    fusionOptions: (a, b) => {
       const ids = [a.id, b.id].sort().join('+');
-      return ids === '1+2' ? cardDb.get(3) : null;
+      return ids === '1+2' ? [cardDb.get(3)] : [];
     },
   };
 
@@ -156,6 +156,35 @@ describe('cadena de fusión (con un resolver de prueba)', () => {
     ok(e.apply({ type: 'play', player: 0, handIds: [a, b], slot: 0, position: 'attack' }));
     expect(fieldCard(e, 0, 0).instanceId).toBe(b);
     expect(e.state.players[0].mictlan.map(c => c.instanceId)).toEqual([a]);
+  });
+});
+
+describe('fusión con varias opciones', () => {
+  // Macehual (guerrero) + Tecolote (ave, muerte): guerrero+ave → Guerrero Águila, guerrero+muerte → Guerrero del Mictlán
+  const setup = () => {
+    const e = duelWith([2, 16, 2, 16, 2, 16, 2, 16], many(9), fusionDb);
+    const hand = e.state.players[0].hand;
+    return { e, ma: hand.find(c => c.def.id === 2)!, te: hand.find(c => c.def.id === 16)! };
+  };
+
+  it('sin elegir, sale la de más ATK', () => {
+    const { e, ma, te } = setup();
+    ok(e.apply({ type: 'play', player: 0, handIds: [ma.instanceId, te.instanceId], slot: 0, position: 'attack' }));
+    expect(fieldCard(e, 0, 0).def.id).toBe(17);
+  });
+
+  it('el jugador puede elegir otra opción válida', () => {
+    const { e, ma, te } = setup();
+    ok(e.apply({ type: 'play', player: 0, handIds: [ma.instanceId, te.instanceId], slot: 0, position: 'attack', fusionChoices: [4] }));
+    expect(fieldCard(e, 0, 0).def.id).toBe(4);
+  });
+
+  it('una elección imposible se rechaza sin cambiar nada', () => {
+    const { e, ma, te } = setup();
+    const r = e.apply({ type: 'play', player: 0, handIds: [ma.instanceId, te.instanceId], slot: 0, position: 'attack', fusionChoices: [8] });
+    expect(r.ok).toBe(false);
+    expect(e.state.players[0].hand).toHaveLength(5);
+    expect(e.state.hasPlayedThisTurn).toBe(false);
   });
 });
 

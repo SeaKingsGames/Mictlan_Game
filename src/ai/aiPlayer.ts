@@ -1,7 +1,7 @@
 import type { CardInstance } from '../core/CardInstance.ts';
 import { FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
 import { opponentOf, type DuelState, type Intent, type PlayerIndex } from '../core/DuelState.ts';
-import type { FusionResolver } from '../core/fusion.ts';
+import { bestFusion, type FusionResolver } from '../core/fusion.ts';
 
 /**
  * IA sencilla: decide UNA intención a la vez (se llama en bucle hasta que termina el turno).
@@ -23,7 +23,7 @@ export function nextAiIntent(state: DuelState, me: PlayerIndex, fusion?: FusionR
         for (const a of monsters) {
           for (const b of monsters) {
             if (a === b) continue;
-            const result = fusion.tryFuse(a.def, b.def);
+            const result = bestFusion(fusion, a.def, b.def);
             if (result && result.atk > play.atk) play = { ids: [a.instanceId, b.instanceId], atk: result.atk, fused: true };
           }
         }

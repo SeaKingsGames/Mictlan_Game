@@ -1,0 +1,3 @@
+Aquí va el arte de las cartas, un archivo por carta (ej. 3.webp).
+En cards.json: "art": "/cards/3.webp"
+Tamaño recomendado: 512 x 512 px, formato .webp o .jpg.

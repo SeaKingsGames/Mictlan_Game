@@ -10,19 +10,20 @@ const HUMAN: PlayerIndex = 0;
 const AI: PlayerIndex = 1;
 const AI_STEP_MS = 750;
 
-const ALBUM_KEY = 'cartas.fusiones.v1';
+const ALBUM_KEY = 'cartas.fusiones.v2';
 
-/** Fusiones que el jugador ya descubrió: "idA+idB" (ordenado) → id del resultado. Se guarda en el navegador. */
-function loadAlbum(): Map<string, number> {
+/** Fusiones descubiertas: "idA+idB>idResultado" (A y B ordenados). Se guardan en el navegador. */
+function loadAlbum(): Set<string> {
   try {
     const raw = localStorage.getItem(ALBUM_KEY);
-    return new Map(raw ? (JSON.parse(raw) as [string, number][]) : []);
-  } catch { return new Map(); }
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch { return new Set(); }
 }
-function saveAlbum(album: Map<string, number>): void {
+function saveAlbum(album: Set<string>): void {
   try { localStorage.setItem(ALBUM_KEY, JSON.stringify([...album])); } catch { /* sin almacenamiento: no pasa nada */ }
 }
 const pairKey = (a: number, b: number) => (a < b ? `${a}+${b}` : `${b}+${a}`);
+const albumKey = (a: number, b: number, r: number) => `${pairKey(a, b)}>${r}`;
 
 const ATTR: Record<string, string> = { sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra' };
 
@@ -49,7 +50,7 @@ export class DuelView {
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album', HTMLElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'chooser', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
 
   constructor(root: HTMLElement) {
@@ -101,6 +102,7 @@ export class DuelView {
             <button class="surrender-btn" data-btn="surrender">Rendirse</button>
           </aside>
 
+          <div class="chooser" data-ref="chooser" hidden></div>
           <div class="overlay" data-ref="overlay" hidden></div>
         </div>
         <div class="rotate-hint">
@@ -117,7 +119,7 @@ export class DuelView {
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
       myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
-      albumPanel: ref('albumPanel'), album: ref('album'),
+      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'),
     };
     this.btn = { log: btn('log'), album: btn('album'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
 
@@ -218,7 +220,7 @@ export class DuelView {
     if (card) this.inspected = card;
     if (!this.isMyTurn()) { this.render(); return; }
     if (this.selectedHand.length > 0) {
-      this.submit({ type: 'play', player: HUMAN, handIds: [...this.selectedHand], slot, position: this.playPosition });
+      void this.playSelected(slot);
       return;
     }
     if (!card) return;
@@ -422,9 +424,11 @@ export class DuelView {
   }
 
   private renderAlbum(): void {
-    const items = [...this.album].map(([key, resultId]) => {
-      const [a, b] = key.split('+').map(Number);
-      return { a: cardDb.get(a), b: cardDb.get(b), r: cardDb.get(resultId) };
+    const items = [...this.album].flatMap(key => {
+      const [pair, r] = key.split('>');
+      const [a, b] = pair.split('+').map(Number);
+      const [ca, cb, cr] = [cardDb.tryGet(a), cardDb.tryGet(b), cardDb.tryGet(Number(r))];
+      return ca && cb && cr ? [{ a: ca, b: cb, r: cr }] : [];
     }).sort((x, y) => y.r.atk - x.r.atk);
     if (items.length === 0) {
       const li = document.createElement('li');
@@ -446,17 +450,68 @@ export class DuelView {
     const defs = this.selectedHand
       .map(id => hand.find(c => c.instanceId === id)?.def)
       .filter((d): d is CardDef => d !== undefined);
-    const preview = fusionDb.previewChain(defs);
-    if (!preview) return '';
     let current = defs[0];
     const parts = [current.name];
-    for (const step of preview.steps) {
-      const known = step.result && this.album.get(pairKey(step.a.id, step.b.id)) === step.result.id;
-      parts.push(`+ ${step.b.name} → ${known ? step.result!.name : '¿?'}`);
+    for (const next of defs.slice(1)) {
+      const options = fusionDb.fusionOptions(current, next);
+      if (options.length > 1) return `${parts.join(' ')} + ${next.name} → ¡${options.length} opciones! Elegirás al jugarla.`;
+      const result = options[0];
+      const known = result && this.album.has(albumKey(current.id, next.id, result.id));
+      parts.push(`+ ${next.name} → ${known ? result.name : '¿?'}`);
       if (!known) return parts.join(' ') + '. Juégala para descubrir el resultado.';
-      current = step.result!;
+      current = result;
     }
     return `${parts.join(' ')} (ATK ${current.atk}). Toca una zona para jugarla.`;
+  }
+
+  /** Muestra las opciones de una fusión y espera a que el jugador elija (null = cancelar). */
+  private chooseFusion(a: CardDef, b: CardDef, options: CardDef[]): Promise<number | null> {
+    return new Promise(resolve => {
+      const box = this.el.chooser;
+      const finish = (id: number | null) => { box.hidden = true; box.replaceChildren(); resolve(id); };
+      const title = document.createElement('p');
+      title.className = 'chooser__title';
+      title.textContent = `${a.name} + ${b.name}`;
+      const sub = document.createElement('p');
+      sub.className = 'chooser__sub';
+      sub.textContent = '¿Qué fusión quieres?';
+      const row = document.createElement('div');
+      row.className = 'chooser__options';
+      for (const opt of options) {
+        const el = createCardElement(opt);
+        el.addEventListener('click', () => finish(opt.id));
+        row.append(el);
+      }
+      const cancel = document.createElement('button');
+      cancel.className = 'tag-btn';
+      cancel.textContent = 'Cancelar';
+      cancel.addEventListener('click', () => finish(null));
+      box.replaceChildren(title, sub, row, cancel);
+      box.hidden = false;
+    });
+  }
+
+  /** Juega la cadena en la zona; si algún paso tiene varias opciones, pregunta cuál. */
+  private async playSelected(slot: number): Promise<void> {
+    const me = this.engine.state.players[HUMAN];
+    const handIds = [...this.selectedHand];
+    const fromHand = handIds.map(id => me.hand.find(c => c.instanceId === id)!.def);
+    const occupant = me.field[slot];
+    const chain = occupant ? [occupant.def, ...fromHand] : fromHand;
+    const choices: number[] = [];
+    let current = chain[0];
+    for (const next of chain.slice(1)) {
+      const options = fusionDb.fusionOptions(current, next);
+      let result = options[0] ?? null;
+      if (options.length > 1) {
+        const picked = await this.chooseFusion(current, next, options);
+        if (picked === null) { this.render(); return; }
+        choices.push(picked);
+        result = options.find(o => o.id === picked)!;
+      }
+      current = result ?? next;
+    }
+    this.submit({ type: 'play', player: HUMAN, handIds, slot, position: this.playPosition, fusionChoices: choices });
   }
 
   private statusMessage(): string {
@@ -481,7 +536,7 @@ export class DuelView {
       if (e.type === 'fusion' && e.player === HUMAN) {
         const [a, b] = e.materialIds.map(id => this.engine.getCard(id)!.def.id);
         const result = this.engine.getCard(e.resultId)!;
-        this.album.set(pairKey(a, b), result.def.id);
+        this.album.add(albumKey(a, b, result.def.id));
         saveAlbum(this.album);
         this.inspected = result;
       }

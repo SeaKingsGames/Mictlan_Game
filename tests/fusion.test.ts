@@ -51,6 +51,15 @@ describe('fusiones', () => {
     expect(preview?.steps.map(s => s.result?.id ?? null)).toEqual([3, 17]);
   });
 
+  it('si aplican varias reglas, da varias opciones de mejor a peor', () => {
+    const opts = fusionDb.fusionOptions(c(2), c(16)).map(x => x.id);
+    expect(opts).toEqual([17, 4]);   // Guerrero del Mictlán 2100, Guerrero Águila 1700
+  });
+
+  it('una receta es la única opción', () => {
+    expect(fusionDb.fusionOptions(c(15), c(4)).map(x => x.id)).toEqual([8]);
+  });
+
   it('detecta errores en fusions.json', () => {
     expect(() => new FusionDatabase({ recipes: [{ a: 1, b: 2, result: 999 }], rules: [] }, cardDb)).toThrow(/inexistente/);
     expect(() => new FusionDatabase({ recipes: [], rules: [{ a: 'jaguar', b: 'agua', result: ['deidad', 'jaguar'] }] }, cardDb)).toThrow(/ninguna carta/);

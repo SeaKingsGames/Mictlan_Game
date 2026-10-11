@@ -36,3 +36,15 @@ tests/      data.test.ts, duel.test.ts                          ← Vitest
 
 Edita `src/data/cards.json` con un `id` nuevo (único, mayor que 0) y corre `npm test`.
 Si algo está mal (ID repetido, etiqueta inexistente, más de 3 copias en un mazo), el test te lo dice.
+
+## Arte de las cartas
+
+1. Guarda la imagen en `public/cards/` con el ID de la carta, por ejemplo `public/cards/3.webp` (512 × 512 px, .webp o .jpg).
+2. En `src/data/cards.json`, agrega a esa carta: `"art": "/cards/3.webp"`.
+3. Si el archivo no existe, la carta sigue mostrando su inicial.
+
+## Páginas
+
+- `/` — el duelo
+- `/cartas.html` — galería de cartas
+- `/fusiones.html` — editor de fusiones (descarga el `fusions.json`)

@@ -65,6 +65,16 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
   // textContent (no innerHTML) para los datos: así un nombre raro nunca rompe la página.
   el.querySelector('.card__name')!.textContent = def.name;
   el.querySelector('.card__glyph')!.textContent = def.name.charAt(0);
+  if (def.art) {
+    // Arte de la carta: archivo en public/cards/ (ej. "art": "/cards/3.webp" en cards.json)
+    const img = document.createElement('img');
+    img.src = def.art;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.addEventListener('error', () => img.remove());   // si falta el archivo, queda la inicial
+    el.querySelector('.card__art')!.append(img);
+  }
   el.querySelector('.card__tags')!.textContent = def.tags.join(' · ');
   el.querySelector('.card__desc')!.textContent = def.description;
   return el;

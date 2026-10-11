@@ -1,4 +1,4 @@
-import type { FusionResolver } from '../core/fusion.ts';
+import { planChain, type FusionResolver } from '../core/fusion.ts';
 import type { CardDatabase } from './cardDatabase.ts';
 import { CARD_TAGS, type CardDef, type CardTag } from './types.ts';
 
@@ -15,20 +15,25 @@ const pairKey = (x: number, y: number) => (x < y ? `${x}+${y}` : `${y}+${x}`);  
 /**
  * Fusiones al estilo YGOFM:
  *  1) receta exacta (A + B = C)
- *  2) reglas por etiqueta, en orden: la carta más débil con las etiquetas del resultado
- *     que sea más fuerte que AMBOS materiales.
+ *  2) reglas por etiqueta: cada regla que aplique da la carta más débil con sus etiquetas
+ *     que sea más fuerte que AMBOS materiales. Si salen varias, el jugador elige.
  */
 export class FusionDatabase implements FusionResolver {
   private readonly recipes = new Map<string, CardDef>();
   private readonly rules: Rule[] = [];
+  /** Problemas encontrados (solo se llenan con strict = false; con strict = true lanzan error). */
+  readonly problems: string[] = [];
+  /** Avisos que no impiden jugar (por ejemplo, una receta que da una carta más débil). */
+  readonly warnings: string[] = [];
 
-  constructor(data: FusionData, db: CardDatabase) {
-    const problems: string[] = [];
+  constructor(data: FusionData, db: CardDatabase, strict = true) {
+    const problems = this.problems;
     const recipeOnly = new Set(data.recipeOnly ?? []);
 
     for (const r of data.recipes) {
       const [a, b, res] = [db.tryGet(r.a), db.tryGet(r.b), db.tryGet(r.result)];
       if (!a || !b || !res) { problems.push(`receta ${r.a}+${r.b}=${r.result}: id inexistente`); continue; }
+      if (res.atk <= a.atk || res.atk <= b.atk) this.warnings.push(`Receta ${a.name} + ${b.name} = ${res.name}: el resultado no es más fuerte que los materiales.`);
       const key = pairKey(r.a, r.b);
       if (this.recipes.has(key)) problems.push(`receta repetida ${key}`);
       this.recipes.set(key, res);
@@ -45,34 +50,38 @@ export class FusionDatabase implements FusionResolver {
       this.rules.push({ a: r.a, b: r.b, candidates });
     }
 
-    if (problems.length) throw new Error('fusions.json tiene problemas:\n- ' + problems.join('\n- '));
+    if (strict && problems.length) throw new Error('fusions.json tiene problemas:\n- ' + problems.join('\n- '));
   }
 
-  tryFuse(a: CardDef, b: CardDef): CardDef | null {
-    if (a.type !== 'monster' || b.type !== 'monster') return null;
+  /**
+   * Todas las cartas que puede dar A + B, de mejor a peor.
+   * Receta exacta = única opción. Si no, cada regla que aplique aporta su resultado
+   * (la carta más débil de ese tipo que supere a ambos materiales) y el jugador elige.
+   */
+  fusionOptions(a: CardDef, b: CardDef): CardDef[] {
+    if (a.type !== 'monster' || b.type !== 'monster') return [];
     const exact = this.recipes.get(pairKey(a.id, b.id));
-    if (exact) return exact;
+    if (exact) return [exact];
+    const found = new Map<number, CardDef>();
     for (const rule of this.rules) {
       const matches =
         (a.tags.includes(rule.a) && b.tags.includes(rule.b)) ||
         (a.tags.includes(rule.b) && b.tags.includes(rule.a));
       if (!matches) continue;
       const result = rule.candidates.find(c => c.atk > a.atk && c.atk > b.atk);
-      if (result) return result;     // si esta regla no da nada mejor, prueba la siguiente
+      if (result) found.set(result.id, result);
     }
-    return null;
+    return [...found.values()].sort((x, y) => y.atk - x.atk);
   }
 
-  /** Simula una cadena completa (para vista previa e IA). No toca el duelo. */
-  previewChain(chain: readonly CardDef[]): { result: CardDef; steps: { a: CardDef; b: CardDef; result: CardDef | null }[] } | null {
-    if (chain.length === 0) return null;
-    let current = chain[0];
-    const steps: { a: CardDef; b: CardDef; result: CardDef | null }[] = [];
-    for (const next of chain.slice(1)) {
-      const result = this.tryFuse(current, next);
-      steps.push({ a: current, b: next, result });
-      current = result ?? next;
-    }
-    return { result: current, steps };
+  /** La mejor opción (la que usa la IA y la que se juega si no eliges). */
+  tryFuse(a: CardDef, b: CardDef): CardDef | null {
+    return this.fusionOptions(a, b)[0] ?? null;
+  }
+
+  /** Simula una cadena completa (vista previa, editor, IA). No toca el duelo. */
+  previewChain(chain: readonly CardDef[], choices: readonly number[] = []) {
+    const plan = planChain(this, chain, choices);
+    return plan.ok ? plan : null;
   }
 }
