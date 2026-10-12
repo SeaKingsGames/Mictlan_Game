@@ -45,7 +45,14 @@ Si algo está mal (ID repetido, etiqueta inexistente, más de 3 copias en un maz
 
 ## Páginas
 
-- `/` — el duelo
+- `/` — el juego: menú (`#/`), mazo y colección (`#/mazo`), campaña (`#/campana`), duelo libre (`#/libre`)
 - `/cartas.html` — galería de cartas
 - `/fusiones.html` — editor de fusiones (descarga el `fusions.json`)
 - `/editor-cartas.html` — editor de cartas y arte (descarga el `cards.json` y las imágenes)
+
+## Campaña y progreso
+
+- Rivales en `src/data/duelists.json` (mazo de 40, dificultad 1-3, botín y carta firma).
+- Colección inicial en `src/data/starter.json`.
+- Tu progreso (colección, mazo, rivales vencidos) se guarda en el navegador. Se reinicia desde Menú → Herramientas.
+- El nombre del juego está en `src/game/config.ts`.

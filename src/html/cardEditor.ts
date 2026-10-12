@@ -31,6 +31,7 @@ const TYPES: { value: CardType; label: string }[] = [
   { value: 'equip', label: 'Equipo' }, { value: 'trap', label: 'Trampa' },
 ];
 
+let draftNotice = '';   // aviso si el borrador se combinó con cartas nuevas
 const original = (cardsJson as CardDef[]).map(c => ({ ...c, tags: [...c.tags] }) as MutableCard);
 let cards: MutableCard[] = loadDraft() ?? structuredClone(original);
 const arts = new Map<number, Art>();
@@ -43,12 +44,38 @@ let search = '';
 
 // ---------------------------------------------------------------- almacenamiento
 
+/**
+ * Carga el borrador y lo combina con el cards.json del proyecto:
+ *  - las cartas que existen en el proyecto pero no en tu borrador se agregan (ej. mágicas nuevas)
+ *  - en borradores viejos (antes del editor de efectos) se copian los efectos del proyecto
+ * Tus cambios (nombres, ATK/DEF, arte, descripciones) se respetan.
+ */
 function loadDraft(): MutableCard[] | null {
-  try { const raw = localStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) as MutableCard[] : null; }
-  catch { return null; }
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as MutableCard[] | { version: 2; cards: MutableCard[] };
+    const isOld = Array.isArray(parsed);
+    const draft = isOld ? parsed : parsed.cards;
+    const have = new Set(draft.map(c => c.id));
+    const added = original.filter(c => !have.has(c.id));
+    let withEffects = 0;
+    if (isOld) {
+      for (const c of draft) {
+        const proj = original.find(o => o.id === c.id);
+        if (!c.effects && proj?.effects) { c.effects = structuredClone(proj.effects) as MutableCard['effects']; withEffects++; }
+      }
+    }
+    const merged = [...draft, ...structuredClone(added)].sort((a, b) => a.id - b.id);
+    const notes: string[] = [];
+    if (added.length) notes.push(`Se agregaron ${added.length} cartas nuevas del proyecto: ${added.map(c => c.name).join(', ')}.`);
+    if (withEffects) notes.push(`Se copiaron los efectos del proyecto a ${withEffects} cartas de tu borrador.`);
+    draftNotice = notes.join(' ');
+    return merged;
+  } catch { return null; }
 }
 function saveDraft(): void {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(cards)); } catch { /* sin almacenamiento */ }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 2, cards })); } catch { /* sin almacenamiento */ }
 }
 function loadImage(id: number): Art | null {
   try { const raw = localStorage.getItem(IMG_KEY(id)); return raw ? JSON.parse(raw) as Art : null; }
@@ -114,9 +141,12 @@ function changed(): void {
 
 // ---------------------------------------------------------------- página
 
+if (draftNotice) saveDraft();   // guarda ya el borrador combinado
+
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.append(h('main', { class: 'editor' },
   h('h1', {}, 'Editor de cartas'),
+  draftNotice ? h('p', { class: 'hint', style: 'color:#8fd8c6' }, '✓ ' + draftNotice) : '',
   h('p', { class: 'hint' },
     'Los cambios se guardan como borrador en este navegador. Al terminar, descarga ',
     h('code', {}, 'cards.json'), ' (va en ', h('code', {}, 'src/data/'), ') y las imágenes nuevas (van en ',

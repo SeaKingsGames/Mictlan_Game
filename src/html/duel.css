@@ -2,7 +2,7 @@
    Tablero del duelo: escenario fijo de 1600 x 900 "unidades" (--u)
    que escala completo a cualquier pantalla, como un juego.
    ===================================================================== */
-html, body { height: 100%; overflow: hidden; background: #0b0908; }
+body.in-duel { height: 100%; overflow: hidden; background: #0b0908; }
 
 .stage-wrap {
   --u: min(calc(100vw / 1600), calc(100dvh / 900));
@@ -332,6 +332,13 @@ button.pl { cursor: default; }
 .overlay__title { margin: 0 0 calc(24 * var(--u)); font: 700 calc(90 * var(--u)) 'Cinzel', Georgia, serif; }
 .overlay__title.win { color: #f2c12e; }
 .overlay__title.lose { color: #d94f30; }
+.overlay__label { margin: 0 0 calc(12 * var(--u)); color: #f3e7d3; font-size: calc(20 * var(--u)); }
+.overlay__rewards { display: flex; gap: calc(20 * var(--u)); justify-content: center; --card-w: calc(180 * var(--u)); margin-bottom: calc(14 * var(--u)); }
+.overlay__rewards .card { animation: fs-pop .5s cubic-bezier(.2, 1.6, .4, 1) both; cursor: default; }
+.overlay__rewards .card:nth-child(2) { animation-delay: .25s; }
+.overlay__note { margin: calc(6 * var(--u)) 0; color: #8fd8c6; font-size: calc(18 * var(--u)); }
+.overlay__buttons { display: flex; gap: calc(16 * var(--u)); justify-content: center; align-items: center; margin-top: calc(18 * var(--u)); }
+.overlay__buttons .end-btn { margin-top: 0; }
 
 /* ---------- Celular vertical ---------- */
 .rotate-hint { display: none; }

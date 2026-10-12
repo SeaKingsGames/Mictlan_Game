@@ -2,7 +2,8 @@ import { nextAiIntent } from '../ai/aiPlayer.ts';
 import type { CardInstance } from '../core/CardInstance.ts';
 import { DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
 import { isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
-import { cardDb, fusionDb, getDeck } from '../data/index.ts';
+import { cardDb, fusionDb } from '../data/index.ts';
+import type { Duelist } from '../game/duelists.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
@@ -17,6 +18,15 @@ const pairKey = (a: number, b: number) => (a < b ? `${a}+${b}` : `${b}+${a}`);
 const albumKey = (a: number, b: number, r: number) => `${pairKey(a, b)}>${r}`;
 
 const ATTR: Record<string, string> = { sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra' };
+
+export interface DuelSetup {
+  playerDeck: number[];
+  opponent: Duelist;
+  /** Se llama una vez al terminar. Regresa las cartas ganadas (para mostrarlas) y avisos extra. */
+  onFinish: (won: boolean) => { rewards: number[]; notes: string[] };
+  /** Volver al menú / campaña. */
+  onExit: () => void;
+}
 
 /**
  * Tablero del duelo en HTML/CSS: escenario 16:9 que escala completo a la pantalla.
@@ -44,9 +54,12 @@ export class DuelView {
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
     'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast', HTMLElement>;
-  private readonly btn: Record<'log' | 'album' | 'end' | 'surrender', HTMLButtonElement>;
+  private readonly btn: Record<'log' | 'album' | 'end' | 'surrender' | 'exit', HTMLButtonElement>;
+  private readonly setup: DuelSetup;
+  private finished: { rewards: number[]; notes: string[] } | null = null;
 
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, setup: DuelSetup) {
+    this.setup = setup;
     root.innerHTML = `
       <div class="stage-wrap">
         <div class="stage">
@@ -69,6 +82,7 @@ export class DuelView {
           <nav class="side-buttons">
             <button class="tag-btn" data-btn="log">Registro</button>
             <button class="tag-btn" data-btn="album">Fusiones</button>
+            <button class="tag-btn" data-btn="exit">Salir</button>
             <span class="turn-tag" data-ref="turn"></span>
           </nav>
 
@@ -115,7 +129,13 @@ export class DuelView {
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
       albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'),
     };
-    this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender') };
+    this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit') };
+    this.btn.exit.addEventListener('click', () => {
+      if (this.engine.state.winner !== null) { this.setup.onExit(); return; }
+      if (!confirm('¿Salir del duelo? Cuenta como derrota.')) return;
+      this.submit({ type: 'surrender', player: HUMAN });
+      this.setup.onExit();
+    });
 
 
     this.btn.log.addEventListener('click', () => { this.showLog = !this.showLog; this.showAlbum = false; this.render(); });
@@ -129,15 +149,23 @@ export class DuelView {
     });
 
     this.newDuel();
+    // Solo en desarrollo (npm run dev): window.__duel para probar desde la consola
+    if (import.meta.env.DEV) (window as unknown as { __duel: DuelView }).__duel = this;
+  }
+
+  /** Para pruebas en desarrollo: el rival se rinde. */
+  debugWin(): void {
+    const r = this.engine.apply({ type: 'surrender', player: AI });
+    if (r.ok) { this.record(r.events); this.render(); }
   }
 
   // ---------------------------------------------------------------- flujo
 
   private newDuel(): void {
     this.album.clear();
-    const deck = getDeck('prueba').cards;
+    this.finished = null;
     this.engine = new DuelEngine({
-      db: cardDb, decks: [deck, deck], seed: Math.floor(Math.random() * 2 ** 31), firstPlayer: HUMAN,
+      db: cardDb, decks: [this.setup.playerDeck, this.setup.opponent.deck], seed: Math.floor(Math.random() * 2 ** 31), firstPlayer: HUMAN,
       fusion: fusionDb,
     });
     this.log = [];
@@ -176,7 +204,7 @@ export class DuelView {
         this.render();
         return;
       }
-      let result = this.engine.apply(nextAiIntent(s, AI, fusionDb));
+      let result = this.engine.apply(nextAiIntent(s, AI, this.setup.opponent.level >= 2 ? fusionDb : undefined));
       if (!result.ok) result = this.engine.apply({ type: 'endTurn', player: AI }); // nunca atorarse
       if (result.ok) this.record(result.events);
       this.render();
@@ -248,8 +276,9 @@ export class DuelView {
       void this.playSelected(slot);
       return;
     }
-    if (!card) return;
-    this.selectedAttacker = this.selectedAttacker === card.instanceId ? null : card.instanceId;
+    // Tocar tu monstruo lo elige (y muestra la bolita). Tocarlo otra vez NO lo suelta, para no
+    // esconder la bolita por accidente; para soltarlo toca una zona vacía.
+    this.selectedAttacker = card ? card.instanceId : null;
     this.message = '';
     this.render();
   }
@@ -297,7 +326,7 @@ export class DuelView {
 
     // Barra central
     this.el.me.replaceChildren(...this.playerBar('Tú', HUMAN, `Mano ${me.hand.length}`));
-    this.el.foe.replaceChildren(...this.playerBar('Rival', AI, `Mazo ${foe.deck.length} · Mictlán ${foe.mictlan.length}`));
+    this.el.foe.replaceChildren(...this.playerBar(this.setup.opponent.name, AI, `Mazo ${foe.deck.length} · Mictlán ${foe.mictlan.length}`));
     this.el.foe.classList.toggle('pl--target', canDirect);
     this.el.foe.title = canDirect ? 'Ataque directo' : '';
     this.el.me.classList.toggle('pl--active', s.turnPlayer === HUMAN && s.winner === null);
@@ -369,7 +398,7 @@ export class DuelView {
     const hit = this.lastLife[player] > p.life;
     const avatar = document.createElement('span');
     avatar.className = 'pl__avatar';
-    avatar.textContent = player === HUMAN ? '☀' : '☾';
+    avatar.textContent = player === HUMAN ? '☀' : this.setup.opponent.glyph;
     const text = document.createElement('span');
     text.className = 'pl__text';
     text.innerHTML = `<span class="pl__name"></span><span class="pl__life${hit ? ' pl__life--hit' : ''}"></span>
@@ -485,12 +514,47 @@ export class DuelView {
     const winner = this.engine.state.winner;
     this.el.overlay.hidden = winner === null;
     if (winner === null) return;
-    this.el.overlay.innerHTML = `
-      <div class="overlay__box">
-        <p class="overlay__title ${winner === HUMAN ? 'win' : 'lose'}">${winner === HUMAN ? '¡Victoria!' : 'Derrota'}</p>
-        <button class="end-btn">Jugar otra vez</button>
-      </div>`;
-    this.el.overlay.querySelector('button')!.addEventListener('click', () => this.newDuel());
+    const won = winner === HUMAN;
+    if (!this.finished) this.finished = this.setup.onFinish(won);   // una sola vez por duelo
+    if (this.el.overlay.childElementCount) return;                  // ya está dibujado
+
+    const box = document.createElement('div');
+    box.className = 'overlay__box';
+    const title = document.createElement('p');
+    title.className = `overlay__title ${won ? 'win' : 'lose'}`;
+    title.textContent = won ? '¡Victoria!' : 'Derrota';
+    box.append(title);
+    if (this.finished.rewards.length) {
+      const label = document.createElement('p');
+      label.className = 'overlay__label';
+      label.textContent = this.finished.rewards.length === 1 ? 'Ganaste esta carta:' : 'Ganaste estas cartas:';
+      const row = document.createElement('div');
+      row.className = 'overlay__rewards';
+      for (const id of this.finished.rewards) {
+        const c = cardDb.tryGet(id);
+        if (c) row.append(createCardElement(c));
+      }
+      box.append(label, row);
+    }
+    for (const note of this.finished.notes) {
+      const p = document.createElement('p');
+      p.className = 'overlay__note';
+      p.textContent = note;
+      box.append(p);
+    }
+    const buttons = document.createElement('div');
+    buttons.className = 'overlay__buttons';
+    const again = document.createElement('button');
+    again.className = 'tag-btn';
+    again.textContent = 'Revancha';
+    again.addEventListener('click', () => { this.el.overlay.replaceChildren(); this.newDuel(); });
+    const back = document.createElement('button');
+    back.className = 'end-btn';
+    back.textContent = 'Continuar';
+    back.addEventListener('click', () => this.setup.onExit());
+    buttons.append(again, back);
+    box.append(buttons);
+    this.el.overlay.replaceChildren(box);
   }
 
   private renderAlbum(): void {
