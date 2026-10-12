@@ -183,15 +183,16 @@ button.pl { cursor: default; }
   background: radial-gradient(circle, #2c5d55, #102a26); border: calc(2 * var(--u)) solid #c9a24a; color: #f2c12e;
 }
 .pl--foe .pl__avatar { background: radial-gradient(circle, #6b2a22, #2a0f0b); }
-.pl__text { flex: 1; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "name life" "bar bar" "detail detail"; align-items: baseline; column-gap: calc(10 * var(--u)); }
+.pl__text { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "name life" "bar bar" "detail detail"; align-items: baseline; column-gap: calc(10 * var(--u)); }
 .pl--me .pl__text { grid-template-columns: 1fr auto; grid-template-areas: "life name" "bar bar" "detail detail"; }
-.pl__name { grid-area: name; font: 700 calc(15 * var(--u)) 'Cinzel', Georgia, serif; text-transform: uppercase; }
+.pl__name { grid-area: name; min-width: 0; font: 700 calc(14 * var(--u)) 'Cinzel', Georgia, serif; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* una sola línea: nunca empuja la barra */
 .pl__life { grid-area: life; display: inline-block; font: 800 calc(26 * var(--u))/1 system-ui, sans-serif; }
 .pl--me .pl__life { justify-self: start; }
 .pl--foe .pl__life { justify-self: end; }
 .pl__bar { grid-area: bar; height: calc(5 * var(--u)); border-radius: 9px; background: #3a2e25; overflow: hidden; margin: calc(3 * var(--u)) 0 calc(2 * var(--u)); }
 .pl__bar > span { display: block; height: 100%; background: linear-gradient(90deg, #d94f30, #f2c12e); transition: width .4s ease; }
-.pl__detail { grid-area: detail; font-size: calc(11 * var(--u)); color: #a89884; }
+.pl__detail { grid-area: detail; font-size: calc(11 * var(--u)); color: #a89884; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl__life--hit { animation: hit .5s ease; }
 @keyframes hit {
   0%, 50% { color: #ff7a6b; }
@@ -216,11 +217,11 @@ button.pl { cursor: default; }
 .foe-hand .card { transform: rotate(180deg); }
 
 .hand {
-  left: calc(540 * var(--u)); width: calc(808 * var(--u)); top: calc(682 * var(--u));
-  display: flex; justify-content: center; z-index: 4;
-  --card-w: calc(158 * var(--u));
+  left: calc(540 * var(--u)); width: calc(808 * var(--u)); top: calc(676 * var(--u));
+  display: flex; justify-content: center; gap: calc(6 * var(--u)); z-index: 4;
+  --card-w: calc(148 * var(--u));      /* 5 cartas caben sin encimarse y sin salirse por abajo */
 }
-.hand .card { margin: 0 calc(-8 * var(--u)); box-shadow: 0 calc(-6 * var(--u)) calc(18 * var(--u)) rgb(0 0 0 / .6); }
+.hand .card { box-shadow: 0 calc(-6 * var(--u)) calc(18 * var(--u)) rgb(0 0 0 / .6); }
 .hand .card:hover { transform: translateY(calc(-40 * var(--u))); z-index: 1; }
 .hand .card--selected { transform: translateY(calc(-70 * var(--u))); z-index: 2; }
 .hand .card__badge { width: 2.4em; height: 2.4em; font-size: 1.1em; top: -.4em; right: -.4em; }

@@ -68,7 +68,7 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
 .card__rarity--UR { background: linear-gradient(135deg, #7b2fd6, #c26bf5, #7b2fd6); }
 .card[data-rarity="UR"] { box-shadow: 0 .4em 1em rgb(0 0 0 / .5), 0 0 .8em rgb(194 107 245 / .45); }
 .card[data-rarity="SR"] { box-shadow: 0 .4em 1em rgb(0 0 0 / .5), 0 0 .6em rgb(245 211 107 / .35); }
-@container (max-width: 80px) { .card__rarity { top: .2em; right: .2em; font-size: 1.6em; } }
+@container (max-width: 80px) { .card__rarity { top: 27%; right: .3em; font-size: 1.5em; } }   /* sobre el dibujo, sin tapar el nombre */
 .card__name {
   margin: 0; min-height: 2.4em;
   display: flex; align-items: center; justify-content: center; text-align: center;
@@ -150,6 +150,10 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
 @container (max-width: 140px) {
   .card__desc { display: none; }
   .card__tags { font-size: .66em; }
+  /* letra más grande para que se lea en la mano; nombre en máximo 2 líneas */
+  .card__name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    height: 2.2em; min-height: 0; overflow: hidden; font-size: 1.2em; line-height: 1.1; flex: none; }
+  .card__stats { font-size: 1em; }
 }
 
 /* Cartas muy chicas (campo y mano en celular): solo nombre, inicial y ATK/DEF.
@@ -157,7 +161,9 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
 @container (max-width: 80px) {
   .card { gap: .4em; }
   .card__head, .card__tags, .card__desc { display: none; }
-  .card__name { min-height: 0; max-height: 2.3em; overflow: hidden; overflow-wrap: anywhere; font-size: 2.1em; line-height: 1.1; }
+  /* máximo 2 líneas, cortadas con "…" en vez de recortarse arriba y abajo */
+  .card__name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    min-height: 0; overflow: hidden; overflow-wrap: anywhere; font-size: 1.8em; line-height: 1.08; text-align: center; flex: none; }
   .card__glyph { font-size: 5em; }
   .card__stats { flex-direction: column; align-items: center; gap: .1em; padding-top: .2em; font-size: 2.4em; line-height: 1.1; }
 }
