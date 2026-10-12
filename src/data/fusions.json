@@ -1,17 +1,121 @@
 {
   "notes": "Recetas: carta A + carta B = carta exacta (se revisan primero). Reglas: etiqueta + etiqueta = la carta más débil con TODAS las etiquetas de 'result' cuyo ATK supere a ambos materiales. Las reglas se prueban en orden; si una no tiene resultado válido, se prueba la siguiente.",
-  "recipeOnly": [8],
+  "recipeOnly": [
+    8,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65
+  ],
   "recipes": [
-    { "a": 15, "b": 4, "result": 8 }
+    {
+      "a": 15,
+      "b": 4,
+      "result": 8
+    },
+    {
+      "a": 48,
+      "b": 42,
+      "result": 60
+    },
+    {
+      "a": 43,
+      "b": 34,
+      "result": 61
+    },
+    {
+      "a": 50,
+      "b": 31,
+      "result": 62
+    },
+    {
+      "a": 42,
+      "b": 12,
+      "result": 64
+    },
+    {
+      "a": 64,
+      "b": 60,
+      "result": 63
+    },
+    {
+      "a": 13,
+      "b": 55,
+      "result": 65
+    },
+    {
+      "a": 49,
+      "b": 56,
+      "result": 59
+    }
   ],
   "rules": [
-    { "a": "guerrero",  "b": "jaguar",  "result": ["guerrero", "jaguar"] },
-    { "a": "guerrero",  "b": "ave",     "result": ["guerrero", "ave"] },
-    { "a": "guerrero",  "b": "muerte",  "result": ["guerrero", "muerte"] },
-    { "a": "serpiente", "b": "fuego",   "result": ["serpiente", "fuego"] },
-    { "a": "serpiente", "b": "ave",     "result": ["serpiente", "ave"] },
-    { "a": "bestia",    "b": "agua",    "result": ["bestia", "agua"] },
-    { "a": "agua",      "b": "muerte",  "result": ["agua", "muerte"] },
-    { "a": "ave",       "b": "muerte",  "result": ["ave", "muerte"] }
+    {
+      "a": "guerrero",
+      "b": "jaguar",
+      "result": [
+        "guerrero",
+        "jaguar"
+      ]
+    },
+    {
+      "a": "guerrero",
+      "b": "ave",
+      "result": [
+        "guerrero",
+        "ave"
+      ]
+    },
+    {
+      "a": "guerrero",
+      "b": "muerte",
+      "result": [
+        "guerrero",
+        "muerte"
+      ]
+    },
+    {
+      "a": "serpiente",
+      "b": "fuego",
+      "result": [
+        "serpiente",
+        "fuego"
+      ]
+    },
+    {
+      "a": "serpiente",
+      "b": "ave",
+      "result": [
+        "serpiente",
+        "ave"
+      ]
+    },
+    {
+      "a": "bestia",
+      "b": "agua",
+      "result": [
+        "bestia",
+        "agua"
+      ]
+    },
+    {
+      "a": "agua",
+      "b": "muerte",
+      "result": [
+        "agua",
+        "muerte"
+      ]
+    },
+    {
+      "a": "ave",
+      "b": "muerte",
+      "result": [
+        "ave",
+        "muerte"
+      ]
+    }
   ]
 }

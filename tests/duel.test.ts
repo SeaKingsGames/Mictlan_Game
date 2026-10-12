@@ -160,7 +160,7 @@ describe('cadena de fusión (con un resolver de prueba)', () => {
 });
 
 describe('fusión con varias opciones', () => {
-  // Macehual (guerrero) + Tecolote (ave, muerte): guerrero+ave → Guerrero Águila, guerrero+muerte → Guerrero del Mictlán
+  // Macehual (guerrero) + Tecolote (ave, muerte): guerrero+ave → Guerrero Águila, guerrero+muerte → Guerrera cihuateteo
   const setup = () => {
     const e = duelWith([2, 16, 2, 16, 2, 16, 2, 16], many(9), fusionDb);
     const hand = e.state.players[0].hand;
@@ -170,7 +170,7 @@ describe('fusión con varias opciones', () => {
   it('sin elegir, sale la de más ATK', () => {
     const { e, ma, te } = setup();
     ok(e.apply({ type: 'play', player: 0, handIds: [ma.instanceId, te.instanceId], slot: 0, position: 'attack' }));
-    expect(fieldCard(e, 0, 0).def.id).toBe(17);
+    expect(fieldCard(e, 0, 0).def.id).toBe(49);
   });
 
   it('el jugador puede elegir otra opción válida', () => {

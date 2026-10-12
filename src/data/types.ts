@@ -12,6 +12,11 @@ export const CARD_TAGS = [
 ] as const;
 export type CardTag = (typeof CARD_TAGS)[number];
 
+/** Rareza: N normal · R rara · SR súper rara · UR ultra rara. */
+export const RARITIES = ['N', 'R', 'SR', 'UR'] as const;
+export type CardRarity = (typeof RARITIES)[number];
+export const RARITY_LABEL: Record<CardRarity, string> = { N: 'Normal', R: 'Rara', SR: 'Súper rara', UR: 'Ultra rara' };
+
 export interface CardDef {
   readonly id: number;          // único, > 0. Es lo único que viaja por red / BD
   readonly name: string;
@@ -22,6 +27,7 @@ export interface CardDef {
   readonly atk: number;
   readonly def: number;
   readonly art?: string;        // ruta de la imagen (public/cards/...)
+  readonly rarity?: CardRarity; // si falta, cuenta como N
   readonly effects?: readonly EffectDef[];
 }
 
@@ -87,5 +93,7 @@ export const DECK_SIZE = 40;   // igual que YGOFM
 export const MAX_COPIES = 3;
 export const HAND_SIZE = 5;
 export const START_LIFE = 8000;
+
+export const rarityOf = (card: CardDef): CardRarity => card.rarity ?? 'N';
 
 export const hasTag = (card: CardDef, tag: CardTag): boolean => card.tags.includes(tag);

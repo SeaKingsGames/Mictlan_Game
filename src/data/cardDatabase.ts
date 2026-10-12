@@ -1,4 +1,4 @@
-import { CARD_TAGS, DECK_SIZE, EFFECT_TARGETS, EFFECT_TRIGGERS, MAX_COPIES, type CardDef, type DeckDef } from './types.ts';
+import { CARD_TAGS, DECK_SIZE, EFFECT_TARGETS, EFFECT_TRIGGERS, MAX_COPIES, RARITIES, type CardDef, type DeckDef } from './types.ts';
 
 /**
  * Registro de todas las cartas. Por red y en la base de datos solo viaja el ID;
@@ -53,6 +53,7 @@ function validateCard(c: CardDef): string[] {
   if (!c.name?.trim()) p.push('falta nombre');
   if (c.atk < 0 || c.def < 0) p.push('ATK/DEF no pueden ser negativos');
   for (const t of c.tags) if (!CARD_TAGS.includes(t)) p.push(`etiqueta desconocida "${t}"`);
+  if (c.rarity !== undefined && !RARITIES.includes(c.rarity)) p.push(`rareza desconocida "${c.rarity}" (usa N, R, SR o UR)`);
   const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive', 'negateAttack'];
   const conditionTypes = ['isNight', 'isDay', 'lifeBelow', 'hasTagOnField', 'opponentHasMoreMonsters'];
   for (const e of c.effects ?? []) {

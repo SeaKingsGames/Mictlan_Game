@@ -1,5 +1,5 @@
 import { CardInstance } from '../core/CardInstance.ts';
-import type { CardAttribute, CardDef } from '../data/types.ts';
+import { rarityOf, type CardAttribute, type CardDef } from '../data/types.ts';
 
 const ATTRIBUTE_LABEL: Record<CardAttribute, string> = {
   sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra',
@@ -47,6 +47,7 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
   }
 
   el.dataset.type = def.type;
+  el.dataset.rarity = rarityOf(def);
   el.setAttribute('aria-label', def.type === 'monster' ? `${def.name}, ATK ${atk}, DEF ${defense}` : `${def.name}, ${TYPE_LABEL[def.type]}`);
   el.innerHTML = `
     <header class="card__head">
@@ -54,6 +55,7 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
       <span>${TYPE_LABEL[def.type]}</span>
     </header>
     <h3 class="card__name"></h3>
+    <span class="card__rarity card__rarity--${rarityOf(def)}">${rarityOf(def)}</span>
     <div class="card__art"><span class="card__glyph"></span></div>
     <p class="card__tags"></p>
     <p class="card__desc"></p>

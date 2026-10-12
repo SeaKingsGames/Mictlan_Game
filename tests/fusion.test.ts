@@ -23,12 +23,17 @@ describe('fusiones', () => {
   });
 
   it('bestia + agua elige la carta más débil que supere a ambos', () => {
-    expect(fuse(1, 10)).toBe(13);    // Ocelote 800 + Serpiente de lago 700 → Cipactli 1500
+    expect(fuse(1, 10)).toBe(47);    // Ocelote 800 + Serpiente de lago 700 → Sapo de la lluvia 1100
     expect(fuse(13, 13)).toBe(14);   // Cipactli 1500 + Cipactli → Ahuízotl 2000 (Cipactli no supera 1500)
   });
 
   it('receta exacta: Serpiente de plumas + Guerrero Águila = Quetzalcóatl', () => {
     expect(fuse(15, 4)).toBe(8);
+  });
+
+  it('los dioses UR solo salen por receta', () => {
+    expect(fuse(48, 42)).toBe(60);   // Colibrí de Huitzilopochtli + Águila real = Huitzilopochtli
+    expect(fuse(46, 42)).not.toBe(60);   // guerrero + ave por regla general NO da Huitzilopochtli
   });
 
   it('Quetzalcóatl no sale por reglas generales', () => {
@@ -45,15 +50,15 @@ describe('fusiones', () => {
   });
 
   it('vista previa de cadena de 3: la fusión sigue con la siguiente carta', () => {
-    // Macehual + Ocelote = Guerrero Jaguar; Guerrero Jaguar + Tecolote (muerte) = Guerrero del Mictlán
+    // Macehual + Ocelote = Guerrero Jaguar; Guerrero Jaguar + Tecolote (muerte) = Guerrera cihuateteo
     const preview = fusionDb.previewChain([c(2), c(1), c(16)]);
-    expect(preview?.result.id).toBe(17);
-    expect(preview?.steps.map(s => s.result?.id ?? null)).toEqual([3, 17]);
+    expect(preview?.result.id).toBe(49);
+    expect(preview?.steps.map(s => s.result?.id ?? null)).toEqual([3, 49]);
   });
 
   it('si aplican varias reglas, da varias opciones de mejor a peor', () => {
     const opts = fusionDb.fusionOptions(c(2), c(16)).map(x => x.id);
-    expect(opts).toEqual([17, 4]);   // Guerrero del Mictlán 2100, Guerrero Águila 1700
+    expect(opts).toEqual([49, 4]);   // Guerrera cihuateteo 1900, Guerrero Águila 1700
   });
 
   it('una receta es la única opción', () => {
@@ -62,6 +67,6 @@ describe('fusiones', () => {
 
   it('detecta errores en fusions.json', () => {
     expect(() => new FusionDatabase({ recipes: [{ a: 1, b: 2, result: 999 }], rules: [] }, cardDb)).toThrow(/inexistente/);
-    expect(() => new FusionDatabase({ recipes: [], rules: [{ a: 'jaguar', b: 'agua', result: ['deidad', 'jaguar'] }] }, cardDb)).toThrow(/ninguna carta/);
+    expect(() => new FusionDatabase({ recipes: [], rules: [{ a: 'jaguar', b: 'agua', result: ['deidad', 'fuego', 'agua'] }] }, cardDb)).toThrow(/ninguna carta/);
   });
 });

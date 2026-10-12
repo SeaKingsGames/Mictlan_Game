@@ -4,7 +4,7 @@ import cardsJson from '../data/cards.json';
 import decksJson from '../data/decks.json';
 import fusionsJson from '../data/fusions.json';
 import { CardDatabase } from '../data/cardDatabase.ts';
-import { CARD_TAGS, type CardAttribute, type CardDef, type CardTag, type CardType } from '../data/types.ts';
+import { CARD_TAGS, RARITIES, RARITY_LABEL, type CardAttribute, type CardDef, type CardRarity, type CardTag, type CardType } from '../data/types.ts';
 import { createCardElement } from './cardElement.ts';
 import { renderEffectEditor, type EditableEffect } from './effectEditor.ts';
 
@@ -125,6 +125,7 @@ function formatCards(list: MutableCard[]): string {
       id: c.id, name: c.name, description: c.description, type: c.type,
       attribute: c.attribute, tags: c.tags, atk: c.atk, def: c.def,
     };
+    if (c.rarity) o.rarity = c.rarity;
     if (c.art) o.art = c.art;
     if (c.effects && c.effects.length) o.effects = c.effects;   // los efectos se editan en el JSON por ahora
     return '  ' + JSON.stringify(o);
@@ -250,7 +251,7 @@ function renderForm(): void {
       select('Tipo', TYPES, c.type, v => { c.type = v; renderEffects(); }),
       text('description', 'Descripción', true),
       select('Atributo', ATTRIBUTES, c.attribute, v => { c.attribute = v; }),
-      h('span', {}),
+      select('Rareza', RARITIES.map(r => ({ value: r, label: `${r} · ${RARITY_LABEL[r]}` })), c.rarity ?? 'N', v => { c.rarity = v as CardRarity; }),
       num('atk', 'ATK'),
       num('def', 'DEF'),
       h('div', { class: 'full' },
@@ -441,6 +442,7 @@ function renderSide(): void {
       pending.length ? h('button', { class: 'ebtn', onclick: () => {
         pending.forEach((id, i) => setTimeout(() => { const a = arts.get(id)!; download(`${id}.${a.ext}`, a.dataUrl); }, i * 300));
       } }, `Descargar imágenes (${pending.length})`) : '',
+      h('button', { class: 'ebtn', onclick: () => importCards(status) }, 'Importar cartas (JSON)'),
       h('button', { class: 'ebtn ebtn--danger', onclick: () => {
         if (!confirm('¿Descartar el borrador y volver al cards.json del proyecto? Las imágenes nuevas también se borran.')) return;
         for (const id of arts.keys()) saveImage(id, null);
@@ -453,6 +455,36 @@ function renderSide(): void {
       status,
     ),
   );
+}
+
+/**
+ * Importa un archivo JSON de cartas (por ejemplo cartas-nuevas.json):
+ *  - cartas con ID nuevo se agregan completas
+ *  - cartas con ID que ya tienes: SOLO se copia la rareza (tus nombres, ATK, arte y efectos no se tocan)
+ */
+function importCards(status: HTMLElement): void {
+  const input = h('input', { type: 'file', accept: '.json,application/json' });
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const incoming = JSON.parse(await file.text()) as MutableCard[];
+      if (!Array.isArray(incoming)) throw new Error('el archivo debe ser una lista de cartas');
+      let added = 0, rarities = 0;
+      for (const raw of incoming) {
+        const existing = cards.find(c => c.id === raw.id);
+        if (!existing) { cards.push({ ...raw, tags: [...(raw.tags ?? [])] }); added++; }
+        else if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; rarities++; }
+      }
+      cards.sort((a, b) => a.id - b.id);
+      saveDraft();
+      renderAll();
+      alert(`Listo: ${added} cartas nuevas y ${rarities} rarezas actualizadas. Tus cambios en las demás cartas se respetaron.`);
+    } catch (e) {
+      status.textContent = `No se pudo importar: ${(e as Error).message}`;
+    }
+  });
+  input.click();
 }
 
 function renderEffects(): void {
