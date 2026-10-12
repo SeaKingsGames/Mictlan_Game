@@ -13,14 +13,17 @@ const TYPE_ORDER: CardType[] = ['monster', 'spell', 'equip', 'trap', 'ritual'];
  * Armar mazo: a la izquierda tu colección, a la derecha tu mazo.
  * Clic en una carta de la colección = agregarla; clic en el mazo = quitarla. Se guarda solo.
  */
-export function renderDeckBuilder(root: HTMLElement, profile: Profile, go: (hash: string) => void): void {
+export function renderDeckBuilder(
+  root: HTMLElement, profile: Profile, go: (hash: string) => void,
+  save: (p: Profile) => void = saveProfile,   // en la nube: guarda el mazo en Supabase
+): void {
   const filters = { text: '', type: '' as '' | CardType, tag: '', sort: 'atk' as 'atk' | 'name' | 'id' };
   let inspected: CardDef | null = null;
 
   const grid = h('div', { class: 'collection' });
   const deckPanel = h('aside', { class: 'deck-panel' });
 
-  const changed = () => { saveProfile(profile); renderGrid(); renderDeck(); };
+  const changed = () => { save(profile); renderGrid(); renderDeck(); };
 
   const add = (c: CardDef) => {
     const inDeck = countIn(profile.deck, c.id);

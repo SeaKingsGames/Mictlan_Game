@@ -1,0 +1,8 @@
+# Configuración mínima para la CLI de Supabase (supabase link / functions deploy).
+project_id = "cartas-quinto-sol"
+
+[functions.duel-start]
+verify_jwt = true
+
+[functions.duel-finish]
+verify_jwt = true

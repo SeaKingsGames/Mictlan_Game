@@ -13,6 +13,16 @@ export interface Profile {
   defeated: string[];                    // duelistas que ya venciste
   wins: number;
   losses: number;
+  /** Solo con cuenta en la nube (Supabase). En modo local no existe. */
+  account?: Account;
+}
+
+export interface Account {
+  username: string | null;
+  email: string | null;
+  guest: boolean;
+  cacao: number;
+  jade: number;
 }
 
 const KEY = 'cartas.perfil.v1';

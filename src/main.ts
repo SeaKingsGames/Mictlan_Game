@@ -3,14 +3,21 @@ import './html/duel.css';
 import './html/screens.css';
 import { createRng } from './core/rng.ts';
 import { cardDb } from './data/index.ts';
-import { GAME_TITLE } from './game/config.ts';
-import { duelists, getDuelist, isUnlocked } from './game/duelists.ts';
-import { addCards, loadProfile, saveProfile, validatePlayerDeck } from './game/profile.ts';
+import { CURRENCY, GAME_TITLE } from './game/config.ts';
+import { duelists, getDuelist, isUnlocked, type Duelist } from './game/duelists.ts';
+import { addCards, loadProfile, saveProfile, validatePlayerDeck, type Profile } from './game/profile.ts';
 import { rollRewards } from './game/rewards.ts';
 import { renderCampaign } from './html/CampaignView.ts';
 import { renderDeckBuilder } from './html/DeckBuilderView.ts';
-import { DuelView } from './html/DuelView.ts';
+import { h } from './html/dom.ts';
+import { DuelView, type DuelResult } from './html/DuelView.ts';
+import { renderLogin } from './html/LoginView.ts';
 import { renderMenu } from './html/MenuView.ts';
+import type { Intent } from './core/DuelState.ts';
+import {
+  finishCloudDuel, flushDeck, hasSession, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
+} from './net/cloud.ts';
+import { cloudEnabled, supabase } from './net/supabase.ts';
 
 /**
  * Navegación por #hash:
@@ -19,59 +26,141 @@ import { renderMenu } from './html/MenuView.ts';
  *   #/campana     campaña
  *   #/libre       duelo libre (rivales desbloqueados)
  *   #/duelo/<id>  duelo contra ese duelista
+ *   #/cuenta      (invitado) guardar cuenta con correo
+ *
+ * Dos modos:
+ *   - NUBE (si hay VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY): cuenta, y los premios los da el servidor.
+ *   - LOCAL (sin esas variables): todo en el navegador, como antes. Útil para probar.
  */
 const app = document.querySelector<HTMLDivElement>('#app')!;
-let profile = loadProfile();
 document.title = GAME_TITLE;
+let profile: Profile | null = cloudEnabled ? null : loadProfile();
 
 const go = (hash: string) => { location.hash = hash; };
 
+function loading(text = 'Cargando…'): void {
+  app.replaceChildren(h('main', { class: 'screen menu' },
+    h('div', { class: 'menu__sun', 'aria-hidden': 'true' }, '✺'),
+    h('p', { class: 'menu__subtitle' }, text)));
+}
+
+/** Modo nube: baja el perfil (o pide iniciar sesión) y dibuja la pantalla actual. */
+async function boot(): Promise<void> {
+  if (!cloudEnabled) { route(); return; }
+  loading();
+  try {
+    if (!(await hasSession())) { profile = null; renderLogin(app, () => void boot()); return; }
+    profile = await loadCloudProfile();
+    route();
+  } catch (e) {
+    app.replaceChildren(h('main', { class: 'screen menu' },
+      h('p', { class: 'warn-box' }, `No se pudo conectar: ${e instanceof Error ? e.message : String(e)}`),
+      h('button', { class: 'big-btn', onclick: () => void boot() }, 'Reintentar')));
+  }
+}
+
 function route(): void {
+  if (!profile) { void boot(); return; }
+  const p = profile;
   const [, page = '', arg = ''] = location.hash.split('/');
   document.body.classList.toggle('in-duel', page === 'duelo');
   window.scrollTo(0, 0);
 
   switch (page) {
-    case 'mazo': renderDeckBuilder(app, profile, go); return;
-    case 'campana': renderCampaign(app, profile, go); return;
-    case 'libre': renderCampaign(app, profile, go, true); return;
-    case 'duelo': startDuel(arg); return;
-    default: renderMenu(app, profile, go, fresh => { profile = fresh; route(); });
+    case 'mazo': renderDeckBuilder(app, p, go, cloudEnabled ? pr => queueDeckSave(pr.deck) : saveProfile); return;
+    case 'campana': renderCampaign(app, p, go); return;
+    case 'libre': renderCampaign(app, p, go, true); return;
+    case 'duelo': startDuel(p, arg); return;
+    case 'cuenta':
+      if (p.account?.guest) { renderLogin(app, () => { go('#/'); void boot(); }, 'upgrade', () => go('#/')); return; }
+      go('#/'); return;
+    default:
+      renderMenu(app, p, go, {
+        onReset: fresh => { profile = fresh; route(); },
+        onSignOut: cloudEnabled ? () => { void signOut().then(() => { profile = null; go('#/'); void boot(); }); } : undefined,
+        onUpgrade: cloudEnabled ? () => go('#/cuenta') : undefined,
+      });
   }
 }
 
-function startDuel(id: string): void {
+function startDuel(p: Profile, id: string): void {
   const rival = getDuelist(id);
-  if (!rival || !isUnlocked(rival.id, profile.defeated) || validatePlayerDeck(profile, profile.deck, cardDb).length) {
+  if (!rival || !isUnlocked(rival.id, p.defeated) || validatePlayerDeck(p, p.deck, cardDb).length) {
     go('#/campana');
     return;
   }
+  const deck = [...p.deck];
+  let duelId = '';
   new DuelView(app, {
-    playerDeck: [...profile.deck],
+    playerDeck: deck,
     opponent: rival,
-    onFinish: won => {
-      if (!won) {
-        profile.losses += 1;
-        saveProfile(profile);
-        return { rewards: [], notes: [] };
+    newSeed: cloudEnabled ? async () => {
+      await flushDeck();
+      const d = await startCloudDuel(rival.id);
+      if (d.deck.length !== deck.length || d.deck.some((c, i) => c !== deck[i])) {
+        throw new Error('Tu mazo en la nube no coincide. Vuelve a abrir "Mi mazo" y reintenta.');
       }
-      const firstWin = !profile.defeated.includes(rival.id);
-      const rewards = rollRewards(rival, firstWin, createRng(Date.now() % 2 ** 31));
-      addCards(profile, rewards);
-      profile.wins += 1;
-      const notes: string[] = [];
-      if (firstWin) {
-        profile.defeated.push(rival.id);
-        const next = duelists[duelists.findIndex(d => d.id === rival.id) + 1];
-        if (next) notes.push(`Nuevo duelista desbloqueado: ${next.name}`);
-        else notes.push('¡Venciste a todos los duelistas!');
-      }
-      saveProfile(profile);
-      return { rewards, notes };
-    },
+      duelId = d.duelId;
+      return d.seed;
+    } : undefined,
+    onFinish: cloudEnabled
+      ? (_won, intents) => finishInCloud(p, rival, duelId, intents)
+      : won => finishLocally(p, rival, won),
     onExit: () => go('#/campana'),
   });
 }
 
+function unlockNote(rival: Duelist): string {
+  const next = duelists[duelists.findIndex(d => d.id === rival.id) + 1];
+  return next ? `Nuevo duelista desbloqueado: ${next.name}` : '¡Venciste a todos los duelistas!';
+}
+
+/** Modo nube: el servidor repite el duelo y decide el premio. Aquí solo se refleja. */
+async function finishInCloud(p: Profile, rival: Duelist, duelId: string, intents: readonly Intent[]): Promise<DuelResult> {
+  const r = await finishCloudDuel(duelId, intents);
+  if (p.account) { p.account.cacao = r.balance.cacao; p.account.jade = r.balance.jade; }
+  p.wins = r.balance.wins;
+  p.losses = r.balance.losses;
+  if (!r.won) return { rewards: [], notes: [] };
+
+  const notes: string[] = [];
+  for (const c of r.cards) {
+    if (!c.converted) { p.collection[c.id] = (p.collection[c.id] ?? 0) + 1; continue; }
+    const name = cardDb.tryGet(c.id)?.name ?? `#${c.id}`;
+    notes.push(`Ya tenías 3 de ${name}: se convirtió en ${c.cacao ?? 0} ${CURRENCY.common.name}${c.jade ? ` y ${c.jade} ${CURRENCY.premium.name}` : ''}`);
+  }
+  notes.unshift(`+${r.cacao} ${CURRENCY.common.icon} ${CURRENCY.common.name}${r.jade ? ` · +${r.jade} ${CURRENCY.premium.icon} ${CURRENCY.premium.name}` : ''}`);
+  if (r.firstWin && !p.defeated.includes(rival.id)) {
+    p.defeated.push(rival.id);
+    notes.push(unlockNote(rival));
+  }
+  return { rewards: r.cards.map(c => c.id), notes };
+}
+
+/** Modo local (sin Supabase): como antes, todo en el navegador. */
+function finishLocally(p: Profile, rival: Duelist, won: boolean): DuelResult {
+  if (!won) {
+    p.losses += 1;
+    saveProfile(p);
+    return { rewards: [], notes: [] };
+  }
+  const firstWin = !p.defeated.includes(rival.id);
+  const rewards = rollRewards(rival, firstWin, createRng(Date.now() % 2 ** 31));
+  addCards(p, rewards);
+  p.wins += 1;
+  const notes: string[] = [];
+  if (firstWin) {
+    p.defeated.push(rival.id);
+    notes.push(unlockNote(rival));
+  }
+  saveProfile(p);
+  return { rewards, notes };
+}
+
+// Si la sesión se cierra en otra pestaña o caduca, volver a la pantalla de entrada.
+supabase?.auth.onAuthStateChange(event => {
+  if (event === 'SIGNED_OUT' && profile) { profile = null; void boot(); }
+});
+
 window.addEventListener('hashchange', route);
-route();
+void boot();

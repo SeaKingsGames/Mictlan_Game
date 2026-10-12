@@ -1,9 +1,9 @@
-import { nextAiIntent } from '../ai/aiPlayer.ts';
 import type { CardInstance } from '../core/CardInstance.ts';
 import { DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
 import { isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
 import { cardDb, fusionDb } from '../data/index.ts';
 import type { Duelist } from '../game/duelists.ts';
+import { aiStep } from '../game/replay.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
@@ -19,11 +19,19 @@ const albumKey = (a: number, b: number, r: number) => `${pairKey(a, b)}>${r}`;
 
 const ATTR: Record<string, string> = { sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra' };
 
+export interface DuelResult {
+  rewards: number[];      // cartas nuevas para mostrar
+  notes: string[];        // avisos (cacao ganado, desbloqueos…)
+  error?: string;         // si no se pudo guardar el resultado
+}
+
 export interface DuelSetup {
   playerDeck: number[];
   opponent: Duelist;
-  /** Se llama una vez al terminar. Regresa las cartas ganadas (para mostrarlas) y avisos extra. */
-  onFinish: (won: boolean) => { rewards: number[]; notes: string[] };
+  /** Semilla de cada duelo (en la nube la da el servidor). Si falla, se muestra el error. */
+  newSeed?: () => Promise<number>;
+  /** Se llama una vez al terminar con tus jugadas aceptadas. Regresa lo que ganaste. */
+  onFinish: (won: boolean, intents: readonly Intent[]) => DuelResult | Promise<DuelResult>;
   /** Volver al menú / campaña. */
   onExit: () => void;
 }
@@ -56,7 +64,10 @@ export class DuelView {
     'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'end' | 'surrender' | 'exit', HTMLButtonElement>;
   private readonly setup: DuelSetup;
-  private finished: { rewards: number[]; notes: string[] } | null = null;
+  private finished: DuelResult | null = null;
+  private finishing = false;
+  private intents: Intent[] = [];   // tus jugadas aceptadas (el servidor las vuelve a jugar)
+  private duelNo = 0;
 
   constructor(root: HTMLElement, setup: DuelSetup) {
     this.setup = setup;
@@ -131,7 +142,7 @@ export class DuelView {
     };
     this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit') };
     this.btn.exit.addEventListener('click', () => {
-      if (this.engine.state.winner !== null) { this.setup.onExit(); return; }
+      if (!this.engine || this.engine.state.winner !== null) { this.setup.onExit(); return; }
       if (!confirm('¿Salir del duelo? Cuenta como derrota.')) return;
       this.submit({ type: 'surrender', player: HUMAN });
       this.setup.onExit();
@@ -144,11 +155,12 @@ export class DuelView {
     this.btn.surrender.addEventListener('click', () => this.onSurrender());
     this.el.foe.addEventListener('click', () => this.onDirectAttack());
     this.el.mictlan.addEventListener('click', () => {
+      if (!this.engine) return;
       const top = this.engine.state.players[HUMAN].mictlan.at(-1);
       if (top) { this.inspected = top; this.render(); }
     });
 
-    this.newDuel();
+    void this.newDuel();
     // Solo en desarrollo (npm run dev): window.__duel para probar desde la consola
     if (import.meta.env.DEV) (window as unknown as { __duel: DuelView }).__duel = this;
   }
@@ -161,11 +173,24 @@ export class DuelView {
 
   // ---------------------------------------------------------------- flujo
 
-  private newDuel(): void {
+  private async newDuel(): Promise<void> {
+    const no = ++this.duelNo;
+    let seed: number;
+    try {
+      if (this.setup.newSeed) this.showOverlayMessage('Preparando el duelo…');
+      seed = this.setup.newSeed ? await this.setup.newSeed() : Math.floor(Math.random() * 2 ** 31);
+    } catch (e) {
+      this.showOverlayMessage(e instanceof Error ? e.message : String(e), true);
+      return;
+    }
+    if (no !== this.duelNo) return;
+    this.el.overlay.replaceChildren();
     this.album.clear();
     this.finished = null;
+    this.finishing = false;
+    this.intents = [];
     this.engine = new DuelEngine({
-      db: cardDb, decks: [this.setup.playerDeck, this.setup.opponent.deck], seed: Math.floor(Math.random() * 2 ** 31), firstPlayer: HUMAN,
+      db: cardDb, decks: [this.setup.playerDeck, this.setup.opponent.deck], seed, firstPlayer: HUMAN,
       fusion: fusionDb,
     });
     this.log = [];
@@ -186,6 +211,7 @@ export class DuelView {
       this.render();
       return;
     }
+    if (intent.player === HUMAN) this.intents.push(intent);
     this.message = '';
     this.selectedHand = [];
     if (intent.type !== 'changePosition') this.selectedAttacker = null;   // tras cambiar posición sigue elegido
@@ -204,8 +230,7 @@ export class DuelView {
         this.render();
         return;
       }
-      let result = this.engine.apply(nextAiIntent(s, AI, this.setup.opponent.level >= 2 ? fusionDb : undefined));
-      if (!result.ok) result = this.engine.apply({ type: 'endTurn', player: AI }); // nunca atorarse
+      const result = aiStep(this.engine, this.setup.opponent, fusionDb);   // la misma IA que repite el servidor
       if (result.ok) this.record(result.events);
       this.render();
       // Si el rival fusionó, espera a que se vea la fusión antes de seguir.
@@ -515,7 +540,19 @@ export class DuelView {
     this.el.overlay.hidden = winner === null;
     if (winner === null) return;
     const won = winner === HUMAN;
-    if (!this.finished) this.finished = this.setup.onFinish(won);   // una sola vez por duelo
+    if (!this.finishing) {                                          // una sola vez por duelo
+      this.finishing = true;
+      const engine = this.engine;
+      Promise.resolve()
+        .then(() => this.setup.onFinish(won, [...this.intents]))
+        .catch((e: unknown) => ({ rewards: [], notes: [], error: e instanceof Error ? e.message : String(e) }))
+        .then(result => {
+          if (engine !== this.engine) return;                        // ya empezó otro duelo
+          this.finished = result;
+          this.el.overlay.replaceChildren();
+          this.render();
+        });
+    }
     if (this.el.overlay.childElementCount) return;                  // ya está dibujado
 
     const box = document.createElement('div');
@@ -524,6 +561,20 @@ export class DuelView {
     title.className = `overlay__title ${won ? 'win' : 'lose'}`;
     title.textContent = won ? '¡Victoria!' : 'Derrota';
     box.append(title);
+    if (!this.finished) {
+      const p = document.createElement('p');
+      p.className = 'overlay__note';
+      p.textContent = 'Guardando resultado…';
+      box.append(p);
+      this.el.overlay.replaceChildren(box);
+      return;
+    }
+    if (this.finished.error) {
+      const p = document.createElement('p');
+      p.className = 'overlay__note overlay__note--error';
+      p.textContent = this.finished.error;
+      box.append(p);
+    }
     if (this.finished.rewards.length) {
       const label = document.createElement('p');
       label.className = 'overlay__label';
@@ -547,7 +598,7 @@ export class DuelView {
     const again = document.createElement('button');
     again.className = 'tag-btn';
     again.textContent = 'Revancha';
-    again.addEventListener('click', () => { this.el.overlay.replaceChildren(); this.newDuel(); });
+    again.addEventListener('click', () => { this.el.overlay.replaceChildren(); void this.newDuel(); });
     const back = document.createElement('button');
     back.className = 'end-btn';
     back.textContent = 'Continuar';
@@ -555,6 +606,28 @@ export class DuelView {
     buttons.append(again, back);
     box.append(buttons);
     this.el.overlay.replaceChildren(box);
+  }
+
+  /** Mensaje a pantalla completa (preparando / error al empezar). */
+  private showOverlayMessage(text: string, withExit = false): void {
+    const box = document.createElement('div');
+    box.className = 'overlay__box';
+    const p = document.createElement('p');
+    p.className = `overlay__note${withExit ? ' overlay__note--error' : ''}`;
+    p.textContent = text;
+    box.append(p);
+    if (withExit) {
+      const back = document.createElement('button');
+      back.className = 'end-btn';
+      back.textContent = 'Volver';
+      back.addEventListener('click', () => this.setup.onExit());
+      const row = document.createElement('div');
+      row.className = 'overlay__buttons';
+      row.append(back);
+      box.append(row);
+    }
+    this.el.overlay.replaceChildren(box);
+    this.el.overlay.hidden = false;
   }
 
   private renderAlbum(): void {

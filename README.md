@@ -1,7 +1,7 @@
 # Cartas — juego de cartas prehispánico
 
 Juego de cartas estilo Yu-Gi-Oh! Forbidden Memories con mitología prehispánica.
-Stack: TypeScript + Vite + HTML/CSS · Supabase (después) · Vercel.
+Stack: TypeScript + Vite + HTML/CSS · Supabase (cuentas y premios, ver `GUIA_SUPABASE.md`) · Vercel.
 
 ## Comandos
 

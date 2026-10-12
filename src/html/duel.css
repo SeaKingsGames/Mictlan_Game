@@ -352,3 +352,4 @@ button.pl { cursor: default; }
   .rotate-hint p { margin: 0; }
   .rotate-hint .tag-btn { font-size: 14px; padding: 10px 16px; }
 }
+.overlay__note--error { color: #ff9a7a; }

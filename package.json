@@ -8,11 +8,16 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:server": "esbuild src/server/rules.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/_shared/game.js --banner:js=\"/* @ts-self-types=\\\"./game.d.ts\\\" */ // GENERADO por 'npm run build:server'. No lo edites a mano.\" && node -e \"require('fs').copyFileSync('src/server/game.d.ts','supabase/functions/_shared/game.d.ts')\""
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3"
   }
 }

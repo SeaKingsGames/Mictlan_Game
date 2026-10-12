@@ -88,3 +88,18 @@
   .deck-panel { position: static; max-height: none; }
   .collection { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); --card-w: 104px; }
 }
+
+/* ---------- Cuenta ---------- */
+.account-bar { position: absolute; top: 14px; right: 16px; left: 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: flex-end; align-items: center; font-size: 15px; }
+.account-bar__who { color: var(--ink-soft); margin-right: auto; }
+.wallet { background: #1f1915; border: 1px solid #4a3f36; border-radius: 999px; padding: 4px 12px; font-weight: 700; color: #e8c890; }
+.wallet--jade { color: #6fd6a8; }
+.menu { position: relative; }
+.login__form { display: flex; flex-direction: column; gap: 10px; width: min(360px, 100%); }
+.login__form input { font: 16px system-ui, sans-serif; padding: 12px 14px; border-radius: 8px; border: 1px solid #4a3f36; background: #15110e; color: var(--ink); }
+.login__form input:focus { outline: 2px solid #e8a33d; border-color: transparent; }
+.login__status { min-height: 1.4em; margin: 2px 0 0; color: var(--ink-soft); font-size: 14px; }
+.login__status--error { color: #ff9a7a; }
+.login__guest { display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(360px, 100%); margin-top: 12px; }
+.login__guest .big-btn { width: 100%; }
+.login__fine { color: var(--ink-soft); font-size: 13px; margin: 0; }
