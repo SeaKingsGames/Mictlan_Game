@@ -10,6 +10,7 @@ export interface PlayerState {
   deck: CardInstance[];
   hand: CardInstance[];
   field: (CardInstance | null)[];   // 5 zonas de monstruo
+  support: (CardInstance | null)[]; // 5 zonas de apoyo (trampas boca abajo)
   mictlan: CardInstance[];          // cementerio
 }
 
@@ -18,7 +19,9 @@ export interface DuelState {
   turnPlayer: PlayerIndex;
   turn: number;                     // 1, 2, 3... (contando ambos jugadores)
   phase: Phase;
-  hasPlayedThisTurn: boolean;       // como YGOFM: una jugada (carta o fusión) por turno
+  /** Por turno: primero (opcional) UNA mágica/equipo/trampa, y luego UN monstruo o fusión. */
+  supportUsedThisTurn: boolean;
+  monsterPlayedThisTurn: boolean;   // después de bajar monstruo ya no se usan mágicas ni trampas
   winner: PlayerIndex | null;
 }
 
@@ -33,7 +36,8 @@ export type Intent =
       faceDown?: boolean;
       fusionChoices?: number[];     // IDs de carta elegidos cuando una fusión tiene varias opciones
     }
-  | { type: 'activate'; player: PlayerIndex; handId: number; targetId?: number }   // mágica o equipo
+  | { type: 'activate'; player: PlayerIndex; handId: number; targetId?: number; slot?: number }  // mágica, equipo o trampa
+  | { type: 'changePosition'; player: PlayerIndex; instanceId: number }
   | { type: 'attack'; player: PlayerIndex; attackerId: number; targetId: number | null }
   | { type: 'endTurn'; player: PlayerIndex }
   | { type: 'surrender'; player: PlayerIndex };   // se puede en cualquier turno
@@ -52,6 +56,10 @@ export type DuelEvent =
   | { type: 'healed'; player: PlayerIndex; amount: number; lifeAfter: number }
   | { type: 'revived'; instanceId: number; slot: number }
   | { type: 'timeChanged'; night: boolean }
+  | { type: 'trapSet'; player: PlayerIndex; slot: number; instanceId: number }   // la UI la oculta al rival
+  | { type: 'trapActivated'; player: PlayerIndex; instanceId: number; attackerId: number }
+  | { type: 'attackNegated'; attackerId: number }
+  | { type: 'positionChanged'; instanceId: number; position: BattlePosition; flipped: boolean }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'attackDeclared'; attackerId: number; targetId: number | null }
   | { type: 'flipped'; instanceId: number }

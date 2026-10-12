@@ -184,7 +184,7 @@ describe('fusión con varias opciones', () => {
     const r = e.apply({ type: 'play', player: 0, handIds: [ma.instanceId, te.instanceId], slot: 0, position: 'attack', fusionChoices: [8] });
     expect(r.ok).toBe(false);
     expect(e.state.players[0].hand).toHaveLength(5);
-    expect(e.state.hasPlayedThisTurn).toBe(false);
+    expect(e.state.monsterPlayedThisTurn).toBe(false);
   });
 });
 

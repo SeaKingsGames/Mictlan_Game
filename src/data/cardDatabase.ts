@@ -53,7 +53,7 @@ function validateCard(c: CardDef): string[] {
   if (!c.name?.trim()) p.push('falta nombre');
   if (c.atk < 0 || c.def < 0) p.push('ATK/DEF no pueden ser negativos');
   for (const t of c.tags) if (!CARD_TAGS.includes(t)) p.push(`etiqueta desconocida "${t}"`);
-  const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive'];
+  const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive', 'negateAttack'];
   const conditionTypes = ['isNight', 'isDay', 'lifeBelow', 'hasTagOnField', 'opponentHasMoreMonsters'];
   for (const e of c.effects ?? []) {
     if (!EFFECT_TRIGGERS.includes(e.trigger)) p.push(`efecto con trigger desconocido "${e.trigger}"`);
@@ -68,6 +68,9 @@ function validateCard(c: CardDef): string[] {
   }
   if ((c.type === 'spell' || c.type === 'equip') && !(c.effects ?? []).some(e => e.trigger === 'onActivate')) {
     p.push('las mágicas y equipos necesitan un efecto onActivate');
+  }
+  if (c.type === 'trap' && !(c.effects ?? []).some(e => e.trigger === 'onOpponentAttack')) {
+    p.push('las trampas necesitan un efecto onOpponentAttack');
   }
   return p;
 }

@@ -13,35 +13,16 @@ export function nextAiIntent(state: DuelState, me: PlayerIndex, fusion?: FusionR
   const foeMonsters = foe.field.filter((c): c is CardInstance => c !== null);
   const strongestFoeAtk = Math.max(0, ...foeMonsters.filter(c => !c.faceDown && c.position === 'attack').map(c => c.atk));
 
-  // 1) Fase principal: una jugada por turno (monstruo, fusión, mágica o equipo).
-  if (state.phase === 'main' && !state.hasPlayedThisTurn && mine.hand.length > 0) {
+  // 1) Fase principal. Orden de la regla: primero (opcional) una mágica/trampa, luego un monstruo.
+  if (state.phase === 'main' && mine.hand.length > 0) {
     const myMonsters = mine.field.filter((c): c is CardInstance => c !== null);
-    const myStrongest = Math.max(0, ...myMonsters.map(c => c.atk));
-    const monsterPlay = chooseMonsterPlay(mine.hand, mine.field, strongestFoeAtk, me, fusion);
-    const spells = mine.hand.filter(c => c.def.type === 'spell' || c.def.type === 'equip');
-    const kind = (c: CardInstance) => spellKind(c);
-    const activate = (c: CardInstance, targetId?: number): Intent => ({ type: 'activate', player: me, handId: c.instanceId, targetId });
-    const equipTarget = [...myMonsters].sort((a, b) => b.atk - a.atk)[0];
+    const monsterPlay = state.monsterPlayedThisTurn ? null : chooseMonsterPlay(mine.hand, mine.field, strongestFoeAtk, me, fusion);
 
-    // a) Un monstruo que mejore el campo
-    if (monsterPlay && (monsterPlay.atk > myStrongest || myMonsters.length < 2)) return monsterPlay.intent;
-    // b) Equipo al monstruo más fuerte
-    const equip = spells.find(c => kind(c) === 'equip');
-    if (equip && equipTarget) return activate(equip, equipTarget.instanceId);
-    // c) Daño directo
-    const dmg = spells.find(c => kind(c) === 'damage');
-    if (dmg) return activate(dmg);
-    // d) Curarse si va perdiendo vida
-    const heal = spells.find(c => kind(c) === 'heal');
-    if (heal && mine.life < 6000) return activate(heal);
-    // e) Subir ATK antes de atacar
-    const buff = spells.find(c => kind(c) === 'buff');
-    if (buff && myMonsters.some(c => c.position === 'attack') && (state.turn > 1 || FIRST_TURN_CAN_ATTACK)) return activate(buff);
-    // f) Cualquier monstruo
+    if (!state.supportUsedThisTurn && !state.monsterPlayedThisTurn) {
+      const support = chooseSupportPlay(state, me, myMonsters, monsterPlay !== null);
+      if (support) return support;
+    }
     if (monsterPlay) return monsterPlay.intent;
-    // g) Para no atorarse con la mano llena de mágicas
-    const any = spells.find(c => kind(c) !== 'equip') ?? (equipTarget ? equip : undefined);
-    if (any) return activate(any, kind(any) === 'equip' ? equipTarget?.instanceId : undefined);
   }
 
   // 2) Batalla: atacar donde gane.
@@ -109,9 +90,39 @@ function chooseMonsterPlay(
   };
 }
 
-/** Qué hace una mágica o equipo, para que la IA decida cuándo usarla. */
-function spellKind(card: CardInstance): 'equip' | 'damage' | 'heal' | 'buff' | 'other' {
+/** Mágica, equipo o trampa que conviene usar ahora (antes de bajar monstruo), o null. */
+function chooseSupportPlay(state: DuelState, me: PlayerIndex, myMonsters: CardInstance[], hasMonsterPlay: boolean): Intent | null {
+  const mine = state.players[me];
+  const cards = mine.hand.filter(c => c.def.type !== 'monster');
+  if (cards.length === 0) return null;
+  const activate = (c: CardInstance, targetId?: number): Intent => ({ type: 'activate', player: me, handId: c.instanceId, targetId });
+  const strongest = [...myMonsters].sort((a, b) => b.atk - a.atk)[0];
+  const canAttack = state.turn > 1 || FIRST_TURN_CAN_ATTACK;
+  const find = (k: ReturnType<typeof spellKind>) => cards.find(c => spellKind(c) === k);
+
+  const trap = find('trap');
+  if (trap && mine.support.some(c => c === null)) return activate(trap);
+  const equip = find('equip');
+  if (equip && strongest) return activate(equip, strongest.instanceId);
+  const dmg = find('damage');
+  if (dmg) return activate(dmg);
+  const heal = find('heal');
+  if (heal && mine.life < 6000) return activate(heal);
+  const buff = find('buff');
+  if (buff && canAttack && myMonsters.some(c => c.position === 'attack')) return activate(buff);
+  // Para no atorarse con la mano llena de mágicas: si no hay monstruo que bajar, usa cualquiera.
+  if (!hasMonsterPlay) {
+    const any = cards.find(c => spellKind(c) !== 'equip' && (spellKind(c) !== 'trap' || mine.support.some(z => z === null)))
+      ?? (strongest ? equip : undefined);
+    if (any) return activate(any, spellKind(any) === 'equip' ? strongest?.instanceId : undefined);
+  }
+  return null;
+}
+
+/** Qué hace una mágica, equipo o trampa, para que la IA decida cuándo usarla. */
+function spellKind(card: CardInstance): 'equip' | 'trap' | 'damage' | 'heal' | 'buff' | 'other' {
   if (card.def.type === 'equip') return 'equip';
+  if (card.def.type === 'trap') return 'trap';
   const actions = (card.def.effects ?? []).flatMap(e => e.actions);
   if (actions.some(a => a.type === 'damage' || a.type === 'destroy')) return 'damage';
   if (actions.some(a => a.type === 'heal')) return 'heal';

@@ -1,7 +1,7 @@
 // Tipos de datos de diseño (lo que en Unity eran ScriptableObjects).
 // Son de SOLO LECTURA en partida: lo que cambia vive en CardInstance.
 
-export type CardType = 'monster' | 'spell' | 'equip' | 'ritual';
+export type CardType = 'monster' | 'spell' | 'equip' | 'trap' | 'ritual';
 
 // Los 4 rumbos. Ventaja cíclica: sol > viento > agua > tierra > sol
 export type CardAttribute = 'sol' | 'viento' | 'agua' | 'tierra';
@@ -36,13 +36,14 @@ export const EFFECT_TRIGGERS = [
   'onTurnStart',     // al empezar el turno de su dueño, si está en el campo
   'continuous',      // mientras esté boca arriba en el campo (auras)
   'onActivate',      // mágicas y equipos: al jugarlas
+  'onOpponentAttack', // trampas: cuando el rival declara un ataque contra ti
 ] as const;
 export type EffectTrigger = (typeof EFFECT_TRIGGERS)[number];
 
 /** A quién afecta. Siempre relativo al dueño de la carta con el efecto. */
 export const EFFECT_TARGETS = [
   'self', 'equipTarget', 'allAllies', 'otherAllies', 'alliesWithTag', 'otherAlliesWithTag',
-  'allEnemies', 'highestAtkEnemy', 'lowestAtkEnemy',
+  'allEnemies', 'highestAtkEnemy', 'lowestAtkEnemy', 'attacker',
 ] as const;
 export type EffectTarget = (typeof EFFECT_TARGETS)[number];
 
@@ -60,13 +61,17 @@ export type EffectAction =
   | { type: 'heal'; amount: number }
   | { type: 'draw'; amount: number }
   | { type: 'destroy'; target: EffectTarget; tag?: CardTag }
-  | { type: 'revive'; tag?: CardTag };                  // el más fuerte de tu Mictlán (con esa etiqueta) vuelve al campo
+  | { type: 'revive'; tag?: CardTag }                   // el más fuerte de tu Mictlán (con esa etiqueta) vuelve al campo
+  | { type: 'negateAttack' };                           // trampas: el ataque no sucede
 
 export interface EffectDef {
   readonly trigger: EffectTrigger;
   readonly conditions?: readonly EffectCondition[];
   readonly actions: readonly EffectAction[];
 }
+
+/** Mágicas, equipos y trampas: van en la fila de apoyo (◈). */
+export const isSupportCard = (card: CardDef): boolean => card.type === 'spell' || card.type === 'equip' || card.type === 'trap';
 
 export const needsEquipTarget = (card: CardDef): boolean =>
   card.type === 'equip' ||

@@ -87,14 +87,21 @@ describe('efectos de monstruos', () => {
 });
 
 describe('mágicas y equipos', () => {
-  it('Temazcal cura 1000, va al Mictlán y cuenta como tu jugada del turno', () => {
+  it('Temazcal cura 1000 y va al Mictlán; después aún puedes bajar un monstruo, pero no otra mágica', () => {
     const e = duel([18, 9, 18, 9, 18, 9, 18, 9], many(9));
     const temazcal = inHand(e, 0, 18);
     ok(e.apply({ type: 'activate', player: 0, handId: temazcal.instanceId }));
     expect(e.state.players[0].life).toBe(START_LIFE + 1000);
     expect(e.state.players[0].mictlan).toContain(temazcal);
-    const again = e.apply({ type: 'play', player: 0, handIds: [inHand(e, 0, 9).instanceId], slot: 0, position: 'attack' });
-    expect(again.ok).toBe(false);
+    expect(e.apply({ type: 'activate', player: 0, handId: inHand(e, 0, 18).instanceId }).ok).toBe(false);
+    play(e, 0, 9, 0);
+  });
+
+  it('después de bajar un monstruo ya no se puede usar mágica', () => {
+    const e = duel([18, 9, 18, 9, 18, 9, 18, 9], many(9));
+    play(e, 0, 9, 0);
+    expect(e.apply({ type: 'activate', player: 0, handId: inHand(e, 0, 18).instanceId }).ok).toBe(false);
+    expect(e.apply({ type: 'play', player: 0, handIds: [inHand(e, 0, 9).instanceId], slot: 1, position: 'attack' }).ok).toBe(false);
   });
 
   it('Macuahuitl da +500 ATK permanente al monstruo equipado y pide objetivo', () => {
@@ -113,6 +120,67 @@ describe('mágicas y equipos', () => {
     const e = duel([18, 9, 18, 9, 18, 9], many(9));
     const r = e.apply({ type: 'play', player: 0, handIds: [inHand(e, 0, 9).instanceId, inHand(e, 0, 18).instanceId], slot: 0, position: 'attack' });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('trampas', () => {
+  // P0 pone la trampa en el turno 1; P1 baja Quetzalcóatl (3000) y ataca a Cipactli en el turno 2
+  function trapDuel(trapId: number) {
+    const e = duel([trapId, 13, trapId, 13, trapId, 13, trapId, 13], many(8));
+    ok(e.apply({ type: 'activate', player: 0, handId: inHand(e, 0, trapId).instanceId }));
+    play(e, 0, 13, 0);
+    pass(e);
+    play(e, 1, 8, 0);
+    const events = ok(e.apply({ type: 'attack', player: 1, attackerId: field(e, 1, 0).instanceId, targetId: field(e, 0, 0).instanceId }));
+    return { e, events };
+  }
+
+  it('la trampa queda boca abajo en tu fila de apoyo', () => {
+    const e = duel([23, 13, 23, 13, 23, 13], many(9));
+    ok(e.apply({ type: 'activate', player: 0, handId: inHand(e, 0, 23).instanceId }));
+    expect(e.state.players[0].support[0]?.faceDown).toBe(true);
+  });
+
+  it('Fosa de estacas destruye al atacante', () => {
+    const { e, events } = trapDuel(23);
+    expect(events.some(ev => ev.type === 'trapActivated')).toBe(true);
+    expect(e.state.players[1].field[0]).toBeNull();
+    expect(field(e, 0, 0).def.id).toBe(13);          // Cipactli sobrevive
+    expect(e.state.players[0].support.every(c => c === null)).toBe(true);
+  });
+
+  it('Niebla de Tláloc detiene el ataque', () => {
+    const { e, events } = trapDuel(24);
+    expect(events.some(ev => ev.type === 'attackNegated')).toBe(true);
+    expect(field(e, 0, 0).def.id).toBe(13);
+    expect(e.state.players[0].life).toBe(START_LIFE);
+  });
+
+  it('Espejo humeante baja 800 ATK al atacante antes del combate', () => {
+    const { e } = trapDuel(25);   // 3000 - 800 = 2200 contra Cipactli 1500 → 700 de daño
+    expect(e.state.players[0].life).toBe(START_LIFE - 700);
+  });
+});
+
+describe('cambiar posición', () => {
+  it('una vez por turno; boca abajo se voltea y activa su efecto', () => {
+    const e = duel(many(5), many(9));
+    ok(e.apply({ type: 'play', player: 0, handIds: [inHand(e, 0, 5).instanceId], slot: 0, position: 'defense', faceDown: true }));
+    pass(e); pass(e);
+    const card = field(e, 0, 0);
+    const events = ok(e.apply({ type: 'changePosition', player: 0, instanceId: card.instanceId }));
+    expect(card.position).toBe('attack');
+    expect(card.faceDown).toBe(false);
+    expect(events.some(ev => ev.type === 'damage')).toBe(true);   // Xiuhcóatl al voltearse
+    expect(e.apply({ type: 'changePosition', player: 0, instanceId: card.instanceId }).ok).toBe(false);
+  });
+
+  it('no después de atacar', () => {
+    const e = duel(many(13), many(9));
+    play(e, 0, 13, 0);
+    pass(e); pass(e);
+    ok(e.apply({ type: 'attack', player: 0, attackerId: field(e, 0, 0).instanceId, targetId: null }));
+    expect(e.apply({ type: 'changePosition', player: 0, instanceId: field(e, 0, 0).instanceId }).ok).toBe(false);
   });
 });
 

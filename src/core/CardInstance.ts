@@ -26,6 +26,8 @@ export class CardInstance {
   position: BattlePosition = 'attack';
   faceDown = false;
   hasAttackedThisTurn = false;
+  positionChangedThisTurn = false;
+  summonedThisTurn = false;
 
   private modifiers: StatModifier[] = [];
 
@@ -65,6 +67,8 @@ export class CardInstance {
     this.fieldSlot = -1;
     this.faceDown = false;
     this.hasAttackedThisTurn = false;
+    this.positionChangedThisTurn = false;
+    this.summonedThisTurn = false;
     this.position = 'attack';
   }
 

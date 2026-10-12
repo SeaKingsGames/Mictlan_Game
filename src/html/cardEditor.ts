@@ -6,6 +6,7 @@ import fusionsJson from '../data/fusions.json';
 import { CardDatabase } from '../data/cardDatabase.ts';
 import { CARD_TAGS, type CardAttribute, type CardDef, type CardTag, type CardType } from '../data/types.ts';
 import { createCardElement } from './cardElement.ts';
+import { renderEffectEditor, type EditableEffect } from './effectEditor.ts';
 
 /**
  * Editor de cartas: abre /editor-cartas.html con `npm run dev`.
@@ -27,7 +28,7 @@ const ATTRIBUTES: { value: CardAttribute; label: string; color: string }[] = [
 ];
 const TYPES: { value: CardType; label: string }[] = [
   { value: 'monster', label: 'Monstruo' }, { value: 'spell', label: 'Mágica' },
-  { value: 'equip', label: 'Equipo' }, { value: 'ritual', label: 'Ritual' },
+  { value: 'equip', label: 'Equipo' }, { value: 'trap', label: 'Trampa' },
 ];
 
 const original = (cardsJson as CardDef[]).map(c => ({ ...c, tags: [...c.tags] }) as MutableCard);
@@ -124,6 +125,7 @@ app.append(h('main', { class: 'editor' },
     h('aside', { class: 'box ce-list', id: 'list' }),
     h('section', { class: 'col' },
       h('div', { class: 'box', id: 'form' }),
+      h('div', { class: 'box', id: 'effects' }),
       h('div', { class: 'box', id: 'art' }),
     ),
     h('aside', { class: 'ce-side' },
@@ -215,7 +217,7 @@ function renderForm(): void {
     h('h2', {}, `Carta #${c.id}`),
     h('div', { class: 'form' },
       text('name', 'Nombre'),
-      select('Tipo', TYPES, c.type, v => { c.type = v; }),
+      select('Tipo', TYPES, c.type, v => { c.type = v; renderEffects(); }),
       text('description', 'Descripción', true),
       select('Atributo', ATTRIBUTES, c.attribute, v => { c.attribute = v; }),
       h('span', {}),
@@ -423,10 +425,22 @@ function renderSide(): void {
   );
 }
 
+function renderEffects(): void {
+  const c = selected();
+  if (!c) { $('effects').replaceChildren(); return; }
+  const editable = c as unknown as { type: CardType; description: string; effects?: EditableEffect[] };
+  renderEffectEditor($('effects'), editable, () => {
+    if (editable.effects && editable.effects.length === 0) delete editable.effects;
+    changed();
+    renderForm();
+  });
+}
+
 function renderAll(): void {
   cropImage = null;
   renderList();
   renderForm();
+  renderEffects();
   renderArt();
   renderPreview();
   renderSide();

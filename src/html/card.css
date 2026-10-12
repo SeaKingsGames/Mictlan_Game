@@ -92,6 +92,8 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
 .stat--type { width: 100%; text-align: center; letter-spacing: .15em; text-transform: uppercase; color: #cfe8ff; }
 .card[data-type="spell"] .card__head, .card[data-type="equip"] .card__head { background: #2f7a6c; color: #f3e7d3; }
 .card[data-type="spell"], .card[data-type="equip"] { --c: #2f9c88; }
+.card[data-type="trap"] { --c: #a04b8c; }
+.card[data-type="trap"] .card__head { background: #7a3569; color: #f3e7d3; }
 .stat--down { color: #ff7a6b; }
 
 .card__badge {

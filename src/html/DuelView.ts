@@ -1,9 +1,10 @@
 import { nextAiIntent } from '../ai/aiPlayer.ts';
 import type { BattlePosition, CardInstance } from '../core/CardInstance.ts';
-import { DuelEngine } from '../core/DuelEngine.ts';
-import { FIELD_SLOTS, isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
+import { DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
+import { isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
 import { cardDb, fusionDb, getDeck } from '../data/index.ts';
-import { START_LIFE, needsEquipTarget, type CardDef } from '../data/types.ts';
+import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
+import { describeEffects } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
 
 const HUMAN: PlayerIndex = 0;
@@ -11,30 +12,9 @@ const AI: PlayerIndex = 1;
 const AI_STEP_MS = 750;
 const FUSION_SHOW_MS = 2200;
 
-const ALBUM_KEY = 'cartas.fusiones.v2';
-
-/** Fusiones descubiertas: "idA+idB>idResultado" (A y B ordenados). Se guardan en el navegador. */
-function loadAlbum(): Set<string> {
-  try {
-    const raw = localStorage.getItem(ALBUM_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-  } catch { return new Set(); }
-}
-function saveAlbum(album: Set<string>): void {
-  try { localStorage.setItem(ALBUM_KEY, JSON.stringify([...album])); } catch { /* sin almacenamiento: no pasa nada */ }
-}
+/** Fusiones vistas en ESTE duelo (tuyas y del rival): "idA+idB>idResultado". Se reinicia cada duelo. */
 const pairKey = (a: number, b: number) => (a < b ? `${a}+${b}` : `${b}+${a}`);
 const albumKey = (a: number, b: number, r: number) => `${pairKey(a, b)}>${r}`;
-
-/** Cuántas fusiones distintas (pareja → resultado) existen con las cartas actuales. */
-const TOTAL_FUSIONS = (() => {
-  const monsters = cardDb.all().filter(c => c.type === 'monster');
-  let n = 0;
-  for (let i = 0; i < monsters.length; i++) {
-    for (let j = i; j < monsters.length; j++) n += fusionDb.fusionOptions(monsters[i], monsters[j]).length;
-  }
-  return n;
-})();
 
 const ATTR: Record<string, string> = { sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra' };
 
@@ -57,7 +37,7 @@ export class DuelView {
   private fusionQueue: { player: PlayerIndex; a: CardDef; b: CardDef; r: CardDef }[] = [];
   private fusionShowing = false;
   private fusionTimer = 0;
-  private readonly album = loadAlbum();
+  private readonly album = new Set<string>();
   private surrenderArmed = false;
   private surrenderTimer = 0;
 
@@ -81,7 +61,7 @@ export class DuelView {
               <ol class="log" data-ref="log"></ol>
             </div>
             <div class="inspector__log" data-ref="albumPanel" hidden>
-              <h2>Fusiones descubiertas <small data-ref="albumCount"></small></h2>
+              <h2>Fusiones del duelo <small data-ref="albumCount"></small></h2>
               <ol class="log album" data-ref="album"></ol>
             </div>
             <p class="status" data-ref="status" role="status"></p>
@@ -160,6 +140,7 @@ export class DuelView {
   // ---------------------------------------------------------------- flujo
 
   private newDuel(): void {
+    this.album.clear();
     const deck = getDeck('prueba').cards;
     this.engine = new DuelEngine({
       db: cardDb, decks: [deck, deck], seed: Math.floor(Math.random() * 2 ** 31), firstPlayer: HUMAN,
@@ -235,12 +216,18 @@ export class DuelView {
   /** La carta elegida si es mágica o equipo. */
   private selectedSpell(): CardInstance | undefined {
     const c = this.selectedHand.length === 1 ? this.handCard(this.selectedHand[0]) : undefined;
-    return c && c.def.type !== 'monster' ? c : undefined;
+    return c && isSupportCard(c.def) ? c : undefined;
   }
 
-  private onSupportSlot(): void {
+  private onSupportSlot(slot: number): void {
+    const own = this.engine.state.players[HUMAN].support[slot];
+    if (own) { this.inspected = own; this.render(); }
     const spell = this.selectedSpell();
     if (!this.isMyTurn() || !spell) return;
+    if (spell.def.type === 'trap') {
+      this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId, slot });
+      return;
+    }
     if (needsEquipTarget(spell.def)) {
       this.message = 'Toca uno de tus monstruos para equiparlo.';
       this.render();
@@ -258,7 +245,7 @@ export class DuelView {
       if (needsEquipTarget(spell.def) && card) {
         this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId, targetId: card.instanceId });
       } else if (!needsEquipTarget(spell.def)) {
-        this.message = 'Las mágicas se activan en tus zonas de abajo (◈).';
+        this.message = 'Las mágicas y trampas van en tus zonas de abajo (◈).';
         this.render();
       }
       return;
@@ -310,7 +297,9 @@ export class DuelView {
     const me = s.players[HUMAN];
     const foe = s.players[AI];
     const myTurn = this.isMyTurn();
-    const canDirect = myTurn && this.selectedAttacker !== null && foe.field.every(c => c === null);
+    const attackerSel = me.field.find(c => c?.instanceId === this.selectedAttacker);
+    const canAttackNow = s.turn > 1 || FIRST_TURN_CAN_ATTACK;
+    const canDirect = myTurn && canAttackNow && attackerSel?.position === 'attack' && !attackerSel.hasAttackedThisTurn && foe.field.every(c => c === null);
 
     // Barra central
     this.el.me.replaceChildren(...this.playerBar('Tú', HUMAN, `Mano ${me.hand.length}`));
@@ -331,14 +320,14 @@ export class DuelView {
     const equipping = !!spell && needsEquipTarget(spell.def);
     this.el.myField.classList.toggle('zones--placing', myTurn && this.selectedHand.length > 0 && !spell);
     this.el.myField.classList.toggle('zones--equipping', equipping);
-    this.el.mySupport.replaceChildren(...Array.from({ length: FIELD_SLOTS }, () => this.supportZone(true)));
-    this.el.foeSupport.replaceChildren(...Array.from({ length: FIELD_SLOTS }, () => this.supportZone(false)));
+    this.el.mySupport.replaceChildren(...me.support.map((c, i) => this.supportZone(c, true, i)));
+    this.el.foeSupport.replaceChildren(...foe.support.map((c, i) => this.supportZone(c, false, i)));
     this.el.mySupport.classList.toggle('zones--placing', !!spell && !equipping);
     const night = isNightTurn(s.turn);
     this.el.emblem.textContent = night ? '☾' : '☀';
     this.el.emblem.title = night ? 'Noche' : 'Día';
     this.el.emblem.classList.toggle('emblem--night', night);
-    this.el.foeField.classList.toggle('zones--targeting', myTurn && this.selectedAttacker !== null);
+    this.el.foeField.classList.toggle('zones--targeting', myTurn && canAttackNow && attackerSel?.position === 'attack' && !attackerSel.hasAttackedThisTurn);
 
     // Mano propia
     this.el.hand.replaceChildren(...me.hand.map(card => {
@@ -415,13 +404,19 @@ export class DuelView {
     return [slot, name];
   }
 
-  private supportZone(mine: boolean): HTMLElement {
+  private supportZone(card: CardInstance | null, mine: boolean, slot: number): HTMLElement {
     const zone = document.createElement(mine ? 'button' : 'div');
     zone.className = 'zone zone--support';
     if (mine) {
       (zone as HTMLButtonElement).type = 'button';
-      zone.setAttribute('aria-label', 'Zona de mágicas');
-      zone.addEventListener('click', () => this.onSupportSlot());
+      zone.setAttribute('aria-label', card ? 'Tu trampa boca abajo' : 'Zona de mágicas y trampas');
+      zone.addEventListener('click', () => this.onSupportSlot(slot));
+    }
+    if (card) {
+      // Trampa boca abajo: el rival solo ve el dorso; tú la ves atenuada.
+      const el = createCardElement(card, { hidden: !mine, faceDownOwn: mine });
+      if (mine) el.addEventListener('mouseenter', () => this.inspect(card));
+      zone.append(el);
     }
     return zone;
   }
@@ -445,7 +440,23 @@ export class DuelView {
     });
     if (!hidden) el.addEventListener('mouseenter', () => this.inspect(card));
     zone.append(el);
+    if (mine && card.instanceId === this.selectedAttacker && this.canChangePosition(card)) {
+      const bubble = document.createElement('span');
+      bubble.className = 'pos-bubble';
+      bubble.setAttribute('role', 'button');
+      bubble.title = card.position === 'attack' ? 'Pasar a defensa' : 'Pasar a ataque';
+      bubble.textContent = card.position === 'attack' ? '⛨' : '⚔';
+      bubble.addEventListener('click', ev => {
+        ev.stopPropagation();
+        this.submit({ type: 'changePosition', player: HUMAN, instanceId: card.instanceId });
+      });
+      zone.append(bubble);
+    }
     return zone;
+  }
+
+  private canChangePosition(card: CardInstance): boolean {
+    return this.isMyTurn() && this.engine.state.phase === 'main' && !card.positionChangedThisTurn && !card.hasAttackedThisTurn;
   }
 
   private inspect(card: CardInstance): void {
@@ -467,12 +478,15 @@ export class DuelView {
     this.el.inspectorInfo.innerHTML = `
       <h3 class="inspector__name"></h3>
       <p class="inspector__meta"></p>
-      <p class="inspector__stats">${card.def.type === 'monster' ? `<b>ATK ${card.atk}</b><b>DEF ${card.defense}</b>` : `<b>${card.def.type === 'equip' ? 'Equipo' : 'Mágica'}</b>`}</p>
+      <p class="inspector__stats">${card.def.type === 'monster' ? `<b>ATK ${card.atk}</b><b>DEF ${card.defense}</b>` : `<b>${{ spell: 'Mágica', equip: 'Equipo', trap: 'Trampa', ritual: 'Ritual', monster: '' }[card.def.type]}</b>`}</p>
       <p class="inspector__desc"></p>
+      <p class="inspector__effect"></p>
       <p class="inspector__where"></p>`;
     this.el.inspectorInfo.querySelector('.inspector__name')!.textContent = card.def.name;
     this.el.inspectorInfo.querySelector('.inspector__meta')!.textContent = [ATTR[card.def.attribute], ...card.def.tags].join(' · ');
     this.el.inspectorInfo.querySelector('.inspector__desc')!.textContent = card.def.description;
+    const fx = describeEffects(card.def.effects);
+    this.el.inspectorInfo.querySelector('.inspector__effect')!.textContent = fx ? `Efecto: ${fx}` : '';
     this.el.inspectorInfo.querySelector('.inspector__where')!.textContent = where + pos;
   }
 
@@ -495,10 +509,10 @@ export class DuelView {
       const [ca, cb, cr] = [cardDb.tryGet(a), cardDb.tryGet(b), cardDb.tryGet(Number(r))];
       return ca && cb && cr ? [{ a: ca, b: cb, r: cr }] : [];
     }).sort((x, y) => y.r.atk - x.r.atk);
-    this.el.albumCount.textContent = `${items.length} de ${TOTAL_FUSIONS}`;
+    this.el.albumCount.textContent = `${items.length} en este duelo`;
     if (items.length === 0) {
       const li = document.createElement('li');
-      li.textContent = 'Todavía no descubres ninguna. Juega 2 o más cartas juntas, o mira las fusiones del rival.';
+      li.textContent = 'Aquí aparecen las fusiones de este duelo, tuyas y del rival.';
       this.el.album.replaceChildren(li);
       return;
     }
@@ -590,16 +604,27 @@ export class DuelView {
     if (this.aiThinking || s.turnPlayer === AI) return 'El rival está pensando...';
     if (this.selectedHand.length > 1) return this.chainPreview();
     const spell = this.selectedSpell();
-    if (spell) return needsEquipTarget(spell.def)
-      ? `Toca uno de tus monstruos para equiparle ${spell.def.name}.`
-      : `Toca una de tus zonas de abajo (◈) para activar ${spell.def.name}.`;
+    if (spell) {
+      if (s.monsterPlayedThisTurn) return 'Ya bajaste monstruo: las mágicas y trampas van antes del monstruo.';
+      if (s.supportUsedThisTurn) return 'Ya usaste una mágica o trampa este turno.';
+      if (spell.def.type === 'trap') return `Toca una de tus zonas de abajo (◈) para colocar ${spell.def.name} boca abajo.`;
+      return needsEquipTarget(spell.def)
+        ? `Toca uno de tus monstruos para equiparle ${spell.def.name}.`
+        : `Toca una de tus zonas de abajo (◈) para activar ${spell.def.name}.`;
+    }
     if (this.selectedHand.length === 1) return 'Toca una zona para jugarla, o elige más cartas para fusionar.';
     if (this.selectedAttacker !== null) {
-      return s.players[AI].field.every(c => c === null)
+      const sel = s.players[HUMAN].field.find(c => c?.instanceId === this.selectedAttacker);
+      const bubble = sel && this.canChangePosition(sel) ? ' El botón redondo cambia su posición.' : '';
+      if (sel?.position === 'defense') return `En defensa no puede atacar.${bubble}`;
+      if (s.turn === 1 && !FIRST_TURN_CAN_ATTACK) return `En el primer turno no se ataca.${bubble}`;
+      if (sel?.hasAttackedThisTurn) return 'Ese monstruo ya atacó este turno.';
+      return (s.players[AI].field.every(c => c === null)
         ? 'Toca la barra del rival para atacar directo.'
-        : 'Toca un monstruo rival para atacarlo.';
+        : 'Toca un monstruo rival para atacarlo.') + bubble;
     }
-    if (s.phase === 'main' && !s.hasPlayedThisTurn) return 'Elige una carta de tu mano.';
+    if (s.phase === 'main' && !s.monsterPlayedThisTurn && !s.supportUsedThisTurn) return 'Puedes usar una mágica o trampa y luego bajar un monstruo.';
+    if (s.phase === 'main' && !s.monsterPlayedThisTurn) return 'Ahora puedes bajar un monstruo o una fusión.';
     return 'Toca uno de tus monstruos para atacar, o termina el turno.';
   }
 
@@ -658,13 +683,14 @@ export class DuelView {
         const [a, b] = e.materialIds.map(id => this.engine.getCard(id)!.def);
         const result = this.engine.getCard(e.resultId)!;
         this.album.add(albumKey(a.id, b.id, result.def.id));
-        saveAlbum(this.album);
         this.inspected = result;
         this.fusionQueue.push({ player: e.player, a, b, r: result.def });
         this.showNextFusion();
       }
       if (e.type === 'effect') this.toast(`Efecto: ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
       if (e.type === 'timeChanged') this.toast(e.night ? 'Cae la noche ☾' : 'Sale el sol ☀');
+      if (e.type === 'trapActivated') this.toast(`¡Trampa! ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
+      if (e.type === 'attackNegated') this.toast('Ataque detenido');
       const line = this.describe(e);
       if (line) this.log.push(line);
     }
@@ -693,6 +719,10 @@ export class DuelView {
       case 'healed': return `${who(e.player)} recupera ${e.amount} PV (${e.lifeAfter} PV)`;
       case 'revived': return `${name(e.instanceId)} regresa del Mictlán`;
       case 'timeChanged': return e.night ? '☾ Cae la noche' : '☀ Sale el sol';
+      case 'trapSet': return e.player === HUMAN ? `Colocas ${name(e.instanceId)} boca abajo` : 'Rival coloca una trampa boca abajo';
+      case 'trapActivated': return `¡Trampa! ${name(e.instanceId)} responde al ataque de ${name(e.attackerId)}`;
+      case 'attackNegated': return `El ataque de ${name(e.attackerId)} se detiene`;
+      case 'positionChanged': return `${name(e.instanceId)} pasa a ${e.position === 'attack' ? 'ataque' : 'defensa'}${e.flipped ? ' (se voltea)' : ''}`;
       case 'gameOver': return `${who(e.winner)} gana${e.reason === 'deckOut' ? ' (mazo vacío)' : e.reason === 'surrender' ? ' (rendición)' : ''}`;
     }
   }

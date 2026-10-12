@@ -6,7 +6,7 @@ const ATTRIBUTE_LABEL: Record<CardAttribute, string> = {
 };
 
 const TYPE_LABEL: Record<CardDef['type'], string> = {
-  monster: 'Monstruo', spell: 'Mágica', equip: 'Equipo', ritual: 'Ritual',
+  monster: 'Monstruo', spell: 'Mágica', equip: 'Equipo', trap: 'Trampa', ritual: 'Ritual',
 };
 
 export interface CardElementOptions {
