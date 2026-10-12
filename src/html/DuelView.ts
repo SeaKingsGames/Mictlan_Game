@@ -1,9 +1,9 @@
 import { nextAiIntent } from '../ai/aiPlayer.ts';
 import type { BattlePosition, CardInstance } from '../core/CardInstance.ts';
 import { DuelEngine } from '../core/DuelEngine.ts';
-import { FIELD_SLOTS, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
+import { FIELD_SLOTS, isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
 import { cardDb, fusionDb, getDeck } from '../data/index.ts';
-import { START_LIFE, type CardDef } from '../data/types.ts';
+import { START_LIFE, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { createCardElement } from './cardElement.ts';
 
 const HUMAN: PlayerIndex = 0;
@@ -64,7 +64,7 @@ export class DuelView {
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow', HTMLElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
 
   constructor(root: HTMLElement) {
@@ -101,7 +101,7 @@ export class DuelView {
 
           <div class="lifebar">
             <div class="pl pl--me" data-ref="me"></div>
-            <div class="emblem" aria-hidden="true">✺</div>
+            <div class="emblem" data-ref="emblem"></div>
             <button class="pl pl--foe" data-ref="foe"></button>
           </div>
 
@@ -117,6 +117,7 @@ export class DuelView {
           </aside>
 
           <div class="chooser" data-ref="chooser" hidden></div>
+          <div class="toast" data-ref="toast" hidden></div>
           <div class="fusion-show" data-ref="fusionShow" hidden></div>
           <div class="overlay" data-ref="overlay" hidden></div>
         </div>
@@ -134,18 +135,10 @@ export class DuelView {
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
       myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
-      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'),
+      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'),
     };
     this.btn = { log: btn('log'), album: btn('album'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
 
-    // Zonas de apoyo (magia/equipo): decorativas hasta la Fase 3
-    for (const row of [this.el.foeSupport, this.el.mySupport]) {
-      for (let i = 0; i < FIELD_SLOTS; i++) {
-        const z = document.createElement('div');
-        z.className = 'zone zone--support';
-        row.append(z);
-      }
-    }
 
     this.btn.log.addEventListener('click', () => { this.showLog = !this.showLog; this.showAlbum = false; this.render(); });
     this.btn.album.addEventListener('click', () => { this.showAlbum = !this.showAlbum; this.showLog = false; this.render(); });
@@ -225,17 +218,51 @@ export class DuelView {
     this.inspected = card;
     if (!this.isMyTurn()) { this.render(); return; }
     const i = this.selectedHand.indexOf(card.instanceId);
+    const isSpell = card.def.type !== 'monster';
+    const hadSpell = this.selectedHand.some(id => this.handCard(id)?.def.type !== 'monster');
     if (i >= 0) this.selectedHand.splice(i, 1);
+    else if (isSpell || hadSpell) this.selectedHand = [card.instanceId];   // mágicas y equipos van solas
     else this.selectedHand.push(card.instanceId);
     this.selectedAttacker = null;
     this.message = '';
     this.render();
   }
 
+  private handCard(id: number): CardInstance | undefined {
+    return this.engine.state.players[HUMAN].hand.find(c => c.instanceId === id);
+  }
+
+  /** La carta elegida si es mágica o equipo. */
+  private selectedSpell(): CardInstance | undefined {
+    const c = this.selectedHand.length === 1 ? this.handCard(this.selectedHand[0]) : undefined;
+    return c && c.def.type !== 'monster' ? c : undefined;
+  }
+
+  private onSupportSlot(): void {
+    const spell = this.selectedSpell();
+    if (!this.isMyTurn() || !spell) return;
+    if (needsEquipTarget(spell.def)) {
+      this.message = 'Toca uno de tus monstruos para equiparlo.';
+      this.render();
+      return;
+    }
+    this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId });
+  }
+
   private onMySlot(slot: number): void {
     const card = this.engine.state.players[HUMAN].field[slot];
     if (card) this.inspected = card;
     if (!this.isMyTurn()) { this.render(); return; }
+    const spell = this.selectedSpell();
+    if (spell) {
+      if (needsEquipTarget(spell.def) && card) {
+        this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId, targetId: card.instanceId });
+      } else if (!needsEquipTarget(spell.def)) {
+        this.message = 'Las mágicas se activan en tus zonas de abajo (◈).';
+        this.render();
+      }
+      return;
+    }
     if (this.selectedHand.length > 0) {
       void this.playSelected(slot);
       return;
@@ -300,7 +327,17 @@ export class DuelView {
     // Campos
     this.el.foeField.replaceChildren(...foe.field.map((card, i) => this.zone(card, false, () => this.onFoeSlot(i))));
     this.el.myField.replaceChildren(...me.field.map((card, i) => this.zone(card, true, () => this.onMySlot(i))));
-    this.el.myField.classList.toggle('zones--placing', myTurn && this.selectedHand.length > 0);
+    const spell = myTurn ? this.selectedSpell() : undefined;
+    const equipping = !!spell && needsEquipTarget(spell.def);
+    this.el.myField.classList.toggle('zones--placing', myTurn && this.selectedHand.length > 0 && !spell);
+    this.el.myField.classList.toggle('zones--equipping', equipping);
+    this.el.mySupport.replaceChildren(...Array.from({ length: FIELD_SLOTS }, () => this.supportZone(true)));
+    this.el.foeSupport.replaceChildren(...Array.from({ length: FIELD_SLOTS }, () => this.supportZone(false)));
+    this.el.mySupport.classList.toggle('zones--placing', !!spell && !equipping);
+    const night = isNightTurn(s.turn);
+    this.el.emblem.textContent = night ? '☾' : '☀';
+    this.el.emblem.title = night ? 'Noche' : 'Día';
+    this.el.emblem.classList.toggle('emblem--night', night);
     this.el.foeField.classList.toggle('zones--targeting', myTurn && this.selectedAttacker !== null);
 
     // Mano propia
@@ -378,6 +415,17 @@ export class DuelView {
     return [slot, name];
   }
 
+  private supportZone(mine: boolean): HTMLElement {
+    const zone = document.createElement(mine ? 'button' : 'div');
+    zone.className = 'zone zone--support';
+    if (mine) {
+      (zone as HTMLButtonElement).type = 'button';
+      zone.setAttribute('aria-label', 'Zona de mágicas');
+      zone.addEventListener('click', () => this.onSupportSlot());
+    }
+    return zone;
+  }
+
   private zone(card: CardInstance | null, mine: boolean, onClick: () => void): HTMLElement {
     const zone = document.createElement('button');
     zone.type = 'button';
@@ -419,11 +467,11 @@ export class DuelView {
     this.el.inspectorInfo.innerHTML = `
       <h3 class="inspector__name"></h3>
       <p class="inspector__meta"></p>
-      <p class="inspector__stats"><b>ATK ${card.atk}</b><b>DEF ${card.defense}</b></p>
+      <p class="inspector__stats">${card.def.type === 'monster' ? `<b>ATK ${card.atk}</b><b>DEF ${card.defense}</b>` : `<b>${card.def.type === 'equip' ? 'Equipo' : 'Mágica'}</b>`}</p>
       <p class="inspector__desc"></p>
       <p class="inspector__where"></p>`;
     this.el.inspectorInfo.querySelector('.inspector__name')!.textContent = card.def.name;
-    this.el.inspectorInfo.querySelector('.inspector__meta')!.textContent = `${ATTR[card.def.attribute]} · ${card.def.tags.join(' · ')}`;
+    this.el.inspectorInfo.querySelector('.inspector__meta')!.textContent = [ATTR[card.def.attribute], ...card.def.tags].join(' · ');
     this.el.inspectorInfo.querySelector('.inspector__desc')!.textContent = card.def.description;
     this.el.inspectorInfo.querySelector('.inspector__where')!.textContent = where + pos;
   }
@@ -541,6 +589,10 @@ export class DuelView {
     if (s.winner !== null) return '';
     if (this.aiThinking || s.turnPlayer === AI) return 'El rival está pensando...';
     if (this.selectedHand.length > 1) return this.chainPreview();
+    const spell = this.selectedSpell();
+    if (spell) return needsEquipTarget(spell.def)
+      ? `Toca uno de tus monstruos para equiparle ${spell.def.name}.`
+      : `Toca una de tus zonas de abajo (◈) para activar ${spell.def.name}.`;
     if (this.selectedHand.length === 1) return 'Toca una zona para jugarla, o elige más cartas para fusionar.';
     if (this.selectedAttacker !== null) {
       return s.players[AI].field.every(c => c === null)
@@ -549,6 +601,18 @@ export class DuelView {
     }
     if (s.phase === 'main' && !s.hasPlayedThisTurn) return 'Elige una carta de tu mano.';
     return 'Toca uno de tus monstruos para atacar, o termina el turno.';
+  }
+
+  private toastTimer = 0;
+  private toast(text: string): void {
+    const t = this.el.toast;
+    t.textContent = text;
+    t.hidden = false;
+    t.classList.remove('toast--show');
+    void t.offsetWidth;            // reinicia la animación
+    t.classList.add('toast--show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => { t.hidden = true; }, 1800);
   }
 
   // ---------------------------------------------------------------- fusión en pantalla
@@ -599,6 +663,8 @@ export class DuelView {
         this.fusionQueue.push({ player: e.player, a, b, r: result.def });
         this.showNextFusion();
       }
+      if (e.type === 'effect') this.toast(`Efecto: ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
+      if (e.type === 'timeChanged') this.toast(e.night ? 'Cae la noche ☾' : 'Sale el sol ☀');
       const line = this.describe(e);
       if (line) this.log.push(line);
     }
@@ -616,11 +682,17 @@ export class DuelView {
       }
       case 'fusion': return `¡Fusión! ${name(e.materialIds[0])} + ${name(e.materialIds[1])} = ${name(e.resultId)}`;
       case 'fusionFailed': return `Fusión fallida: ${name(e.discardedId)} va al Mictlán`;
-      case 'sentToMictlan': return e.reason === 'battle' ? `${name(e.instanceId)} es destruido` : null;
+      case 'sentToMictlan': return e.reason === 'battle' || e.reason === 'effect' ? `${name(e.instanceId)} es destruido` : null;
       case 'phaseChanged': return null;
       case 'attackDeclared': return `${name(e.attackerId)} ataca ${e.targetId === null ? 'directo' : 'a ' + name(e.targetId)}`;
       case 'flipped': return `${name(e.instanceId)} se voltea`;
       case 'damage': return `${who(e.player)} recibe ${e.amount} de daño (${e.lifeAfter} PV)`;
+      case 'activated': return `${who(e.player)} activa ${name(e.instanceId)}${e.targetId !== null ? ' en ' + name(e.targetId) : ''}`;
+      case 'effect': return `Efecto de ${name(e.instanceId)}`;
+      case 'statChanged': return `${name(e.instanceId)} queda en ATK ${e.atk} / DEF ${e.def}`;
+      case 'healed': return `${who(e.player)} recupera ${e.amount} PV (${e.lifeAfter} PV)`;
+      case 'revived': return `${name(e.instanceId)} regresa del Mictlán`;
+      case 'timeChanged': return e.night ? '☾ Cae la noche' : '☀ Sale el sol';
       case 'gameOver': return `${who(e.winner)} gana${e.reason === 'deckOut' ? ' (mazo vacío)' : e.reason === 'surrender' ? ' (rendición)' : ''}`;
     }
   }

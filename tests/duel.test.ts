@@ -71,10 +71,10 @@ describe('batalla', () => {
     ok(e.apply({ type: 'attack', player: 0, attackerId: fieldCard(e, 0, 0).instanceId, targetId: fieldCard(e, 1, 0).instanceId }));
 
   it('ATK mayor destruye y hace daño por la diferencia', () => {
-    const e = setup(3, 2);           // 1800 vs 900
+    const e = setup(13, 2);          // Cipactli 1500 vs Macehual 900
     attack(e);
     expect(e.state.players[1].field[0]).toBeNull();
-    expect(e.state.players[1].life).toBe(START_LIFE - 900);
+    expect(e.state.players[1].life).toBe(START_LIFE - 600);
     expect(e.state.players[1].mictlan).toHaveLength(1);
   });
 

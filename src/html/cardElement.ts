@@ -46,7 +46,8 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
     return el;
   }
 
-  el.setAttribute('aria-label', `${def.name}, ATK ${atk}, DEF ${defense}`);
+  el.dataset.type = def.type;
+  el.setAttribute('aria-label', def.type === 'monster' ? `${def.name}, ATK ${atk}, DEF ${defense}` : `${def.name}, ${TYPE_LABEL[def.type]}`);
   el.innerHTML = `
     <header class="card__head">
       <span>${ATTRIBUTE_LABEL[def.attribute]}</span>
@@ -56,9 +57,9 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
     <div class="card__art"><span class="card__glyph"></span></div>
     <p class="card__tags"></p>
     <p class="card__desc"></p>
-    <footer class="card__stats">
-      <span class="${statClass(atk, def.atk)}">ATK ${atk}</span>
-      <span class="${statClass(defense, def.def)}">DEF ${defense}</span>
+    <footer class="card__stats">${def.type === 'monster'
+      ? `<span class="${statClass(atk, def.atk)}">ATK ${atk}</span><span class="${statClass(defense, def.def)}">DEF ${defense}</span>`
+      : `<span class="stat stat--type">${TYPE_LABEL[def.type]}</span>`}
     </footer>
     ${opts.selectionOrder !== undefined ? `<span class="card__badge">${opts.selectionOrder}</span>` : ''}
   `;

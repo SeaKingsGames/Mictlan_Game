@@ -1,9 +1,12 @@
 import type { CardDatabase } from '../data/cardDatabase.ts';
-import { HAND_SIZE, START_LIFE } from '../data/types.ts';
+import {
+  HAND_SIZE, START_LIFE, needsEquipTarget,
+  type EffectAction, type EffectCondition, type EffectTarget, type EffectTrigger, type CardTag,
+} from '../data/types.ts';
 import { CardInstance } from './CardInstance.ts';
 import { InstanceIdCounter, buildShuffledDeck } from './deck.ts';
 import {
-  FIELD_SLOTS, opponentOf,
+  FIELD_SLOTS, isNightTurn, opponentOf,
   type ApplyResult, type DuelEvent, type DuelState, type Intent, type PlayerIndex, type PlayerState,
 } from './DuelState.ts';
 import { noFusions, planChain, type FusionResolver } from './fusion.ts';
@@ -32,6 +35,7 @@ export class DuelEngine {
   private readonly ids = new InstanceIdCounter();
   private readonly cards = new Map<number, CardInstance>();
   private started = false;
+  private effectDepth = 0;          // evita cadenas infinitas de efectos
 
   constructor(opts: DuelOptions) {
     this.db = opts.db;
@@ -59,6 +63,7 @@ export class DuelEngine {
     const events: DuelEvent[] = [];
     for (const p of [0, 1] as const) this.refillHand(p, events);
     events.push({ type: 'turnStarted', player: this.state.turnPlayer, turn: 1 });
+    this.recomputeAuras();
     return events;
   }
 
@@ -78,13 +83,16 @@ export class DuelEngine {
     if (intent.player !== s.turnPlayer) return fail('No es tu turno');
 
     const events: DuelEvent[] = [];
-    let error: string | null;
+    let error: string | null = null;
     switch (intent.type) {
       case 'play': error = this.play(intent, events); break;
+      case 'activate': error = this.activate(intent, events); break;
       case 'attack': error = this.attack(intent, events); break;
       case 'endTurn': error = this.endTurn(events); break;
     }
-    return error ? fail(error) : { ok: true, events };
+    if (error) return fail(error);
+    this.recomputeAuras();
+    return { ok: true, events };
   }
 
   // ---------------------------------------------------------------- jugar cartas
@@ -102,7 +110,7 @@ export class DuelEngine {
     for (const id of intent.handIds) {
       const card = me.hand.find(c => c.instanceId === id);
       if (!card) return 'Esa carta no está en tu mano';
-      if (card.def.type !== 'monster') return 'Por ahora solo se pueden jugar monstruos';
+      if (card.def.type !== 'monster') return 'Las mágicas y los equipos se activan; no van en la cadena de fusión';
       fromHand.push(card);
     }
 
@@ -146,6 +154,36 @@ export class DuelEngine {
       type: 'cardPlayed', player: intent.player, instanceId: current.instanceId,
       slot: intent.slot, position: current.position, faceDown: current.faceDown,
     });
+    if (!current.faceDown) {
+      if (fused) this.runEffects(current, 'onFusionSummon', events);
+      this.runEffects(current, 'onSummon', events);
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------- mágicas y equipos
+
+  private activate(intent: Extract<Intent, { type: 'activate' }>, events: DuelEvent[]): string | null {
+    const s = this.state;
+    const me = s.players[intent.player];
+    if (s.phase !== 'main') return 'Solo puedes activar cartas en la fase principal';
+    if (s.hasPlayedThisTurn) return 'Ya jugaste una carta este turno';
+    const card = me.hand.find(c => c.instanceId === intent.handId);
+    if (!card) return 'Esa carta no está en tu mano';
+    if (card.def.type !== 'spell' && card.def.type !== 'equip') return 'Solo las mágicas y los equipos se activan';
+
+    let target: CardInstance | undefined;
+    if (needsEquipTarget(card.def)) {
+      target = me.field.find((c): c is CardInstance => c !== null && c.instanceId === intent.targetId);
+      if (!target) return 'Elige uno de tus monstruos para equiparlo';
+    }
+
+    // Validado.
+    s.hasPlayedThisTurn = true;
+    me.hand = me.hand.filter(c => c !== card);
+    events.push({ type: 'activated', player: intent.player, instanceId: card.instanceId, targetId: target?.instanceId ?? null });
+    this.runEffects(card, 'onActivate', events, target);
+    this.sendToMictlan(card, 'used', events);
     return null;
   }
 
@@ -182,12 +220,22 @@ export class DuelEngine {
 
     if (attacker.faceDown) { attacker.faceDown = false; events.push({ type: 'flipped', instanceId: attacker.instanceId }); }
 
+    // Efectos al atacar (pueden subir el ATK o incluso quitar al objetivo)
+    this.runEffects(attacker, 'onAttack', events);
+    this.recomputeAuras();
+    if (s.winner !== null || attacker.zone !== 'field') return null;
+    if (target && target.zone !== 'field') return null;   // el objetivo ya no está: el ataque se pierde
+
     if (!target) {
       this.damage(foePlayer, attacker.atk, events);
       return null;
     }
 
-    if (target.faceDown) { target.faceDown = false; events.push({ type: 'flipped', instanceId: target.instanceId }); }
+    if (target.faceDown) {
+      target.faceDown = false;
+      events.push({ type: 'flipped', instanceId: target.instanceId });
+      this.recomputeAuras();
+    }
 
     if (target.position === 'attack') {
       const diff = attacker.atk - target.atk;
@@ -213,6 +261,7 @@ export class DuelEngine {
 
   private endTurn(events: DuelEvent[]): string | null {
     const s = this.state;
+    const wasNight = isNightTurn(s.turn);
     for (const p of s.players) {
       for (const c of p.field) {
         if (!c) continue;
@@ -225,7 +274,11 @@ export class DuelEngine {
     s.phase = 'main';
     s.hasPlayedThisTurn = false;
     events.push({ type: 'turnStarted', player: s.turnPlayer, turn: s.turn });
+    if (isNightTurn(s.turn) !== wasNight) events.push({ type: 'timeChanged', night: isNightTurn(s.turn) });
     this.refillHand(s.turnPlayer, events);
+    for (const c of [...s.players[s.turnPlayer].field]) {
+      if (c && !c.faceDown && c.zone === 'field') this.runEffects(c, 'onTurnStart', events);
+    }
     return null;
   }
 
@@ -245,14 +298,17 @@ export class DuelEngine {
 
   // ---------------------------------------------------------------- utilidades
 
-  private destroy(card: CardInstance, events: DuelEvent[]): void {
+  private destroy(card: CardInstance, events: DuelEvent[], reason: 'battle' | 'effect' = 'battle'): void {
+    if (card.zone !== 'field') return;
     const owner = this.state.players[card.owner];
     const slot = owner.field.indexOf(card);
     if (slot >= 0) owner.field[slot] = null;
-    this.sendToMictlan(card, 'battle', events);
+    const wasFaceUp = !card.faceDown;
+    this.sendToMictlan(card, reason, events);
+    if (wasFaceUp) this.runEffects(card, 'onDestroyed', events);
   }
 
-  private sendToMictlan(card: CardInstance, reason: 'battle' | 'fusionFailed' | 'material', events: DuelEvent[]): void {
+  private sendToMictlan(card: CardInstance, reason: 'battle' | 'fusionFailed' | 'material' | 'effect' | 'used', events: DuelEvent[]): void {
     card.resetForZoneChange();
     card.zone = 'mictlan';
     this.state.players[card.owner].mictlan.push(card);
@@ -265,6 +321,133 @@ export class DuelEngine {
     p.life = Math.max(0, p.life - amount);
     events.push({ type: 'damage', player, amount, lifeAfter: p.life });
     if (p.life === 0) this.finish(opponentOf(player), 'life', events);
+  }
+
+  // ---------------------------------------------------------------- efectos
+
+  /** Corre los efectos de `card` con ese trigger (si se cumplen sus condiciones). */
+  private runEffects(card: CardInstance, trigger: EffectTrigger, events: DuelEvent[], equipTarget?: CardInstance): void {
+    const effects = (card.def.effects ?? []).filter(e => e.trigger === trigger);
+    if (effects.length === 0 || this.state.winner !== null || this.effectDepth > 8) return;
+    this.effectDepth++;
+    try {
+      for (const effect of effects) {
+        if (!this.conditionsMet(card, effect.conditions ?? [])) continue;
+        events.push({ type: 'effect', instanceId: card.instanceId, trigger });
+        for (const action of effect.actions) {
+          if (this.state.winner !== null) return;
+          this.runAction(card, action, events, equipTarget);
+        }
+      }
+    } finally {
+      this.effectDepth--;
+    }
+  }
+
+  private conditionsMet(card: CardInstance, conditions: readonly EffectCondition[]): boolean {
+    const s = this.state;
+    const me = s.players[card.owner];
+    const foe = s.players[opponentOf(card.owner)];
+    const count = (field: (CardInstance | null)[]) => field.filter(c => c !== null).length;
+    return conditions.every(c => {
+      switch (c.type) {
+        case 'isNight': return isNightTurn(s.turn);
+        case 'isDay': return !isNightTurn(s.turn);
+        case 'lifeBelow': return me.life < c.amount;
+        case 'hasTagOnField': return me.field.some(o => o && o !== card && !o.faceDown && o.def.tags.includes(c.tag));
+        case 'opponentHasMoreMonsters': return count(foe.field) > count(me.field);
+      }
+    });
+  }
+
+  private resolveTargets(card: CardInstance, target: EffectTarget, tag: CardTag | undefined, equipTarget?: CardInstance): CardInstance[] {
+    const mine = this.state.players[card.owner].field.filter((c): c is CardInstance => c !== null);
+    const theirs = this.state.players[opponentOf(card.owner)].field.filter((c): c is CardInstance => c !== null);
+    const withTag = (list: CardInstance[]) => (tag ? list.filter(c => c.def.tags.includes(tag)) : list);
+    const byAtk = [...theirs].sort((a, b) => b.atk - a.atk);
+    switch (target) {
+      case 'self': return card.zone === 'field' ? [card] : [];
+      case 'equipTarget': return equipTarget && equipTarget.zone === 'field' ? [equipTarget] : [];
+      case 'allAllies': return withTag(mine);
+      case 'otherAllies': return withTag(mine.filter(c => c !== card));
+      case 'alliesWithTag': return withTag(mine);
+      case 'otherAlliesWithTag': return withTag(mine.filter(c => c !== card));
+      case 'allEnemies': return withTag(theirs);
+      case 'highestAtkEnemy': return byAtk.slice(0, 1);
+      case 'lowestAtkEnemy': return byAtk.slice(-1);
+    }
+  }
+
+  private runAction(card: CardInstance, a: EffectAction, events: DuelEvent[], equipTarget?: CardInstance): void {
+    const owner = card.owner;
+    const me = this.state.players[owner];
+    switch (a.type) {
+      case 'modifyAtk':
+      case 'modifyDef': {
+        for (const t of this.resolveTargets(card, a.target, a.tag, equipTarget)) {
+          t.addModifier({
+            atk: a.type === 'modifyAtk' ? a.amount : 0,
+            def: a.type === 'modifyDef' ? a.amount : 0,
+            sourceId: card.instanceId,
+            untilEndOfTurn: a.untilEndOfTurn ?? false,
+          });
+          events.push({ type: 'statChanged', instanceId: t.instanceId, atk: t.atk, def: t.defense });
+        }
+        return;
+      }
+      case 'damage':
+        this.damage(a.who === 'self' ? owner : opponentOf(owner), a.amount, events);
+        return;
+      case 'heal':
+        me.life += a.amount;
+        events.push({ type: 'healed', player: owner, amount: a.amount, lifeAfter: me.life });
+        return;
+      case 'draw': {
+        const drawn = me.deck.splice(0, Math.max(0, a.amount));   // por efecto no se pierde si el mazo se acaba
+        for (const c of drawn) { c.zone = 'hand'; me.hand.push(c); }
+        if (drawn.length) events.push({ type: 'cardsDrawn', player: owner, instanceIds: drawn.map(c => c.instanceId) });
+        return;
+      }
+      case 'destroy':
+        for (const t of this.resolveTargets(card, a.target, a.tag, equipTarget)) this.destroy(t, events, 'effect');
+        return;
+      case 'revive': {
+        const slot = me.field.findIndex(c => c === null);
+        const pick = me.mictlan
+          .filter(c => c !== card && c.def.type === 'monster' && (!a.tag || c.def.tags.includes(a.tag)))
+          .sort((x, y) => y.atk - x.atk)[0];
+        if (slot < 0 || !pick) return;
+        me.mictlan = me.mictlan.filter(c => c !== pick);
+        pick.resetForZoneChange();
+        pick.zone = 'field';
+        pick.fieldSlot = slot;
+        me.field[slot] = pick;
+        events.push({ type: 'revived', instanceId: pick.instanceId, slot });
+        return;
+      }
+    }
+  }
+
+  /** Recalcula los efectos continuos (auras) de todo el campo. Se llama después de cada cambio. */
+  private recomputeAuras(): void {
+    const field = this.state.players.flatMap(p => p.field).filter((c): c is CardInstance => c !== null);
+    field.forEach(c => c.clearAuraModifiers());
+    for (const source of field) {
+      if (source.faceDown) continue;
+      for (const effect of source.def.effects ?? []) {
+        if (effect.trigger !== 'continuous' || !this.conditionsMet(source, effect.conditions ?? [])) continue;
+        for (const a of effect.actions) {
+          if (a.type !== 'modifyAtk' && a.type !== 'modifyDef') continue;
+          for (const t of this.resolveTargets(source, a.target, a.tag)) {
+            t.addModifier({
+              atk: a.type === 'modifyAtk' ? a.amount : 0,
+              def: a.type === 'modifyDef' ? a.amount : 0,
+              sourceId: source.instanceId, untilEndOfTurn: false, aura: true,
+            });
+          }
+        }
+      }
+    }
   }
 
   private finish(winner: PlayerIndex, reason: 'life' | 'deckOut' | 'surrender', events: DuelEvent[]): void {

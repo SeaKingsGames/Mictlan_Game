@@ -21,9 +21,56 @@ export interface CardDef {
   readonly tags: readonly CardTag[];  // para las reglas genéricas de fusión
   readonly atk: number;
   readonly def: number;
-  readonly art?: string;        // ruta de la imagen (más adelante)
-  // Fase 3: readonly effects?: EffectDef[];
+  readonly art?: string;        // ruta de la imagen (public/cards/...)
+  readonly effects?: readonly EffectDef[];
 }
+
+// ---------------------------------------------------------------- efectos (datos)
+
+/** Cuándo se activa un efecto. */
+export const EFFECT_TRIGGERS = [
+  'onSummon',        // al quedar boca arriba en el campo (normal o por fusión)
+  'onFusionSummon',  // solo si salió por fusión
+  'onAttack',        // al declarar un ataque (antes de calcular el daño)
+  'onDestroyed',     // al ser destruido
+  'onTurnStart',     // al empezar el turno de su dueño, si está en el campo
+  'continuous',      // mientras esté boca arriba en el campo (auras)
+  'onActivate',      // mágicas y equipos: al jugarlas
+] as const;
+export type EffectTrigger = (typeof EFFECT_TRIGGERS)[number];
+
+/** A quién afecta. Siempre relativo al dueño de la carta con el efecto. */
+export const EFFECT_TARGETS = [
+  'self', 'equipTarget', 'allAllies', 'otherAllies', 'alliesWithTag', 'otherAlliesWithTag',
+  'allEnemies', 'highestAtkEnemy', 'lowestAtkEnemy',
+] as const;
+export type EffectTarget = (typeof EFFECT_TARGETS)[number];
+
+export type EffectCondition =
+  | { type: 'isNight' }
+  | { type: 'isDay' }
+  | { type: 'lifeBelow'; amount: number }               // la vida del dueño es menor a
+  | { type: 'hasTagOnField'; tag: CardTag }             // el dueño tiene otro monstruo con esa etiqueta
+  | { type: 'opponentHasMoreMonsters' };
+
+export type EffectAction =
+  | { type: 'modifyAtk'; amount: number; target: EffectTarget; tag?: CardTag; untilEndOfTurn?: boolean }
+  | { type: 'modifyDef'; amount: number; target: EffectTarget; tag?: CardTag; untilEndOfTurn?: boolean }
+  | { type: 'damage'; amount: number; who: 'opponent' | 'self' }
+  | { type: 'heal'; amount: number }
+  | { type: 'draw'; amount: number }
+  | { type: 'destroy'; target: EffectTarget; tag?: CardTag }
+  | { type: 'revive'; tag?: CardTag };                  // el más fuerte de tu Mictlán (con esa etiqueta) vuelve al campo
+
+export interface EffectDef {
+  readonly trigger: EffectTrigger;
+  readonly conditions?: readonly EffectCondition[];
+  readonly actions: readonly EffectAction[];
+}
+
+export const needsEquipTarget = (card: CardDef): boolean =>
+  card.type === 'equip' ||
+  (card.effects ?? []).some(e => e.actions.some(a => 'target' in a && a.target === 'equipTarget'));
 
 export interface DeckDef {
   readonly id: string;

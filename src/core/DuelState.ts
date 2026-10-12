@@ -33,6 +33,7 @@ export type Intent =
       faceDown?: boolean;
       fusionChoices?: number[];     // IDs de carta elegidos cuando una fusión tiene varias opciones
     }
+  | { type: 'activate'; player: PlayerIndex; handId: number; targetId?: number }   // mágica o equipo
   | { type: 'attack'; player: PlayerIndex; attackerId: number; targetId: number | null }
   | { type: 'endTurn'; player: PlayerIndex }
   | { type: 'surrender'; player: PlayerIndex };   // se puede en cualquier turno
@@ -44,7 +45,13 @@ export type DuelEvent =
   | { type: 'cardPlayed'; player: PlayerIndex; instanceId: number; slot: number; position: BattlePosition; faceDown: boolean }
   | { type: 'fusion'; player: PlayerIndex; materialIds: [number, number]; resultId: number }
   | { type: 'fusionFailed'; player: PlayerIndex; discardedId: number }
-  | { type: 'sentToMictlan'; instanceId: number; reason: 'battle' | 'fusionFailed' | 'material' }
+  | { type: 'sentToMictlan'; instanceId: number; reason: 'battle' | 'fusionFailed' | 'material' | 'effect' | 'used' }
+  | { type: 'activated'; player: PlayerIndex; instanceId: number; targetId: number | null }
+  | { type: 'effect'; instanceId: number; trigger: string }
+  | { type: 'statChanged'; instanceId: number; atk: number; def: number }
+  | { type: 'healed'; player: PlayerIndex; amount: number; lifeAfter: number }
+  | { type: 'revived'; instanceId: number; slot: number }
+  | { type: 'timeChanged'; night: boolean }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'attackDeclared'; attackerId: number; targetId: number | null }
   | { type: 'flipped'; instanceId: number }
@@ -54,3 +61,6 @@ export type DuelEvent =
 export type ApplyResult = { ok: true; events: DuelEvent[] } | { ok: false; error: string };
 
 export const opponentOf = (p: PlayerIndex): PlayerIndex => (p === 0 ? 1 : 0);
+
+/** Ciclo Día/Noche: cambia cada 2 turnos (turnos 1-2 día, 3-4 noche, 5-6 día...). */
+export const isNightTurn = (turn: number): boolean => Math.floor((turn - 1) / 2) % 2 === 1;

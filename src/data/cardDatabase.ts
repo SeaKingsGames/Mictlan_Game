@@ -1,4 +1,4 @@
-import { CARD_TAGS, DECK_SIZE, MAX_COPIES, type CardDef, type DeckDef } from './types.ts';
+import { CARD_TAGS, DECK_SIZE, EFFECT_TARGETS, EFFECT_TRIGGERS, MAX_COPIES, type CardDef, type DeckDef } from './types.ts';
 
 /**
  * Registro de todas las cartas. Por red y en la base de datos solo viaja el ID;
@@ -15,7 +15,7 @@ export class CardDatabase {
         throw new Error(`ID duplicado ${raw.id}: "${raw.name}" y "${this.byId.get(raw.id)!.name}"`);
       }
       // freeze = nadie puede modificar la definición en runtime por accidente
-      this.byId.set(raw.id, Object.freeze({ ...raw, tags: Object.freeze([...raw.tags]) }));
+      this.byId.set(raw.id, Object.freeze({ ...raw, tags: Object.freeze([...raw.tags]), effects: raw.effects ? Object.freeze([...raw.effects]) : undefined }));
     }
   }
 
@@ -53,5 +53,21 @@ function validateCard(c: CardDef): string[] {
   if (!c.name?.trim()) p.push('falta nombre');
   if (c.atk < 0 || c.def < 0) p.push('ATK/DEF no pueden ser negativos');
   for (const t of c.tags) if (!CARD_TAGS.includes(t)) p.push(`etiqueta desconocida "${t}"`);
+  const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive'];
+  const conditionTypes = ['isNight', 'isDay', 'lifeBelow', 'hasTagOnField', 'opponentHasMoreMonsters'];
+  for (const e of c.effects ?? []) {
+    if (!EFFECT_TRIGGERS.includes(e.trigger)) p.push(`efecto con trigger desconocido "${e.trigger}"`);
+    if (!Array.isArray(e.actions) || e.actions.length === 0) p.push('efecto sin acciones');
+    for (const cond of e.conditions ?? []) if (!conditionTypes.includes(cond.type)) p.push(`condición desconocida "${cond.type}"`);
+    for (const a of e.actions ?? []) {
+      if (!actionTypes.includes(a.type)) p.push(`acción desconocida "${a.type}"`);
+      if ('target' in a && !EFFECT_TARGETS.includes(a.target)) p.push(`objetivo desconocido "${a.target}"`);
+      if ('tag' in a && a.tag && !CARD_TAGS.includes(a.tag)) p.push(`etiqueta desconocida "${a.tag}" en un efecto`);
+    }
+    if (e.trigger === 'onActivate' && c.type === 'monster') p.push('un monstruo no puede tener efecto onActivate');
+  }
+  if ((c.type === 'spell' || c.type === 'equip') && !(c.effects ?? []).some(e => e.trigger === 'onActivate')) {
+    p.push('las mágicas y equipos necesitan un efecto onActivate');
+  }
   return p;
 }

@@ -9,6 +9,7 @@ export interface StatModifier {
   readonly def: number;
   readonly sourceId: number;        // instancia que lo causó (para quitarlo si se va)
   readonly untilEndOfTurn: boolean;
+  readonly aura?: boolean;          // de un efecto continuo: se recalcula siempre
 }
 
 /**
@@ -48,6 +49,10 @@ export class CardInstance {
 
   removeModifiersFrom(sourceId: number): void {
     this.modifiers = this.modifiers.filter(m => m.sourceId !== sourceId);
+  }
+
+  clearAuraModifiers(): void {
+    this.modifiers = this.modifiers.filter(m => !m.aura);
   }
 
   clearEndOfTurnModifiers(): void {

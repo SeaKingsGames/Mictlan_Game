@@ -89,6 +89,9 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
   font: 800 .82em/1.2 system-ui, sans-serif;
 }
 .stat--up   { color: #7ed37e; }
+.stat--type { width: 100%; text-align: center; letter-spacing: .15em; text-transform: uppercase; color: #cfe8ff; }
+.card[data-type="spell"] .card__head, .card[data-type="equip"] .card__head { background: #2f7a6c; color: #f3e7d3; }
+.card[data-type="spell"], .card[data-type="equip"] { --c: #2f9c88; }
 .stat--down { color: #ff7a6b; }
 
 .card__badge {

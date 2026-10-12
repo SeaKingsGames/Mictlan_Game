@@ -98,6 +98,7 @@ function formatCards(list: MutableCard[]): string {
       attribute: c.attribute, tags: c.tags, atk: c.atk, def: c.def,
     };
     if (c.art) o.art = c.art;
+    if (c.effects && c.effects.length) o.effects = c.effects;   // los efectos se editan en el JSON por ahora
     return '  ' + JSON.stringify(o);
   });
   return '[\n' + ordered.join(',\n') + '\n]\n';
