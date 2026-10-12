@@ -1,5 +1,5 @@
 import { nextAiIntent } from '../ai/aiPlayer.ts';
-import type { BattlePosition, CardInstance } from '../core/CardInstance.ts';
+import type { CardInstance } from '../core/CardInstance.ts';
 import { DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
 import { isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
 import { cardDb, fusionDb, getDeck } from '../data/index.ts';
@@ -26,7 +26,6 @@ export class DuelView {
   private engine!: DuelEngine;
   private selectedHand: number[] = [];
   private selectedAttacker: number | null = null;
-  private playPosition: BattlePosition = 'attack';
   private aiThinking = false;
   private log: string[] = [];
   private message = '';
@@ -45,7 +44,7 @@ export class DuelView {
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
     'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast', HTMLElement>;
-  private readonly btn: Record<'log' | 'album' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
+  private readonly btn: Record<'log' | 'album' | 'end' | 'surrender', HTMLButtonElement>;
 
   constructor(root: HTMLElement) {
     root.innerHTML = `
@@ -69,7 +68,6 @@ export class DuelView {
 
           <nav class="side-buttons">
             <button class="tag-btn" data-btn="log">Registro</button>
-            <button class="tag-btn" data-btn="position"></button>
             <button class="tag-btn" data-btn="album">Fusiones</button>
             <span class="turn-tag" data-ref="turn"></span>
           </nav>
@@ -117,15 +115,11 @@ export class DuelView {
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
       albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'),
     };
-    this.btn = { log: btn('log'), album: btn('album'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
+    this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender') };
 
 
     this.btn.log.addEventListener('click', () => { this.showLog = !this.showLog; this.showAlbum = false; this.render(); });
     this.btn.album.addEventListener('click', () => { this.showAlbum = !this.showAlbum; this.showLog = false; this.render(); });
-    this.btn.position.addEventListener('click', () => {
-      this.playPosition = this.playPosition === 'attack' ? 'defense' : 'attack';
-      this.render();
-    });
     this.btn.end.addEventListener('click', () => this.submit({ type: 'endTurn', player: HUMAN }));
     this.btn.surrender.addEventListener('click', () => this.onSurrender());
     this.el.foe.addEventListener('click', () => this.onDirectAttack());
@@ -166,7 +160,7 @@ export class DuelView {
     }
     this.message = '';
     this.selectedHand = [];
-    this.selectedAttacker = null;
+    if (intent.type !== 'changePosition') this.selectedAttacker = null;   // tras cambiar posición sigue elegido
     this.record(result.events);
     this.render();
     if (this.engine.state.turnPlayer === AI && this.engine.state.winner === null && !this.aiThinking) this.runAiTurn();
@@ -344,9 +338,6 @@ export class DuelView {
     this.el.mictlan.replaceChildren(...this.pile('Mictlán', me.mictlan.length, top ? createCardElement(top) : null));
 
     // Botones
-    this.btn.position.textContent = this.playPosition === 'attack' ? 'Posición: ATK' : 'Posición: DEF';
-    this.btn.position.classList.toggle('tag-btn--def', this.playPosition === 'defense');
-    this.btn.position.disabled = !myTurn;
     this.btn.log.classList.toggle('tag-btn--on', this.showLog);
     this.btn.album.classList.toggle('tag-btn--on', this.showAlbum);
     this.btn.album.textContent = `Fusiones ${this.album.size}`;
@@ -456,7 +447,7 @@ export class DuelView {
   }
 
   private canChangePosition(card: CardInstance): boolean {
-    return this.isMyTurn() && this.engine.state.phase === 'main' && !card.positionChangedThisTurn && !card.hasAttackedThisTurn;
+    return this.isMyTurn() && !card.hasAttackedThisTurn;
   }
 
   private inspect(card: CardInstance): void {
@@ -595,7 +586,7 @@ export class DuelView {
       }
       current = result ?? next;
     }
-    this.submit({ type: 'play', player: HUMAN, handIds, slot, position: this.playPosition, fusionChoices: choices });
+    this.submit({ type: 'play', player: HUMAN, handIds, slot, position: 'attack', fusionChoices: choices });
   }
 
   private statusMessage(): string {

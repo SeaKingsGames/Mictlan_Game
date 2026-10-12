@@ -163,7 +163,7 @@ describe('trampas', () => {
 });
 
 describe('cambiar posición', () => {
-  it('una vez por turno; boca abajo se voltea y activa su efecto', () => {
+  it('las veces que quieras; boca abajo se voltea y activa su efecto solo la primera vez', () => {
     const e = duel(many(5), many(9));
     ok(e.apply({ type: 'play', player: 0, handIds: [inHand(e, 0, 5).instanceId], slot: 0, position: 'defense', faceDown: true }));
     pass(e); pass(e);
@@ -172,7 +172,12 @@ describe('cambiar posición', () => {
     expect(card.position).toBe('attack');
     expect(card.faceDown).toBe(false);
     expect(events.some(ev => ev.type === 'damage')).toBe(true);   // Xiuhcóatl al voltearse
-    expect(e.apply({ type: 'changePosition', player: 0, instanceId: card.instanceId }).ok).toBe(false);
+    ok(e.apply({ type: 'changePosition', player: 0, instanceId: card.instanceId }));
+    expect(card.position).toBe('defense');
+    const again = ok(e.apply({ type: 'changePosition', player: 0, instanceId: card.instanceId }));
+    expect(card.position).toBe('attack');
+    expect(again.some(ev => ev.type === 'damage')).toBe(false);   // ya no se voltea otra vez
+    expect(e.state.players[1].life).toBe(START_LIFE - 500);
   });
 
   it('no después de atacar', () => {

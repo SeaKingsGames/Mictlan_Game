@@ -213,8 +213,7 @@ export class DuelEngine {
     const s = this.state;
     const card = s.players[intent.player].field.find(c => c?.instanceId === intent.instanceId);
     if (!card) return 'Ese monstruo no está en tu campo';
-    if (s.phase !== 'main') return 'Solo puedes cambiar la posición antes de atacar';
-    if (card.positionChangedThisTurn) return 'Ese monstruo ya cambió de posición este turno';
+    // Se puede cambiar las veces que quieras en tu turno, mientras ese monstruo no haya atacado.
     if (card.hasAttackedThisTurn) return 'Un monstruo que ya atacó no puede cambiar de posición';
 
     card.positionChangedThisTurn = true;
