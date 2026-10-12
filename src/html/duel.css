@@ -67,6 +67,19 @@ html, body { height: 100%; overflow: hidden; background: #0b0908; }
 }
 .status--error { color: #ff8a7a; background: rgb(217 79 48 / .12); border-color: rgb(217 79 48 / .5); }
 
+/* Álbum: carta + carta = resultado, en chiquito */
+.inspector__log h2 small { font: 600 calc(14 * var(--u)) system-ui; color: #8fa3ad; margin-left: calc(6 * var(--u)); }
+.album { gap: calc(10 * var(--u)); padding-right: calc(4 * var(--u)); }
+.album-row {
+  display: flex; align-items: center; justify-content: center; gap: calc(6 * var(--u));
+  padding: calc(8 * var(--u)) 0; border-bottom: 1px solid #22313b;
+  --card-w: calc(86 * var(--u));
+}
+.album-row .card { cursor: default; flex: none; }
+.album-row .card:hover { transform: none; }
+.album-row__op { font: 800 calc(22 * var(--u)) system-ui; color: #e8a33d; }
+.album-row__result { box-shadow: 0 0 0 calc(2 * var(--u)) #f2c12e, 0 0 calc(12 * var(--u)) rgb(242 193 46 / .45); }
+
 /* ---------- Botones laterales ---------- */
 .side-buttons {
   left: calc(444 * var(--u)); top: calc(150 * var(--u)); width: calc(140 * var(--u));

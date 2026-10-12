@@ -26,6 +26,16 @@ function saveAlbum(album: Set<string>): void {
 const pairKey = (a: number, b: number) => (a < b ? `${a}+${b}` : `${b}+${a}`);
 const albumKey = (a: number, b: number, r: number) => `${pairKey(a, b)}>${r}`;
 
+/** Cuántas fusiones distintas (pareja → resultado) existen con las cartas actuales. */
+const TOTAL_FUSIONS = (() => {
+  const monsters = cardDb.all().filter(c => c.type === 'monster');
+  let n = 0;
+  for (let i = 0; i < monsters.length; i++) {
+    for (let j = i; j < monsters.length; j++) n += fusionDb.fusionOptions(monsters[i], monsters[j]).length;
+  }
+  return n;
+})();
+
 const ATTR: Record<string, string> = { sol: 'Sol', viento: 'Viento', agua: 'Agua', tierra: 'Tierra' };
 
 /**
@@ -54,7 +64,7 @@ export class DuelView {
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'chooser' | 'fusionShow', HTMLElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'position' | 'end' | 'surrender', HTMLButtonElement>;
 
   constructor(root: HTMLElement) {
@@ -71,7 +81,7 @@ export class DuelView {
               <ol class="log" data-ref="log"></ol>
             </div>
             <div class="inspector__log" data-ref="albumPanel" hidden>
-              <h2>Fusiones descubiertas</h2>
+              <h2>Fusiones descubiertas <small data-ref="albumCount"></small></h2>
               <ol class="log album" data-ref="album"></ol>
             </div>
             <p class="status" data-ref="status" role="status"></p>
@@ -124,7 +134,7 @@ export class DuelView {
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
       myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
-      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'),
+      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'),
     };
     this.btn = { log: btn('log'), album: btn('album'), position: btn('position'), end: btn('end'), surrender: btn('surrender') };
 
@@ -437,16 +447,21 @@ export class DuelView {
       const [ca, cb, cr] = [cardDb.tryGet(a), cardDb.tryGet(b), cardDb.tryGet(Number(r))];
       return ca && cb && cr ? [{ a: ca, b: cb, r: cr }] : [];
     }).sort((x, y) => y.r.atk - x.r.atk);
+    this.el.albumCount.textContent = `${items.length} de ${TOTAL_FUSIONS}`;
     if (items.length === 0) {
       const li = document.createElement('li');
-      li.textContent = 'Todavía no descubres ninguna. Elige 2 o más cartas de tu mano y juégalas juntas.';
+      li.textContent = 'Todavía no descubres ninguna. Juega 2 o más cartas juntas, o mira las fusiones del rival.';
       this.el.album.replaceChildren(li);
       return;
     }
+    const op = (txt: string) => { const s2 = document.createElement('span'); s2.className = 'album-row__op'; s2.textContent = txt; return s2; };
     this.el.album.replaceChildren(...items.map(({ a, b, r }) => {
       const li = document.createElement('li');
-      li.className = 'album__item';
-      li.textContent = `${a.name} + ${b.name} → ${r.name} (${r.atk})`;
+      li.className = 'album-row';
+      li.title = `${a.name} + ${b.name} = ${r.name} (ATK ${r.atk})`;
+      const result = createCardElement(r);
+      result.classList.add('album-row__result');
+      li.append(createCardElement(a), op('+'), createCardElement(b), op('='), result);
       return li;
     }));
   }
