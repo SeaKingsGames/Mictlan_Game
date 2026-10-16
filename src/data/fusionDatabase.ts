@@ -3,7 +3,7 @@ import type { CardDatabase } from './cardDatabase.ts';
 import { CARD_TAGS, type CardDef, type CardTag } from './types.ts';
 
 export interface FusionData {
-  recipeOnly?: number[];                                   // cartas que solo salen por receta
+  recipeOnly?: number[];                                   // cartas que solo salen por receta (los nahuales tampoco salen por reglas genéricas)
   recipes: { a: number; b: number; result: number }[];
   rules: { a: CardTag; b: CardTag; result: CardTag[] }[];
 }
@@ -44,7 +44,7 @@ export class FusionDatabase implements FusionResolver {
         if (!CARD_TAGS.includes(t)) problems.push(`regla ${r.a}+${r.b}: etiqueta desconocida "${t}"`);
       }
       const candidates = db.all()
-        .filter(c => c.type === 'monster' && !recipeOnly.has(c.id) && r.result.every(t => c.tags.includes(t)))
+        .filter(c => c.type === 'monster' && !recipeOnly.has(c.id) && !c.nahual && r.result.every(t => c.tags.includes(t)))
         .sort((x, y) => x.atk - y.atk);
       if (candidates.length === 0) problems.push(`regla ${r.a}+${r.b}: ninguna carta tiene [${r.result.join(', ')}]`);
       this.rules.push({ a: r.a, b: r.b, candidates });

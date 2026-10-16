@@ -173,3 +173,17 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
 }
 
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+
+/* ---------- Nahuales: cambian de forma de noche ---------- */
+.card__nahual {
+  position: absolute; top: 2.6em; left: .5em; z-index: 1;
+  font-size: .8em; line-height: 1; padding: .15em .25em; border-radius: .3em;
+  background: rgb(20 16 40 / .85); border: .1em solid #8f7fe8;
+}
+.card--night {
+  --c: #7d6be0;
+  background: linear-gradient(160deg, #2a2050, #0f0b1f 70%);
+  box-shadow: 0 .4em 1em rgb(0 0 0 / .5), 0 0 .9em rgb(125 107 224 / .55);
+}
+.card--night .card__glyph { color: #c9bdff; }
+@container (max-width: 80px) { .card__nahual { top: 27%; left: .3em; font-size: 1.5em; } }

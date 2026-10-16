@@ -5,6 +5,7 @@ import decksJson from '../data/decks.json';
 import fusionsJson from '../data/fusions.json';
 import { CardDatabase } from '../data/cardDatabase.ts';
 import { CARD_TAGS, RARITIES, RARITY_LABEL, type CardAttribute, type CardDef, type CardRarity, type CardTag, type CardType } from '../data/types.ts';
+import { CardInstance } from '../core/CardInstance.ts';
 import { createCardElement } from './cardElement.ts';
 import { renderEffectEditor, type EditableEffect } from './effectEditor.ts';
 
@@ -127,7 +128,8 @@ function formatCards(list: MutableCard[]): string {
     };
     if (c.rarity) o.rarity = c.rarity;
     if (c.art) o.art = c.art;
-    if (c.effects && c.effects.length) o.effects = c.effects;   // los efectos se editan en el JSON por ahora
+    if (c.effects && c.effects.length) o.effects = c.effects;
+    if (c.type === 'monster' && c.nahual) o.nahual = c.nahual;
     return '  ' + JSON.stringify(o);
   });
   return '[\n' + ordered.join(',\n') + '\n]\n';
@@ -258,9 +260,45 @@ function renderForm(): void {
         h('p', { class: 'hint', style: 'margin:0 0 6px' }, 'Etiquetas (sirven para las fusiones)'),
         tagChips),
     ),
+    c.type === 'monster' ? nahualSection(c) : '',
     h('div', { class: 'actions-row' },
       h('button', { class: 'ebtn ebtn--danger', onclick: deleteCard }, 'Borrar carta')),
   );
+}
+
+/** Nahual: forma de noche (Ocaso y Medianoche). */
+function nahualSection(c: MutableCard): HTMLElement {
+  const on = h('input', { type: 'checkbox', checked: !!c.nahual });
+  on.addEventListener('change', () => {
+    c.nahual = on.checked ? { name: `${c.name} (noche)`, atk: c.atk + 500, def: Math.max(0, c.def - 300) } : undefined;
+    if (!c.nahual) delete c.nahual;
+    changed();
+    renderForm();
+  });
+  const box = h('fieldset', { class: 'nahual-box' },
+    h('legend', {}, h('label', {}, on, ' 🌙 Es nahual (cambia de forma de noche)')));
+  const n = c.nahual;
+  if (n) {
+    const set = (patch: Partial<NonNullable<MutableCard['nahual']>>) => {
+      c.nahual = { ...c.nahual!, ...patch };
+      if (c.nahual.description === '') delete (c.nahual as { description?: string }).description;
+      changed();
+    };
+    const name = h('input', { type: 'text', value: n.name });
+    name.addEventListener('input', () => set({ name: name.value }));
+    const atk = h('input', { type: 'number', min: 0, step: 50, value: n.atk });
+    atk.addEventListener('input', () => set({ atk: Math.max(0, Math.round(Number(atk.value) || 0)) }));
+    const def = h('input', { type: 'number', min: 0, step: 50, value: n.def });
+    def.addEventListener('input', () => set({ def: Math.max(0, Math.round(Number(def.value) || 0)) }));
+    const desc = h('textarea', { value: n.description ?? '' });
+    desc.addEventListener('input', () => set({ description: desc.value }));
+    box.append(h('div', { class: 'form' },
+      h('label', {}, 'Nombre de noche', name),
+      h('label', {}, 'ATK de noche', atk),
+      h('label', {}, 'DEF de noche', def),
+      h('label', { class: 'full' }, 'Descripción de noche (opcional)', desc)));
+  }
+  return box;
 }
 
 function deleteCard(): void {
@@ -394,7 +432,15 @@ function renderArt(): void {
 
 function renderPreview(): void {
   const c = selected();
-  $('preview').replaceChildren(c ? createCardElement(previewDef(c)) : '');
+  if (!c) { $('preview').replaceChildren(); return; }
+  const day = createCardElement(previewDef(c));
+  if (!c.nahual) { $('preview').replaceChildren(day); return; }
+  // Nahual: se ve la forma de día y la de noche
+  const inst = new CardInstance(0, 0, previewDef(c));
+  inst.nightForm = true;
+  $('preview').replaceChildren(h('div', { class: 'nahual-preview' },
+    h('figure', {}, day, h('figcaption', {}, '☀ De día')),
+    h('figure', {}, createCardElement(inst), h('figcaption', {}, '☾ De noche'))));
 }
 
 function renderSide(): void {
@@ -474,7 +520,10 @@ function importCards(status: HTMLElement): void {
       for (const raw of incoming) {
         const existing = cards.find(c => c.id === raw.id);
         if (!existing) { cards.push({ ...raw, tags: [...(raw.tags ?? [])] }); added++; }
-        else if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; rarities++; }
+        else {
+          if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; rarities++; }
+          if (raw.nahual && !existing.nahual) existing.nahual = raw.nahual;
+        }
       }
       cards.sort((a, b) => a.id - b.id);
       saveDraft();

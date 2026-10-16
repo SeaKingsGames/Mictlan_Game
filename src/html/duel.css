@@ -354,3 +354,46 @@ button.pl { cursor: default; }
   .rotate-hint .tag-btn { font-size: 14px; padding: 10px 16px; }
 }
 .overlay__note--error { color: #ff9a7a; }
+
+/* ---------- Reloj Solar (centro de la barra de vidas) ---------- */
+.emblem:has(.clock) { padding: calc(2 * var(--u)); background: radial-gradient(circle, #1a1512, #0b0908); }
+.clock {
+  position: relative; width: calc(54 * var(--u)); height: calc(54 * var(--u)); border-radius: 50%;
+  display: grid; place-items: center;
+  /* 4 fases en el sentido del reloj, empezando arriba: Alba, Mediodía, Ocaso, Medianoche */
+  background:
+    radial-gradient(circle, #14110f 0 46%, transparent 47%),
+    conic-gradient(#e88a5a 0 25%, #f2c12e 0 50%, #9b5bb5 0 75%, #2b3a7a 0);
+  box-shadow: 0 0 0 calc(2 * var(--u)) #c9a24a, 0 0 calc(12 * var(--u)) rgb(242 193 46 / .35);
+}
+.emblem--night .clock { box-shadow: 0 0 0 calc(2 * var(--u)) #8fa0e8, 0 0 calc(14 * var(--u)) rgb(140 160 255 / .45); }
+.clock__icon { position: relative; z-index: 1; font-size: calc(17 * var(--u)); line-height: 1; text-shadow: none; }
+.clock__needle {
+  position: absolute; z-index: 2; left: 50%; top: 50%; width: calc(4 * var(--u)); height: calc(28 * var(--u));
+  margin-left: calc(-1.5 * var(--u)); transform-origin: 50% 0;
+  background: linear-gradient(transparent 0 42%, #fff 42%, #f2c12e); border-radius: 9px;
+  filter: drop-shadow(0 0 calc(2 * var(--u)) #000);
+  /* 8 pasos por vuelta (2 turnos por fase); apunta hacia afuera */
+  transform: rotate(calc(180deg + var(--step, 0) * 45deg + 22.5deg));
+  transition: transform .8s cubic-bezier(.3, 1.4, .5, 1);
+}
+
+/* ---------- Panel de fase y signo (columna de botones) ---------- */
+.time-box, .sign-box {
+  display: flex; flex-direction: column; gap: calc(3 * var(--u)); text-align: center;
+  padding: calc(10 * var(--u)) calc(8 * var(--u)); border-radius: calc(8 * var(--u));
+  background: #12100e; border: calc(2 * var(--u)) solid #3a3029; color: #e2d4bd;
+  font-size: calc(13 * var(--u)); line-height: 1.3;
+}
+.time-box b, .sign-box b { font: 700 calc(16 * var(--u)) 'Cinzel', Georgia, serif; color: #f3e7d3; }
+.time-box small, .sign-box small { color: #a89884; font-size: calc(11 * var(--u)); }
+.time-box__bonus { color: #f2c12e; }
+.time-box[data-phase="alba"] { border-color: #e88a5a; }
+.time-box[data-phase="mediodia"] { border-color: #f2c12e; }
+.time-box[data-phase="ocaso"] { border-color: #9b5bb5; }
+.time-box[data-phase="medianoche"] { border-color: #5b6fd6; background: #0e1024; }
+.time-box[data-phase="medianoche"] .time-box__bonus { color: #9fb2ff; }
+.sign-box { border-color: #2f9c88; }
+.sign-box small { text-transform: uppercase; letter-spacing: .1em; }
+.sign-box__text { color: #8fd8c6; }
+.sign-box[hidden] { display: none; }

@@ -21,90 +21,1842 @@ function shuffle(items, rng) {
 
 // src/data/cards.json
 var cards_default = [
-  { id: 1, name: "Ocelote joven", description: "Cachorro de la selva, material de fusi\xF3n.", type: "monster", attribute: "tierra", tags: ["jaguar", "bestia"], atk: 800, def: 600, rarity: "N" },
-  { id: 2, name: "Macehual con macuahuitl", description: "Guerrero del pueblo armado con obsidiana.", type: "monster", attribute: "tierra", tags: ["guerrero"], atk: 900, def: 700, rarity: "N" },
-  { id: 3, name: "Guerrero Jaguar", description: "De noche, gana +300 ATK al atacar.", type: "monster", attribute: "tierra", tags: ["guerrero", "jaguar"], atk: 1800, def: 1400, rarity: "R", effects: [{ trigger: "onAttack", conditions: [{ type: "isNight" }], actions: [{ type: "modifyAtk", amount: 300, target: "self", untilEndOfTurn: true }] }] },
-  { id: 4, name: "Guerrero \xC1guila", description: "\xC9lite del sol. Al ser invocado por fusi\xF3n, robas 1 carta.", type: "monster", attribute: "sol", tags: ["guerrero", "ave", "sol"], atk: 1700, def: 1500, rarity: "R", effects: [{ trigger: "onFusionSummon", actions: [{ type: "draw", amount: 1 }] }] },
-  { id: 5, name: "Xiuhc\xF3atl", description: "Serpiente de fuego. Al ser invocada, hace 500 de da\xF1o al rival.", type: "monster", attribute: "sol", tags: ["serpiente", "fuego", "sol"], atk: 2200, def: 1600, rarity: "SR", effects: [{ trigger: "onSummon", actions: [{ type: "damage", amount: 500, who: "opponent" }] }] },
-  { id: 6, name: "Tl\xE1loc", description: "Se\xF1or de la lluvia. Tus otros monstruos de agua ganan +300 ATK.", type: "monster", attribute: "agua", tags: ["deidad", "agua"], atk: 2600, def: 2400, rarity: "UR", effects: [{ trigger: "continuous", actions: [{ type: "modifyAtk", amount: 300, target: "otherAlliesWithTag", tag: "agua" }] }] },
-  { id: 7, name: "Mictlantecuhtli", description: "Se\xF1or del Mictl\xE1n. Al ser destruido, revive tu monstruo de muerte m\xE1s fuerte del Mictl\xE1n.", type: "monster", attribute: "tierra", tags: ["deidad", "muerte"], atk: 2800, def: 2e3, rarity: "UR", effects: [{ trigger: "onDestroyed", actions: [{ type: "revive", tag: "muerte" }] }] },
-  { id: 8, name: "Quetzalc\xF3atl", description: "Serpiente emplumada. Solo por receta. Al ser invocada por fusi\xF3n, destruye al monstruo rival m\xE1s fuerte.", type: "monster", attribute: "viento", tags: ["deidad", "serpiente", "ave", "viento"], atk: 3e3, def: 2500, rarity: "UR", effects: [{ trigger: "onFusionSummon", actions: [{ type: "destroy", target: "highestAtkEnemy" }] }] },
-  { id: 9, name: "Colibr\xED guerrero", description: "Mensajero veloz. Al ser invocado, robas 1 carta.", type: "monster", attribute: "viento", tags: ["ave"], atk: 500, def: 400, rarity: "N", effects: [{ trigger: "onSummon", actions: [{ type: "draw", amount: 1 }] }] },
-  { id: 10, name: "Serpiente de lago", description: "Habita los canales de Tenochtitlan.", type: "monster", attribute: "agua", tags: ["serpiente", "agua"], atk: 700, def: 900, rarity: "N" },
-  { id: 11, name: "Xoloitzcuintle", description: "Gu\xEDa de las almas rumbo al Mictl\xE1n.", type: "monster", attribute: "tierra", tags: ["bestia", "muerte"], atk: 1e3, def: 800, rarity: "N" },
-  { id: 12, name: "Sacerdote del Fuego Nuevo", description: "Guardi\xE1n del Fuego Nuevo. Al ser invocado, recuperas 500 PV.", type: "monster", attribute: "sol", tags: ["fuego"], atk: 600, def: 1200, rarity: "N", effects: [{ trigger: "onSummon", actions: [{ type: "heal", amount: 500 }] }] },
-  { id: 13, name: "Cipactli", description: "Caim\xE1n primordial de cuyo cuerpo se hizo la tierra.", type: "monster", attribute: "agua", tags: ["bestia", "agua"], atk: 1500, def: 1200, rarity: "R" },
-  { id: 14, name: "Ahu\xEDzotl", description: "Bestia de los lagos. Si es de noche al ser invocado, destruye al monstruo rival m\xE1s d\xE9bil.", type: "monster", attribute: "agua", tags: ["bestia", "agua", "muerte"], atk: 2e3, def: 1500, rarity: "SR", effects: [{ trigger: "onSummon", conditions: [{ type: "isNight" }], actions: [{ type: "destroy", target: "lowestAtkEnemy" }] }] },
-  { id: 15, name: "Serpiente de plumas", description: "Serpiente cubierta de plumas de quetzal.", type: "monster", attribute: "viento", tags: ["serpiente", "ave", "viento"], atk: 1600, def: 1200, rarity: "R" },
-  { id: 16, name: "Tecolote del Mictl\xE1n", description: "Su canto anuncia la muerte. Al ser destruido, hace 500 de da\xF1o al rival.", type: "monster", attribute: "viento", tags: ["ave", "muerte"], atk: 1300, def: 900, rarity: "R", effects: [{ trigger: "onDestroyed", actions: [{ type: "damage", amount: 500, who: "opponent" }] }] },
-  { id: 17, name: "Guerrero del Mictl\xE1n", description: "Guerrero ca\xEDdo que regres\xF3 del inframundo. De noche tiene +500 ATK.", type: "monster", attribute: "tierra", tags: ["guerrero", "muerte"], atk: 2100, def: 1600, rarity: "SR", effects: [{ trigger: "continuous", conditions: [{ type: "isNight" }], actions: [{ type: "modifyAtk", amount: 500, target: "self" }] }] },
-  { id: 18, name: "Temazcal", description: "Ba\xF1o de vapor sagrado. Recuperas 1000 PV.", type: "spell", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "N", effects: [{ trigger: "onActivate", actions: [{ type: "heal", amount: 1e3 }] }] },
-  { id: 19, name: "Juego de pelota", description: "Tlachtli. Tus monstruos ganan +400 ATK hasta el final del turno.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 400, target: "allAllies", untilEndOfTurn: true }] }] },
-  { id: 20, name: "Lluvia de obsidiana", description: "Hace 800 de da\xF1o al rival.", type: "spell", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "damage", amount: 800, who: "opponent" }] }] },
-  { id: 21, name: "Chimalli", description: "Escudo de guerra. El monstruo equipado gana +600 DEF.", type: "equip", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "N", effects: [{ trigger: "onActivate", actions: [{ type: "modifyDef", amount: 600, target: "equipTarget" }] }] },
-  { id: 22, name: "Macuahuitl de obsidiana", description: "El monstruo equipado gana +500 ATK.", type: "equip", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 500, target: "equipTarget" }] }] },
-  { id: 23, name: "Fosa de estacas", description: "Trampa. Cuando el rival ataca, destruye al monstruo atacante.", type: "trap", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "destroy", target: "attacker" }] }] },
-  { id: 24, name: "Niebla de Tl\xE1loc", description: "Trampa. Cuando el rival ataca, la niebla detiene el ataque.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "negateAttack" }] }] },
-  { id: 25, name: "Espejo humeante", description: "Trampa de Tezcatlipoca. Cuando el rival ataca, el atacante pierde 800 ATK este turno.", type: "trap", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "modifyAtk", amount: -800, target: "attacker", untilEndOfTurn: true }] }] },
-  { id: 26, name: "Tlacuache ladr\xF3n", description: "Rob\xF3 el fuego a los dioses y lo trajo a los hombres.", type: "monster", attribute: "tierra", tags: ["bestia"], atk: 400, def: 300, rarity: "N" },
-  { id: 27, name: "Ajolote del lago", description: "X\xF3lotl escondido en las aguas de Xochimilco.", type: "monster", attribute: "agua", tags: ["agua", "bestia"], atk: 300, def: 500, rarity: "N" },
-  { id: 28, name: "Chapul\xEDn de Chapultepec", description: "Salta entre los ahuehuetes del cerro.", type: "monster", attribute: "tierra", tags: ["bestia"], atk: 500, def: 200, rarity: "N" },
-  { id: 29, name: "Guacamaya roja", description: "Sus plumas se ofrecen al sol.", type: "monster", attribute: "sol", tags: ["ave", "sol"], atk: 700, def: 500, rarity: "N" },
-  { id: 30, name: "Tortuga de r\xEDo", description: "Lenta pero dif\xEDcil de romper.", type: "monster", attribute: "agua", tags: ["agua", "bestia"], atk: 600, def: 1100, rarity: "N" },
-  { id: 31, name: "Venado sagrado", description: "Animal del sol y de la cacer\xEDa.", type: "monster", attribute: "tierra", tags: ["bestia", "sol"], atk: 900, def: 700, rarity: "N" },
-  { id: 32, name: "Pescador de Texcoco", description: "Defiende su canoa con lanza y red.", type: "monster", attribute: "agua", tags: ["guerrero", "agua"], atk: 700, def: 600, rarity: "N" },
-  { id: 33, name: "Aprendiz de tlacuilo", description: "Pinta c\xF3dices; conoce los nombres de los dioses.", type: "monster", attribute: "viento", tags: ["viento"], atk: 600, def: 800, rarity: "N" },
-  { id: 34, name: "Murci\xE9lago de Tzinacan", description: "Vuela en la casa de los murci\xE9lagos del inframundo.", type: "monster", attribute: "viento", tags: ["ave", "muerte"], atk: 800, def: 600, rarity: "N" },
-  { id: 35, name: "Coyote astuto", description: "Nunca cae en la misma trampa dos veces.", type: "monster", attribute: "tierra", tags: ["bestia"], atk: 1e3, def: 700, rarity: "N" },
-  { id: 36, name: "Halc\xF3n mensajero", description: "Lleva noticias de una ciudad a otra.", type: "monster", attribute: "viento", tags: ["ave", "viento"], atk: 900, def: 600, rarity: "N" },
-  { id: 37, name: "Lagartija de obsidiana", description: "Su piel brilla como vidrio volc\xE1nico.", type: "monster", attribute: "tierra", tags: ["serpiente", "fuego"], atk: 600, def: 500, rarity: "N" },
-  { id: 38, name: "Guerrero cuext\xE9catl", description: "Guerrero huasteco de gorro c\xF3nico.", type: "monster", attribute: "tierra", tags: ["guerrero"], atk: 1100, def: 900, rarity: "N" },
-  { id: 39, name: "Arquero chichimeca", description: "Cazador del norte; no falla un tiro.", type: "monster", attribute: "viento", tags: ["guerrero", "viento"], atk: 1200, def: 800, rarity: "R" },
-  { id: 40, name: "Guerrero coyote", description: "Viste la piel del coyote en batalla.", type: "monster", attribute: "tierra", tags: ["guerrero", "bestia"], atk: 1400, def: 1100, rarity: "R" },
-  { id: 41, name: "Serpiente de cascabel", description: "Avisa antes de morder.", type: "monster", attribute: "tierra", tags: ["serpiente", "muerte"], atk: 1300, def: 900, rarity: "R" },
-  { id: 42, name: "\xC1guila real", description: "La que se pos\xF3 sobre el nopal.", type: "monster", attribute: "sol", tags: ["ave", "sol"], atk: 1500, def: 1e3, rarity: "R" },
-  { id: 43, name: "Jaguar negro", description: "Sombra de la selva, animal de Tezcatlipoca.", type: "monster", attribute: "tierra", tags: ["jaguar", "bestia", "muerte"], atk: 1600, def: 1200, rarity: "R" },
-  { id: 44, name: "Sacerdotisa de la luna", description: "Cuenta los d\xEDas del calendario lunar.", type: "monster", attribute: "agua", tags: ["agua"], atk: 1200, def: 1500, rarity: "R" },
-  { id: 45, name: "Tlaloque de la lluvia", description: "Ayudante de Tl\xE1loc que rompe las jarras del cielo.", type: "monster", attribute: "agua", tags: ["deidad", "agua"], atk: 1500, def: 1400, rarity: "R" },
-  { id: 46, name: "Capit\xE1n tequihua", description: "Veterano que captur\xF3 a cuatro enemigos.", type: "monster", attribute: "tierra", tags: ["guerrero"], atk: 1700, def: 1300, rarity: "R" },
-  { id: 47, name: "Sapo de la lluvia", description: "Canta para llamar a Tl\xE1loc.", type: "monster", attribute: "agua", tags: ["agua", "bestia"], atk: 1100, def: 1300, rarity: "N" },
-  { id: 48, name: "Colibr\xED de Huitzilopochtli", description: "El alma de un guerrero ca\xEDdo que volvi\xF3 como colibr\xED.", type: "monster", attribute: "sol", tags: ["ave", "sol", "guerrero"], atk: 1700, def: 900, rarity: "R" },
-  { id: 49, name: "Guerrera cihuateteo", description: "Mujer guerrera que acompa\xF1a al sol al atardecer.", type: "monster", attribute: "viento", tags: ["guerrero", "muerte"], atk: 1900, def: 1500, rarity: "SR" },
-  { id: 50, name: "Cent\xE9otl, se\xF1or del ma\xEDz", description: "Dios del ma\xEDz tierno que alimenta al pueblo.", type: "monster", attribute: "sol", tags: ["deidad", "sol"], atk: 2e3, def: 2200, rarity: "SR" },
-  { id: 51, name: "Xochiquetzal", description: "Diosa de las flores, la belleza y el arte.", type: "monster", attribute: "viento", tags: ["deidad", "ave"], atk: 1800, def: 2400, rarity: "SR" },
-  { id: 52, name: "Chalchiuhtlicue", description: "Se\xF1ora de la falda de jade, diosa de lagos y r\xEDos.", type: "monster", attribute: "agua", tags: ["deidad", "agua"], atk: 2500, def: 2300, rarity: "SR" },
-  { id: 53, name: "Huehuec\xF3yotl", description: "El coyote viejo, dios de la m\xFAsica y el enga\xF1o.", type: "monster", attribute: "tierra", tags: ["deidad", "bestia"], atk: 2200, def: 1800, rarity: "SR" },
-  { id: 54, name: "Mixc\xF3atl", description: "Serpiente de nubes, dios de la caza.", type: "monster", attribute: "viento", tags: ["deidad", "serpiente", "guerrero"], atk: 2300, def: 1700, rarity: "SR" },
-  { id: 55, name: "X\xF3lotl", description: "Hermano de Quetzalc\xF3atl; gu\xEDa a los muertos al Mictl\xE1n.", type: "monster", attribute: "tierra", tags: ["deidad", "muerte", "bestia"], atk: 2400, def: 1600, rarity: "SR" },
-  { id: 56, name: "Teccizt\xE9catl", description: "Se volvi\xF3 la luna al dudar ante la hoguera.", type: "monster", attribute: "agua", tags: ["deidad"], atk: 2200, def: 2e3, rarity: "SR" },
-  { id: 57, name: "Tzitzimitl", description: "Estrella demonio que baja en los eclipses.", type: "monster", attribute: "viento", tags: ["deidad", "muerte", "viento"], atk: 2500, def: 1800, rarity: "SR" },
-  { id: 58, name: "Cihuac\xF3atl", description: "Mujer serpiente; su llanto anuncia desgracias.", type: "monster", attribute: "tierra", tags: ["deidad", "serpiente", "muerte"], atk: 2400, def: 1900, rarity: "SR" },
-  { id: 59, name: "Coyolxauhqui", description: "Diosa de la luna que gui\xF3 a los cuatrocientos guerreros del sur.", type: "monster", attribute: "viento", tags: ["deidad", "guerrero"], atk: 2900, def: 2100, rarity: "UR" },
-  { id: 60, name: "Huitzilopochtli", description: "Colibr\xED del sur, dios de la guerra y del sol.", type: "monster", attribute: "sol", tags: ["deidad", "guerrero", "sol", "ave"], atk: 3300, def: 2600, rarity: "UR" },
-  { id: 61, name: "Tezcatlipoca", description: "Espejo humeante, se\xF1or de la noche.", type: "monster", attribute: "viento", tags: ["deidad", "jaguar", "muerte"], atk: 3300, def: 2800, rarity: "UR" },
-  { id: 62, name: "Xipe T\xF3tec", description: "Nuestro se\xF1or el desollado, dios de la renovaci\xF3n.", type: "monster", attribute: "tierra", tags: ["deidad", "sol"], atk: 3e3, def: 2400, rarity: "UR" },
-  { id: 63, name: "Tonatiuh", description: "El Quinto Sol, que pide energ\xEDa para moverse.", type: "monster", attribute: "sol", tags: ["deidad", "sol", "fuego"], atk: 3400, def: 2900, rarity: "UR" },
-  { id: 64, name: "Xiuhtecuhtli", description: "Se\xF1or del fuego y del a\xF1o.", type: "monster", attribute: "sol", tags: ["deidad", "fuego"], atk: 3100, def: 2500, rarity: "UR" },
-  { id: 65, name: "Tlaltecuhtli", description: "Se\xF1ora de la tierra que devora a los muertos.", type: "monster", attribute: "tierra", tags: ["deidad", "bestia"], atk: 3e3, def: 3e3, rarity: "UR" },
-  { id: 66, name: "Ofrenda de cacao", description: "Recuperas 800 PV.", type: "spell", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "N", effects: [{ trigger: "onActivate", actions: [{ type: "heal", amount: 800 }] }] },
-  { id: 67, name: "Danza del venado", description: "Tus monstruos ganan +300 ATK hasta el final del turno.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 300, target: "allAllies", untilEndOfTurn: true }] }] },
-  { id: 68, name: "Ceremonia del Fuego Nuevo", description: "Hace 1000 de da\xF1o al rival.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onActivate", actions: [{ type: "damage", amount: 1e3, who: "opponent" }] }] },
-  { id: 69, name: "C\xF3dice sagrado", description: "Robas 2 cartas.", type: "spell", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onActivate", actions: [{ type: "draw", amount: 2 }] }] },
-  { id: 70, name: "Rodela de plumas", description: "El monstruo equipado gana +400 ATK.", type: "equip", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 400, target: "equipTarget" }] }] },
-  { id: 71, name: "\xC1tlatl", description: "El monstruo equipado gana +700 ATK.", type: "equip", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 700, target: "equipTarget" }] }] },
-  { id: 72, name: "Penacho de quetzal", description: "El monstruo equipado gana +300 ATK y +300 DEF.", type: "equip", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 300, target: "equipTarget" }, { type: "modifyDef", amount: 300, target: "equipTarget" }] }] },
-  { id: 73, name: "Red de pescador", description: "Cuando el rival ataca, el atacante pierde 1000 ATK este turno.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "modifyAtk", amount: -1e3, target: "attacker", untilEndOfTurn: true }] }] },
-  { id: 74, name: "Eclipse", description: "Cuando el rival ataca, la oscuridad detiene el ataque.", type: "trap", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "negateAttack" }] }] },
-  { id: 75, name: "Furia de Tl\xE1loc", description: "Cuando el rival ataca, destruye a todos los monstruos rivales.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "UR", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "destroy", target: "allEnemies" }] }] }
+  {
+    id: 1,
+    name: "Ocelote joven",
+    description: "Cachorro de la selva, material de fusi\xF3n.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "jaguar",
+      "bestia"
+    ],
+    atk: 800,
+    def: 600,
+    rarity: "N"
+  },
+  {
+    id: 2,
+    name: "Macehual con macuahuitl",
+    description: "Guerrero del pueblo armado con obsidiana.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero"
+    ],
+    atk: 900,
+    def: 700,
+    rarity: "N"
+  },
+  {
+    id: 3,
+    name: "Guerrero Jaguar",
+    description: "De noche, gana +300 ATK al atacar.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero",
+      "jaguar"
+    ],
+    atk: 1800,
+    def: 1400,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onAttack",
+        conditions: [
+          {
+            type: "isNight"
+          }
+        ],
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 300,
+            target: "self",
+            untilEndOfTurn: true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 4,
+    name: "Guerrero \xC1guila",
+    description: "\xC9lite del sol. Al ser invocado por fusi\xF3n, robas 1 carta.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "guerrero",
+      "ave",
+      "sol"
+    ],
+    atk: 1700,
+    def: 1500,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onFusionSummon",
+        actions: [
+          {
+            type: "draw",
+            amount: 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 5,
+    name: "Xiuhc\xF3atl",
+    description: "Serpiente de fuego. Al ser invocada, hace 500 de da\xF1o al rival.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "serpiente",
+      "fuego",
+      "sol"
+    ],
+    atk: 2200,
+    def: 1600,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onSummon",
+        actions: [
+          {
+            type: "damage",
+            amount: 500,
+            who: "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 6,
+    name: "Tl\xE1loc",
+    description: "Se\xF1or de la lluvia. Tus otros monstruos de agua ganan +300 ATK.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "deidad",
+      "agua"
+    ],
+    atk: 2600,
+    def: 2400,
+    rarity: "UR",
+    effects: [
+      {
+        trigger: "continuous",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 300,
+            target: "otherAlliesWithTag",
+            tag: "agua"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 7,
+    name: "Mictlantecuhtli",
+    description: "Se\xF1or del Mictl\xE1n. Al ser destruido, revive tu monstruo de muerte m\xE1s fuerte del Mictl\xE1n.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "deidad",
+      "muerte"
+    ],
+    atk: 2800,
+    def: 2e3,
+    rarity: "UR",
+    effects: [
+      {
+        trigger: "onDestroyed",
+        actions: [
+          {
+            type: "revive",
+            tag: "muerte"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 8,
+    name: "Quetzalc\xF3atl",
+    description: "Serpiente emplumada. Solo por receta. Al ser invocada por fusi\xF3n, destruye al monstruo rival m\xE1s fuerte.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "deidad",
+      "serpiente",
+      "ave",
+      "viento"
+    ],
+    atk: 3e3,
+    def: 2500,
+    rarity: "UR",
+    effects: [
+      {
+        trigger: "onFusionSummon",
+        actions: [
+          {
+            type: "destroy",
+            target: "highestAtkEnemy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 9,
+    name: "Colibr\xED guerrero",
+    description: "Mensajero veloz. Al ser invocado, robas 1 carta.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "ave"
+    ],
+    atk: 500,
+    def: 400,
+    rarity: "N",
+    effects: [
+      {
+        trigger: "onSummon",
+        actions: [
+          {
+            type: "draw",
+            amount: 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 10,
+    name: "Serpiente de lago",
+    description: "Habita los canales de Tenochtitlan.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "serpiente",
+      "agua"
+    ],
+    atk: 700,
+    def: 900,
+    rarity: "N"
+  },
+  {
+    id: 11,
+    name: "Xoloitzcuintle",
+    description: "Gu\xEDa de las almas rumbo al Mictl\xE1n.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "bestia",
+      "muerte"
+    ],
+    atk: 1e3,
+    def: 800,
+    rarity: "N"
+  },
+  {
+    id: 12,
+    name: "Sacerdote del Fuego Nuevo",
+    description: "Guardi\xE1n del Fuego Nuevo. Al ser invocado, recuperas 500 PV.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "fuego"
+    ],
+    atk: 600,
+    def: 1200,
+    rarity: "N",
+    effects: [
+      {
+        trigger: "onSummon",
+        actions: [
+          {
+            type: "heal",
+            amount: 500
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 13,
+    name: "Cipactli",
+    description: "Caim\xE1n primordial de cuyo cuerpo se hizo la tierra.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "bestia",
+      "agua"
+    ],
+    atk: 1500,
+    def: 1200,
+    rarity: "R"
+  },
+  {
+    id: 14,
+    name: "Ahu\xEDzotl",
+    description: "Bestia de los lagos. Si es de noche al ser invocado, destruye al monstruo rival m\xE1s d\xE9bil.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "bestia",
+      "agua",
+      "muerte"
+    ],
+    atk: 2e3,
+    def: 1500,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onSummon",
+        conditions: [
+          {
+            type: "isNight"
+          }
+        ],
+        actions: [
+          {
+            type: "destroy",
+            target: "lowestAtkEnemy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 15,
+    name: "Serpiente de plumas",
+    description: "Serpiente cubierta de plumas de quetzal.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "serpiente",
+      "ave",
+      "viento"
+    ],
+    atk: 1600,
+    def: 1200,
+    rarity: "R"
+  },
+  {
+    id: 16,
+    name: "Tecolote del Mictl\xE1n",
+    description: "Su canto anuncia la muerte. Al ser destruido, hace 500 de da\xF1o al rival.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "ave",
+      "muerte"
+    ],
+    atk: 1300,
+    def: 900,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onDestroyed",
+        actions: [
+          {
+            type: "damage",
+            amount: 500,
+            who: "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 17,
+    name: "Guerrero del Mictl\xE1n",
+    description: "Guerrero ca\xEDdo que regres\xF3 del inframundo. De noche tiene +500 ATK.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero",
+      "muerte"
+    ],
+    atk: 2100,
+    def: 1600,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "continuous",
+        conditions: [
+          {
+            type: "isNight"
+          }
+        ],
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 500,
+            target: "self"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 18,
+    name: "Temazcal",
+    description: "Ba\xF1o de vapor sagrado. Recuperas 1000 PV.",
+    type: "spell",
+    attribute: "agua",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "N",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "heal",
+            amount: 1e3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 19,
+    name: "Juego de pelota",
+    description: "Tlachtli. Tus monstruos ganan +400 ATK hasta el final del turno.",
+    type: "spell",
+    attribute: "sol",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 400,
+            target: "allAllies",
+            untilEndOfTurn: true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 20,
+    name: "Lluvia de obsidiana",
+    description: "Hace 800 de da\xF1o al rival.",
+    type: "spell",
+    attribute: "tierra",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "damage",
+            amount: 800,
+            who: "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 21,
+    name: "Chimalli",
+    description: "Escudo de guerra. El monstruo equipado gana +600 DEF.",
+    type: "equip",
+    attribute: "tierra",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "N",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyDef",
+            amount: 600,
+            target: "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 22,
+    name: "Macuahuitl de obsidiana",
+    description: "El monstruo equipado gana +500 ATK.",
+    type: "equip",
+    attribute: "tierra",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 500,
+            target: "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 23,
+    name: "Fosa de estacas",
+    description: "Trampa. Cuando el rival ataca, destruye al monstruo atacante.",
+    type: "trap",
+    attribute: "tierra",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onOpponentAttack",
+        actions: [
+          {
+            type: "destroy",
+            target: "attacker"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 24,
+    name: "Niebla de Tl\xE1loc",
+    description: "Trampa. Cuando el rival ataca, la niebla detiene el ataque.",
+    type: "trap",
+    attribute: "agua",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onOpponentAttack",
+        actions: [
+          {
+            type: "negateAttack"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 25,
+    name: "Espejo humeante",
+    description: "Trampa de Tezcatlipoca. Cuando el rival ataca, el atacante pierde 800 ATK este turno.",
+    type: "trap",
+    attribute: "viento",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onOpponentAttack",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: -800,
+            target: "attacker",
+            untilEndOfTurn: true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 26,
+    name: "Tlacuache ladr\xF3n",
+    description: "Rob\xF3 el fuego a los dioses y lo trajo a los hombres.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "bestia"
+    ],
+    atk: 400,
+    def: 300,
+    rarity: "N"
+  },
+  {
+    id: 27,
+    name: "Ajolote del lago",
+    description: "X\xF3lotl escondido en las aguas de Xochimilco.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "agua",
+      "bestia"
+    ],
+    atk: 300,
+    def: 500,
+    rarity: "N"
+  },
+  {
+    id: 28,
+    name: "Chapul\xEDn de Chapultepec",
+    description: "Salta entre los ahuehuetes del cerro.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "bestia"
+    ],
+    atk: 500,
+    def: 200,
+    rarity: "N"
+  },
+  {
+    id: 29,
+    name: "Guacamaya roja",
+    description: "Sus plumas se ofrecen al sol.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "ave",
+      "sol"
+    ],
+    atk: 700,
+    def: 500,
+    rarity: "N"
+  },
+  {
+    id: 30,
+    name: "Tortuga de r\xEDo",
+    description: "Lenta pero dif\xEDcil de romper.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "agua",
+      "bestia"
+    ],
+    atk: 600,
+    def: 1100,
+    rarity: "N"
+  },
+  {
+    id: 31,
+    name: "Venado sagrado",
+    description: "Animal del sol y de la cacer\xEDa.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "bestia",
+      "sol"
+    ],
+    atk: 900,
+    def: 700,
+    rarity: "N"
+  },
+  {
+    id: 32,
+    name: "Pescador de Texcoco",
+    description: "Defiende su canoa con lanza y red.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "guerrero",
+      "agua"
+    ],
+    atk: 700,
+    def: 600,
+    rarity: "N"
+  },
+  {
+    id: 33,
+    name: "Aprendiz de tlacuilo",
+    description: "Pinta c\xF3dices; conoce los nombres de los dioses.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "viento"
+    ],
+    atk: 600,
+    def: 800,
+    rarity: "N"
+  },
+  {
+    id: 34,
+    name: "Murci\xE9lago de Tzinacan",
+    description: "Vuela en la casa de los murci\xE9lagos del inframundo.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "ave",
+      "muerte"
+    ],
+    atk: 800,
+    def: 600,
+    rarity: "N"
+  },
+  {
+    id: 35,
+    name: "Coyote astuto",
+    description: "Nunca cae en la misma trampa dos veces.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "bestia"
+    ],
+    atk: 1e3,
+    def: 700,
+    rarity: "N"
+  },
+  {
+    id: 36,
+    name: "Halc\xF3n mensajero",
+    description: "Lleva noticias de una ciudad a otra.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "ave",
+      "viento"
+    ],
+    atk: 900,
+    def: 600,
+    rarity: "N"
+  },
+  {
+    id: 37,
+    name: "Lagartija de obsidiana",
+    description: "Su piel brilla como vidrio volc\xE1nico.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "serpiente",
+      "fuego"
+    ],
+    atk: 600,
+    def: 500,
+    rarity: "N"
+  },
+  {
+    id: 38,
+    name: "Guerrero cuext\xE9catl",
+    description: "Guerrero huasteco de gorro c\xF3nico.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero"
+    ],
+    atk: 1100,
+    def: 900,
+    rarity: "N"
+  },
+  {
+    id: 39,
+    name: "Arquero chichimeca",
+    description: "Cazador del norte; no falla un tiro.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "guerrero",
+      "viento"
+    ],
+    atk: 1200,
+    def: 800,
+    rarity: "R"
+  },
+  {
+    id: 40,
+    name: "Guerrero coyote",
+    description: "Viste la piel del coyote en batalla.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero",
+      "bestia"
+    ],
+    atk: 1400,
+    def: 1100,
+    rarity: "R"
+  },
+  {
+    id: 41,
+    name: "Serpiente de cascabel",
+    description: "Avisa antes de morder.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "serpiente",
+      "muerte"
+    ],
+    atk: 1300,
+    def: 900,
+    rarity: "R"
+  },
+  {
+    id: 42,
+    name: "\xC1guila real",
+    description: "La que se pos\xF3 sobre el nopal.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "ave",
+      "sol"
+    ],
+    atk: 1500,
+    def: 1e3,
+    rarity: "R"
+  },
+  {
+    id: 43,
+    name: "Jaguar negro",
+    description: "Sombra de la selva, animal de Tezcatlipoca.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "jaguar",
+      "bestia",
+      "muerte"
+    ],
+    atk: 1600,
+    def: 1200,
+    rarity: "R"
+  },
+  {
+    id: 44,
+    name: "Sacerdotisa de la luna",
+    description: "Cuenta los d\xEDas del calendario lunar.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "agua"
+    ],
+    atk: 1200,
+    def: 1500,
+    rarity: "R"
+  },
+  {
+    id: 45,
+    name: "Tlaloque de la lluvia",
+    description: "Ayudante de Tl\xE1loc que rompe las jarras del cielo.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "deidad",
+      "agua"
+    ],
+    atk: 1500,
+    def: 1400,
+    rarity: "R"
+  },
+  {
+    id: 46,
+    name: "Capit\xE1n tequihua",
+    description: "Veterano que captur\xF3 a cuatro enemigos.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero"
+    ],
+    atk: 1700,
+    def: 1300,
+    rarity: "R"
+  },
+  {
+    id: 47,
+    name: "Sapo de la lluvia",
+    description: "Canta para llamar a Tl\xE1loc.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "agua",
+      "bestia"
+    ],
+    atk: 1100,
+    def: 1300,
+    rarity: "N"
+  },
+  {
+    id: 48,
+    name: "Colibr\xED de Huitzilopochtli",
+    description: "El alma de un guerrero ca\xEDdo que volvi\xF3 como colibr\xED.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "ave",
+      "sol",
+      "guerrero"
+    ],
+    atk: 1700,
+    def: 900,
+    rarity: "R"
+  },
+  {
+    id: 49,
+    name: "Guerrera cihuateteo",
+    description: "Mujer guerrera que acompa\xF1a al sol al atardecer.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "guerrero",
+      "muerte"
+    ],
+    atk: 1900,
+    def: 1500,
+    rarity: "SR"
+  },
+  {
+    id: 50,
+    name: "Cent\xE9otl, se\xF1or del ma\xEDz",
+    description: "Dios del ma\xEDz tierno que alimenta al pueblo.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "deidad",
+      "sol"
+    ],
+    atk: 2e3,
+    def: 2200,
+    rarity: "SR"
+  },
+  {
+    id: 51,
+    name: "Xochiquetzal",
+    description: "Diosa de las flores, la belleza y el arte.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "deidad",
+      "ave"
+    ],
+    atk: 1800,
+    def: 2400,
+    rarity: "SR"
+  },
+  {
+    id: 52,
+    name: "Chalchiuhtlicue",
+    description: "Se\xF1ora de la falda de jade, diosa de lagos y r\xEDos.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "deidad",
+      "agua"
+    ],
+    atk: 2500,
+    def: 2300,
+    rarity: "SR"
+  },
+  {
+    id: 53,
+    name: "Huehuec\xF3yotl",
+    description: "El coyote viejo, dios de la m\xFAsica y el enga\xF1o.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "deidad",
+      "bestia"
+    ],
+    atk: 2200,
+    def: 1800,
+    rarity: "SR"
+  },
+  {
+    id: 54,
+    name: "Mixc\xF3atl",
+    description: "Serpiente de nubes, dios de la caza.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "deidad",
+      "serpiente",
+      "guerrero"
+    ],
+    atk: 2300,
+    def: 1700,
+    rarity: "SR"
+  },
+  {
+    id: 55,
+    name: "X\xF3lotl",
+    description: "Hermano de Quetzalc\xF3atl; gu\xEDa a los muertos al Mictl\xE1n.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "deidad",
+      "muerte",
+      "bestia"
+    ],
+    atk: 2400,
+    def: 1600,
+    rarity: "SR"
+  },
+  {
+    id: 56,
+    name: "Teccizt\xE9catl",
+    description: "Se volvi\xF3 la luna al dudar ante la hoguera.",
+    type: "monster",
+    attribute: "agua",
+    tags: [
+      "deidad"
+    ],
+    atk: 2200,
+    def: 2e3,
+    rarity: "SR"
+  },
+  {
+    id: 57,
+    name: "Tzitzimitl",
+    description: "Estrella demonio que baja en los eclipses.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "deidad",
+      "muerte",
+      "viento"
+    ],
+    atk: 2500,
+    def: 1800,
+    rarity: "SR"
+  },
+  {
+    id: 58,
+    name: "Cihuac\xF3atl",
+    description: "Mujer serpiente; su llanto anuncia desgracias.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "deidad",
+      "serpiente",
+      "muerte"
+    ],
+    atk: 2400,
+    def: 1900,
+    rarity: "SR"
+  },
+  {
+    id: 59,
+    name: "Coyolxauhqui",
+    description: "Diosa de la luna que gui\xF3 a los cuatrocientos guerreros del sur.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "deidad",
+      "guerrero"
+    ],
+    atk: 2900,
+    def: 2100,
+    rarity: "UR"
+  },
+  {
+    id: 60,
+    name: "Huitzilopochtli",
+    description: "Colibr\xED del sur, dios de la guerra y del sol.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "deidad",
+      "guerrero",
+      "sol",
+      "ave"
+    ],
+    atk: 3300,
+    def: 2600,
+    rarity: "UR"
+  },
+  {
+    id: 61,
+    name: "Tezcatlipoca",
+    description: "Espejo humeante, se\xF1or de la noche.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "deidad",
+      "jaguar",
+      "muerte"
+    ],
+    atk: 3300,
+    def: 2800,
+    rarity: "UR"
+  },
+  {
+    id: 62,
+    name: "Xipe T\xF3tec",
+    description: "Nuestro se\xF1or el desollado, dios de la renovaci\xF3n.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "deidad",
+      "sol"
+    ],
+    atk: 3e3,
+    def: 2400,
+    rarity: "UR"
+  },
+  {
+    id: 63,
+    name: "Tonatiuh",
+    description: "El Quinto Sol, que pide energ\xEDa para moverse.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "deidad",
+      "sol",
+      "fuego"
+    ],
+    atk: 3400,
+    def: 2900,
+    rarity: "UR"
+  },
+  {
+    id: 64,
+    name: "Xiuhtecuhtli",
+    description: "Se\xF1or del fuego y del a\xF1o.",
+    type: "monster",
+    attribute: "sol",
+    tags: [
+      "deidad",
+      "fuego"
+    ],
+    atk: 3100,
+    def: 2500,
+    rarity: "UR"
+  },
+  {
+    id: 65,
+    name: "Tlaltecuhtli",
+    description: "Se\xF1ora de la tierra que devora a los muertos.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "deidad",
+      "bestia"
+    ],
+    atk: 3e3,
+    def: 3e3,
+    rarity: "UR"
+  },
+  {
+    id: 66,
+    name: "Ofrenda de cacao",
+    description: "Recuperas 800 PV.",
+    type: "spell",
+    attribute: "tierra",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "N",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "heal",
+            amount: 800
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 67,
+    name: "Danza del venado",
+    description: "Tus monstruos ganan +300 ATK hasta el final del turno.",
+    type: "spell",
+    attribute: "sol",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 300,
+            target: "allAllies",
+            untilEndOfTurn: true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 68,
+    name: "Ceremonia del Fuego Nuevo",
+    description: "Hace 1000 de da\xF1o al rival.",
+    type: "spell",
+    attribute: "sol",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "damage",
+            amount: 1e3,
+            who: "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 69,
+    name: "C\xF3dice sagrado",
+    description: "Robas 2 cartas.",
+    type: "spell",
+    attribute: "viento",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "draw",
+            amount: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 70,
+    name: "Rodela de plumas",
+    description: "El monstruo equipado gana +400 ATK.",
+    type: "equip",
+    attribute: "viento",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 400,
+            target: "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 71,
+    name: "\xC1tlatl",
+    description: "El monstruo equipado gana +700 ATK.",
+    type: "equip",
+    attribute: "viento",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 700,
+            target: "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 72,
+    name: "Penacho de quetzal",
+    description: "El monstruo equipado gana +300 ATK y +300 DEF.",
+    type: "equip",
+    attribute: "sol",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onActivate",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: 300,
+            target: "equipTarget"
+          },
+          {
+            type: "modifyDef",
+            amount: 300,
+            target: "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 73,
+    name: "Red de pescador",
+    description: "Cuando el rival ataca, el atacante pierde 1000 ATK este turno.",
+    type: "trap",
+    attribute: "agua",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "R",
+    effects: [
+      {
+        trigger: "onOpponentAttack",
+        actions: [
+          {
+            type: "modifyAtk",
+            amount: -1e3,
+            target: "attacker",
+            untilEndOfTurn: true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 74,
+    name: "Eclipse",
+    description: "Cuando el rival ataca, la oscuridad detiene el ataque.",
+    type: "trap",
+    attribute: "viento",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "SR",
+    effects: [
+      {
+        trigger: "onOpponentAttack",
+        actions: [
+          {
+            type: "negateAttack"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 75,
+    name: "Furia de Tl\xE1loc",
+    description: "Cuando el rival ataca, destruye a todos los monstruos rivales.",
+    type: "trap",
+    attribute: "agua",
+    tags: [],
+    atk: 0,
+    def: 0,
+    rarity: "UR",
+    effects: [
+      {
+        trigger: "onOpponentAttack",
+        actions: [
+          {
+            type: "destroy",
+            target: "allEnemies"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 76,
+    name: "Brujo nahualli",
+    description: "Hechicero de la sierra. Dicen que de noche camina en cuatro patas.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "guerrero",
+      "jaguar"
+    ],
+    atk: 1200,
+    def: 1500,
+    rarity: "SR",
+    nahual: {
+      name: "Jaguar nahual",
+      atk: 2300,
+      def: 900,
+      description: "La forma de noche del brujo: un jaguar de ojos humanos."
+    }
+  },
+  {
+    id: 77,
+    name: "Anciana del pueblo",
+    description: "Curandera que sabe los nombres de todas las hierbas.",
+    type: "monster",
+    attribute: "viento",
+    tags: [
+      "ave",
+      "muerte"
+    ],
+    atk: 500,
+    def: 1300,
+    rarity: "R",
+    nahual: {
+      name: "Tecolote nahual",
+      atk: 1700,
+      def: 1e3,
+      description: "Cuando canta el tecolote, alguien va a morir."
+    }
+  },
+  {
+    id: 78,
+    name: "Comerciante viajero",
+    description: "Pochteca que recorre los caminos con su carga de cacao.",
+    type: "monster",
+    attribute: "tierra",
+    tags: [
+      "bestia"
+    ],
+    atk: 900,
+    def: 900,
+    rarity: "R",
+    nahual: {
+      name: "Coyote nahual",
+      atk: 1600,
+      def: 1100,
+      description: "Astuto y veloz: nadie lo ve llegar a la caravana."
+    }
+  }
 ];
 
 // src/data/duelists.json
 var duelists_default = [
-  { id: "tianguis", name: "Macehual del tianguis", title: "Mercado de Tlatelolco", level: 1, glyph: "\u2618", intro: "Un comerciante que aprendi\xF3 a pelear entre puestos de cacao y obsidiana.", deck: [1, 1, 1, 2, 2, 2, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 16, 16, 16, 3, 3, 15, 15, 18, 18, 18, 19, 19, 19, 21, 21, 21, 22, 22, 22], signature: 3, rewards: [{ card: 1, weight: 6 }, { card: 2, weight: 6 }, { card: 9, weight: 6 }, { card: 11, weight: 6 }, { card: 13, weight: 3 }, { card: 19, weight: 3 }, { card: 21, weight: 3 }, { card: 3, weight: 1 }] },
-  { id: "chalchiuhtlicue", name: "Sacerdotisa de Chalchiuhtlicue", title: "Lago de Texcoco", level: 2, glyph: "\u2248", intro: "Guardiana de las aguas. Sus criaturas del lago se fortalecen con Tl\xE1loc.", deck: [10, 10, 10, 13, 13, 13, 14, 14, 6, 11, 11, 11, 1, 1, 1, 16, 16, 16, 9, 9, 9, 15, 15, 18, 18, 18, 24, 24, 24, 21, 21, 21, 20, 20, 20, 25, 25, 25, 12, 12], signature: 14, rewards: [{ card: 10, weight: 6 }, { card: 13, weight: 6 }, { card: 18, weight: 6 }, { card: 24, weight: 6 }, { card: 14, weight: 3 }, { card: 6, weight: 1 }] },
-  { id: "jaguar", name: "Capit\xE1n Jaguar", title: "Casa de los guerreros", level: 2, glyph: "\u2694", intro: "L\xEDder de la orden jaguar. De noche sus guerreros son m\xE1s peligrosos.", deck: [2, 2, 2, 1, 1, 1, 3, 3, 3, 4, 4, 9, 9, 9, 16, 16, 16, 17, 17, 11, 11, 11, 22, 22, 22, 21, 21, 21, 19, 19, 19, 23, 23, 23, 20, 20, 20, 13, 13, 13], signature: 17, rewards: [{ card: 2, weight: 6 }, { card: 1, weight: 6 }, { card: 22, weight: 6 }, { card: 23, weight: 6 }, { card: 3, weight: 3 }, { card: 4, weight: 3 }, { card: 17, weight: 1 }] },
-  { id: "xiuhtecuhtli", name: "Sacerdote de Xiuhtecuhtli", title: "Templo del fuego", level: 3, glyph: "\u2739", intro: "Se\xF1or del fuego nuevo. Quema con serpientes de fuego y lluvia de obsidiana.", deck: [12, 12, 12, 10, 10, 10, 5, 5, 15, 15, 15, 9, 9, 9, 4, 4, 2, 2, 2, 13, 13, 13, 20, 20, 20, 19, 19, 19, 23, 23, 23, 25, 25, 25, 18, 18, 18, 22, 22, 22], signature: 5, rewards: [{ card: 12, weight: 6 }, { card: 20, weight: 6 }, { card: 25, weight: 6 }, { card: 15, weight: 3 }, { card: 5, weight: 1 }] },
-  { id: "mictlantecuhtli", name: "Mictlantecuhtli", title: "Se\xF1or del Mictl\xE1n", level: 3, glyph: "\u2620", intro: "El se\xF1or de los muertos. Lo que destruyes, \xE9l lo trae de regreso.", deck: [11, 11, 11, 16, 16, 16, 17, 17, 17, 14, 14, 14, 7, 7, 13, 13, 13, 2, 2, 2, 1, 1, 1, 10, 10, 10, 24, 24, 24, 23, 23, 23, 25, 25, 25, 20, 20, 20, 21, 21], signature: 7, rewards: [{ card: 16, weight: 6 }, { card: 25, weight: 6 }, { card: 24, weight: 6 }, { card: 17, weight: 3 }, { card: 14, weight: 3 }, { card: 7, weight: 1 }, { card: 8, weight: 1 }] }
+  {
+    id: "tianguis",
+    name: "Macehual del tianguis",
+    title: "Mercado de Tlatelolco",
+    level: 1,
+    glyph: "\u2618",
+    intro: "Un comerciante que aprendi\xF3 a pelear entre puestos de cacao y obsidiana.",
+    deck: [
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      78,
+      9,
+      9,
+      10,
+      10,
+      10,
+      11,
+      11,
+      11,
+      12,
+      12,
+      12,
+      13,
+      13,
+      13,
+      16,
+      16,
+      16,
+      3,
+      3,
+      15,
+      15,
+      18,
+      18,
+      18,
+      19,
+      19,
+      19,
+      21,
+      21,
+      21,
+      22,
+      22,
+      22
+    ],
+    signature: 3,
+    rewards: [
+      {
+        card: 1,
+        weight: 6
+      },
+      {
+        card: 2,
+        weight: 6
+      },
+      {
+        card: 9,
+        weight: 6
+      },
+      {
+        card: 11,
+        weight: 6
+      },
+      {
+        card: 13,
+        weight: 3
+      },
+      {
+        card: 19,
+        weight: 3
+      },
+      {
+        card: 21,
+        weight: 3
+      },
+      {
+        card: 3,
+        weight: 1
+      },
+      {
+        card: 78,
+        weight: 3
+      }
+    ]
+  },
+  {
+    id: "chalchiuhtlicue",
+    name: "Sacerdotisa de Chalchiuhtlicue",
+    title: "Lago de Texcoco",
+    level: 2,
+    glyph: "\u2248",
+    intro: "Guardiana de las aguas. Sus criaturas del lago se fortalecen con Tl\xE1loc.",
+    deck: [
+      10,
+      10,
+      10,
+      13,
+      13,
+      13,
+      14,
+      14,
+      6,
+      11,
+      11,
+      11,
+      1,
+      1,
+      1,
+      16,
+      16,
+      16,
+      9,
+      9,
+      9,
+      15,
+      15,
+      18,
+      18,
+      18,
+      24,
+      24,
+      24,
+      21,
+      21,
+      21,
+      20,
+      20,
+      20,
+      25,
+      25,
+      25,
+      12,
+      12
+    ],
+    signature: 14,
+    rewards: [
+      {
+        card: 10,
+        weight: 6
+      },
+      {
+        card: 13,
+        weight: 6
+      },
+      {
+        card: 18,
+        weight: 6
+      },
+      {
+        card: 24,
+        weight: 6
+      },
+      {
+        card: 14,
+        weight: 3
+      },
+      {
+        card: 6,
+        weight: 1
+      },
+      {
+        card: 77,
+        weight: 2
+      }
+    ]
+  },
+  {
+    id: "jaguar",
+    name: "Capit\xE1n Jaguar",
+    title: "Casa de los guerreros",
+    level: 2,
+    glyph: "\u2694",
+    intro: "L\xEDder de la orden jaguar. De noche sus guerreros son m\xE1s peligrosos.",
+    deck: [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      3,
+      3,
+      3,
+      4,
+      4,
+      76,
+      76,
+      9,
+      16,
+      16,
+      16,
+      17,
+      17,
+      11,
+      11,
+      11,
+      22,
+      22,
+      22,
+      21,
+      21,
+      21,
+      19,
+      19,
+      19,
+      23,
+      23,
+      23,
+      20,
+      20,
+      20,
+      13,
+      13,
+      13
+    ],
+    signature: 17,
+    rewards: [
+      {
+        card: 2,
+        weight: 6
+      },
+      {
+        card: 1,
+        weight: 6
+      },
+      {
+        card: 22,
+        weight: 6
+      },
+      {
+        card: 23,
+        weight: 6
+      },
+      {
+        card: 3,
+        weight: 3
+      },
+      {
+        card: 4,
+        weight: 3
+      },
+      {
+        card: 17,
+        weight: 1
+      },
+      {
+        card: 76,
+        weight: 2
+      }
+    ]
+  },
+  {
+    id: "xiuhtecuhtli",
+    name: "Sacerdote de Xiuhtecuhtli",
+    title: "Templo del fuego",
+    level: 3,
+    glyph: "\u2739",
+    intro: "Se\xF1or del fuego nuevo. Quema con serpientes de fuego y lluvia de obsidiana.",
+    deck: [
+      12,
+      12,
+      12,
+      10,
+      10,
+      10,
+      5,
+      5,
+      15,
+      15,
+      15,
+      9,
+      9,
+      9,
+      4,
+      4,
+      2,
+      2,
+      2,
+      13,
+      13,
+      13,
+      20,
+      20,
+      20,
+      19,
+      19,
+      19,
+      23,
+      23,
+      23,
+      25,
+      25,
+      25,
+      18,
+      18,
+      18,
+      22,
+      22,
+      22
+    ],
+    signature: 5,
+    rewards: [
+      {
+        card: 12,
+        weight: 6
+      },
+      {
+        card: 20,
+        weight: 6
+      },
+      {
+        card: 25,
+        weight: 6
+      },
+      {
+        card: 15,
+        weight: 3
+      },
+      {
+        card: 5,
+        weight: 1
+      }
+    ]
+  },
+  {
+    id: "mictlantecuhtli",
+    name: "Mictlantecuhtli",
+    title: "Se\xF1or del Mictl\xE1n",
+    level: 3,
+    glyph: "\u2620",
+    intro: "El se\xF1or de los muertos. Lo que destruyes, \xE9l lo trae de regreso.",
+    deck: [
+      11,
+      11,
+      11,
+      16,
+      16,
+      16,
+      17,
+      17,
+      17,
+      14,
+      14,
+      14,
+      7,
+      7,
+      13,
+      13,
+      13,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      77,
+      77,
+      10,
+      24,
+      24,
+      24,
+      23,
+      23,
+      23,
+      25,
+      25,
+      25,
+      20,
+      20,
+      20,
+      21,
+      21
+    ],
+    signature: 7,
+    rewards: [
+      {
+        card: 16,
+        weight: 6
+      },
+      {
+        card: 25,
+        weight: 6
+      },
+      {
+        card: 24,
+        weight: 6
+      },
+      {
+        card: 17,
+        weight: 3
+      },
+      {
+        card: 14,
+        weight: 3
+      },
+      {
+        card: 7,
+        weight: 1
+      },
+      {
+        card: 8,
+        weight: 1
+      },
+      {
+        card: 77,
+        weight: 3
+      }
+    ]
+  }
 ];
 
 // src/data/fusions.json
@@ -230,6 +1982,282 @@ var fusions_default = {
   ]
 };
 
+// src/data/signs.json
+var signs_default = [
+  {
+    id: "cipactli",
+    name: "Cipactli",
+    meaning: "Lagarto",
+    glyph: "\u{1F40A}",
+    text: "Monstruos de Tierra +200 ATK",
+    rules: [
+      {
+        kind: "stat",
+        attribute: "tierra",
+        atk: 200
+      }
+    ]
+  },
+  {
+    id: "ehecatl",
+    name: "Eh\xE9catl",
+    meaning: "Viento",
+    glyph: "\u{1F32C}",
+    text: "Monstruos de Viento +300 ATK",
+    rules: [
+      {
+        kind: "stat",
+        attribute: "viento",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "calli",
+    name: "Calli",
+    meaning: "Casa",
+    glyph: "\u{1F3E0}",
+    text: "Todos los monstruos +300 DEF",
+    rules: [
+      {
+        kind: "stat",
+        def: 300
+      }
+    ]
+  },
+  {
+    id: "cuetzpalin",
+    name: "Cuetzpalin",
+    meaning: "Lagartija",
+    glyph: "\u{1F98E}",
+    text: "Ambos roban 1 carta extra al empezar",
+    rules: [
+      {
+        kind: "extraDraw",
+        amount: 1
+      }
+    ]
+  },
+  {
+    id: "coatl",
+    name: "C\xF3atl",
+    meaning: "Serpiente",
+    glyph: "\u{1F40D}",
+    text: "Serpientes +300 ATK",
+    rules: [
+      {
+        kind: "stat",
+        tag: "serpiente",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "miquiztli",
+    name: "Miquiztli",
+    meaning: "Muerte",
+    glyph: "\u{1F480}",
+    text: "Si destruyen tu monstruo, recibes 300 de da\xF1o",
+    rules: [
+      {
+        kind: "destroyBurn",
+        amount: 300
+      }
+    ]
+  },
+  {
+    id: "mazatl",
+    name: "M\xE1zatl",
+    meaning: "Venado",
+    glyph: "\u{1F98C}",
+    text: "Bestias +200 ATK",
+    rules: [
+      {
+        kind: "stat",
+        tag: "bestia",
+        atk: 200
+      }
+    ]
+  },
+  {
+    id: "tochtli",
+    name: "Tochtli",
+    meaning: "Conejo",
+    glyph: "\u{1F407}",
+    text: "Al empezar tu turno recuperas 200 de vida",
+    rules: [
+      {
+        kind: "turnHeal",
+        amount: 200
+      }
+    ]
+  },
+  {
+    id: "atl",
+    name: "Atl",
+    meaning: "Agua",
+    glyph: "\u{1F4A7}",
+    text: "Monstruos de Agua +300 ATK",
+    rules: [
+      {
+        kind: "stat",
+        attribute: "agua",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "itzcuintli",
+    name: "Itzcuintli",
+    meaning: "Perro",
+    glyph: "\u{1F415}",
+    text: "Cartas de muerte +300 ATK",
+    rules: [
+      {
+        kind: "stat",
+        tag: "muerte",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "ozomatli",
+    name: "Ozomatli",
+    meaning: "Mono",
+    glyph: "\u{1F412}",
+    text: "Los monstruos de fusi\xF3n salen con +300 ATK",
+    rules: [
+      {
+        kind: "fusionBonus",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "malinalli",
+    name: "Malinalli",
+    meaning: "Hierba",
+    glyph: "\u{1F33F}",
+    text: "Ambos empiezan con 6000 de vida",
+    rules: [
+      {
+        kind: "startLife",
+        amount: 6e3
+      }
+    ]
+  },
+  {
+    id: "acatl",
+    name: "\xC1catl",
+    meaning: "Ca\xF1a",
+    glyph: "\u{1F38B}",
+    text: "Los ataques directos hacen 400 de da\xF1o extra",
+    rules: [
+      {
+        kind: "directBonus",
+        amount: 400
+      }
+    ]
+  },
+  {
+    id: "ocelotl",
+    name: "Oc\xE9lotl",
+    meaning: "Jaguar",
+    glyph: "\u{1F406}",
+    text: "Jaguares +400 ATK",
+    rules: [
+      {
+        kind: "stat",
+        tag: "jaguar",
+        atk: 400
+      }
+    ]
+  },
+  {
+    id: "cuauhtli",
+    name: "Cuauhtli",
+    meaning: "\xC1guila",
+    glyph: "\u{1F985}",
+    text: "Aves +300 ATK",
+    rules: [
+      {
+        kind: "stat",
+        tag: "ave",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "cozcacuauhtli",
+    name: "Cozcacuauhtli",
+    meaning: "Zopilote",
+    glyph: "\u{1FAB6}",
+    text: "Si destruyes un monstruo rival, recuperas 300 de vida",
+    rules: [
+      {
+        kind: "destroyHeal",
+        amount: 300
+      }
+    ]
+  },
+  {
+    id: "ollin",
+    name: "Ollin",
+    meaning: "Movimiento",
+    glyph: "\u{1F300}",
+    text: "Todos los monstruos +300 ATK y \u2212300 DEF",
+    rules: [
+      {
+        kind: "stat",
+        atk: 300,
+        def: -300
+      }
+    ]
+  },
+  {
+    id: "tecpatl",
+    name: "T\xE9cpatl",
+    meaning: "Pedernal",
+    glyph: "\u{1F52A}",
+    text: "Guerreros +300 ATK",
+    rules: [
+      {
+        kind: "stat",
+        tag: "guerrero",
+        atk: 300
+      }
+    ]
+  },
+  {
+    id: "quiahuitl",
+    name: "Qui\xE1huitl",
+    meaning: "Lluvia",
+    glyph: "\u{1F327}",
+    text: "Deidades +200 ATK y +200 DEF",
+    rules: [
+      {
+        kind: "stat",
+        tag: "deidad",
+        atk: 200,
+        def: 200
+      }
+    ]
+  },
+  {
+    id: "xochitl",
+    name: "X\xF3chitl",
+    meaning: "Flor",
+    glyph: "\u{1F338}",
+    text: "Ambos empiezan con 10000 de vida",
+    rules: [
+      {
+        kind: "startLife",
+        amount: 1e4
+      }
+    ]
+  }
+];
+
 // src/data/types.ts
 var CARD_TAGS = [
   "jaguar",
@@ -333,11 +2361,15 @@ function validateCard(c) {
   for (const t of c.tags) if (!CARD_TAGS.includes(t)) p.push(`etiqueta desconocida "${t}"`);
   if (c.rarity !== void 0 && !RARITIES.includes(c.rarity)) p.push(`rareza desconocida "${c.rarity}" (usa N, R, SR o UR)`);
   const actionTypes = ["modifyAtk", "modifyDef", "damage", "heal", "draw", "destroy", "revive", "negateAttack"];
-  const conditionTypes = ["isNight", "isDay", "lifeBelow", "hasTagOnField", "opponentHasMoreMonsters"];
+  const conditionTypes = ["isNight", "isDay", "isPhase", "lifeBelow", "hasTagOnField", "opponentHasMoreMonsters"];
+  const phases = ["alba", "mediodia", "ocaso", "medianoche"];
   for (const e of c.effects ?? []) {
     if (!EFFECT_TRIGGERS.includes(e.trigger)) p.push(`efecto con trigger desconocido "${e.trigger}"`);
     if (!Array.isArray(e.actions) || e.actions.length === 0) p.push("efecto sin acciones");
-    for (const cond of e.conditions ?? []) if (!conditionTypes.includes(cond.type)) p.push(`condici\xF3n desconocida "${cond.type}"`);
+    for (const cond of e.conditions ?? []) {
+      if (!conditionTypes.includes(cond.type)) p.push(`condici\xF3n desconocida "${cond.type}"`);
+      if (cond.type === "isPhase" && !phases.includes(cond.phase)) p.push(`fase desconocida "${cond.phase}" (usa alba, mediodia, ocaso o medianoche)`);
+    }
     for (const a of e.actions ?? []) {
       if (!actionTypes.includes(a.type)) p.push(`acci\xF3n desconocida "${a.type}"`);
       if ("target" in a && !EFFECT_TARGETS.includes(a.target)) p.push(`objetivo desconocido "${a.target}"`);
@@ -347,6 +2379,11 @@ function validateCard(c) {
   }
   if ((c.type === "spell" || c.type === "equip") && !(c.effects ?? []).some((e) => e.trigger === "onActivate")) {
     p.push("las m\xE1gicas y equipos necesitan un efecto onActivate");
+  }
+  if (c.nahual) {
+    if (c.type !== "monster") p.push("solo los monstruos pueden ser nahuales");
+    if (!c.nahual.name?.trim()) p.push("al nahual le falta el nombre de su forma de noche");
+    if (!Number.isInteger(c.nahual.atk) || !Number.isInteger(c.nahual.def) || c.nahual.atk < 0 || c.nahual.def < 0) p.push("ATK/DEF del nahual deben ser enteros \u2265 0");
   }
   if (c.type === "trap" && !(c.effects ?? []).some((e) => e.trigger === "onOpponentAttack")) {
     p.push("las trampas necesitan un efecto onOpponentAttack");
@@ -406,7 +2443,7 @@ var FusionDatabase = class {
       for (const t of [r.a, r.b, ...r.result]) {
         if (!CARD_TAGS.includes(t)) problems.push(`regla ${r.a}+${r.b}: etiqueta desconocida "${t}"`);
       }
-      const candidates = db.all().filter((c) => c.type === "monster" && !recipeOnly.has(c.id) && r.result.every((t) => c.tags.includes(t))).sort((x, y) => x.atk - y.atk);
+      const candidates = db.all().filter((c) => c.type === "monster" && !recipeOnly.has(c.id) && !c.nahual && r.result.every((t) => c.tags.includes(t))).sort((x, y) => x.atk - y.atk);
       if (candidates.length === 0) problems.push(`regla ${r.a}+${r.b}: ninguna carta tiene [${r.result.join(", ")}]`);
       this.rules.push({ a: r.a, b: r.b, candidates });
     }
@@ -423,8 +2460,8 @@ var FusionDatabase = class {
     if (exact) return [exact];
     const found = /* @__PURE__ */ new Map();
     for (const rule of this.rules) {
-      const matches = a.tags.includes(rule.a) && b.tags.includes(rule.b) || a.tags.includes(rule.b) && b.tags.includes(rule.a);
-      if (!matches) continue;
+      const matches2 = a.tags.includes(rule.a) && b.tags.includes(rule.b) || a.tags.includes(rule.b) && b.tags.includes(rule.a);
+      if (!matches2) continue;
       const result = rule.candidates.find((c) => c.atk > a.atk && c.atk > b.atk);
       if (result) found.set(result.id, result);
     }
@@ -444,7 +2481,9 @@ var FusionDatabase = class {
 // src/data/index.ts
 var cardDb = new CardDatabase(cards_default);
 var fusionDb = new FusionDatabase(fusions_default, cardDb);
-var DATA_VERSION = fnv1a(JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default));
+var daySigns = signs_default;
+var ENGINE_VERSION = 2;
+var DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default) + JSON.stringify(signs_default));
 function fnv1a(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -508,17 +2547,30 @@ var CardInstance = class {
   hasAttackedThisTurn = false;
   positionChangedThisTurn = false;
   summonedThisTurn = false;
+  /** Nahual en forma de noche (lo decide el motor según el Reloj Solar). */
+  nightForm = false;
   modifiers = [];
   constructor(instanceId, owner, def) {
     this.instanceId = instanceId;
     this.owner = owner;
     this.def = def;
   }
+  /** Stats base de la forma actual (de noche, la del nahual). */
+  get baseAtk() {
+    return this.nightForm && this.def.nahual ? this.def.nahual.atk : this.def.atk;
+  }
+  get baseDef() {
+    return this.nightForm && this.def.nahual ? this.def.nahual.def : this.def.def;
+  }
+  /** Nombre que se ve (de noche, el del nahual). */
+  get name() {
+    return this.nightForm && this.def.nahual ? this.def.nahual.name : this.def.name;
+  }
   get atk() {
-    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.atk, this.def.atk));
+    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.atk, this.baseAtk));
   }
   get defense() {
-    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.def, this.def.def));
+    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.def, this.baseDef));
   }
   get activeModifiers() {
     return this.modifiers;
@@ -543,10 +2595,11 @@ var CardInstance = class {
     this.hasAttackedThisTurn = false;
     this.positionChangedThisTurn = false;
     this.summonedThisTurn = false;
+    this.nightForm = false;
     this.position = "attack";
   }
   toString() {
-    return `#${this.instanceId} ${this.def.name} ${this.atk}/${this.defense} [${this.zone}]`;
+    return `#${this.instanceId} ${this.name} ${this.atk}/${this.defense} [${this.zone}]`;
   }
 };
 
@@ -562,13 +2615,52 @@ function buildShuffledDeck(cardIds, owner, db, ids, rng) {
   return shuffle(instances, rng);
 }
 
+// src/core/time.ts
+var TIME_PHASES = ["alba", "mediodia", "ocaso", "medianoche"];
+var TURNS_PER_PHASE = 2;
+var PHASE_INFO = {
+  alba: { name: "Alba", icon: "\u{1F305}", night: false, bonuses: [{ attribute: "tierra", atk: 200 }] },
+  mediodia: { name: "Mediod\xEDa", icon: "\u2600", night: false, bonuses: [{ attribute: "sol", atk: 300 }] },
+  ocaso: { name: "Ocaso", icon: "\u{1F307}", night: true, bonuses: [{ attribute: "viento", atk: 200 }] },
+  medianoche: { name: "Medianoche", icon: "\u263E", night: true, bonuses: [{ attribute: "agua", atk: 300 }, { tag: "muerte", atk: 300 }, { attribute: "sol", atk: -200 }] }
+};
+function phaseOf(turn) {
+  return TIME_PHASES[Math.floor((Math.max(1, turn) - 1) / TURNS_PER_PHASE) % TIME_PHASES.length];
+}
+var isNightTurn = (turn) => PHASE_INFO[phaseOf(turn)].night;
+function phaseAtkBonus(phase, card) {
+  return PHASE_INFO[phase].bonuses.reduce((sum, b) => sum + (matches(card, b) ? b.atk : 0), 0);
+}
+function matches(card, b) {
+  if (b.attribute && card.attribute !== b.attribute) return false;
+  if (b.tag && !card.tags.includes(b.tag)) return false;
+  return true;
+}
+
 // src/core/DuelState.ts
 var FIELD_SLOTS = 5;
 var opponentOf = (p) => p === 0 ? 1 : 0;
-var isNightTurn = (turn) => Math.floor((turn - 1) / 2) % 2 === 1;
+
+// src/core/daySign.ts
+var signRules = (sign, kind) => (sign?.rules ?? []).filter((r) => r.kind === kind);
+function signTotal(sign, kind) {
+  let n = 0;
+  for (const r of sign?.rules ?? []) {
+    if (r.kind !== kind) continue;
+    n += r.kind === "fusionBonus" ? r.atk : "amount" in r ? r.amount : 0;
+  }
+  return n;
+}
 
 // src/core/DuelEngine.ts
+var SOURCE_ENVIRONMENT = -1;
+var SOURCE_FUSION_SIGN = -2;
 var FIRST_TURN_CAN_ATTACK = false;
+function pickDaySign(seed, signs) {
+  if (!signs || signs.length === 0) return null;
+  const rng = createRng((seed ^ 5351397) >>> 0);
+  return signs[Math.floor(rng() * signs.length)] ?? null;
+}
 var DuelEngine = class {
   state;
   db;
@@ -583,10 +2675,12 @@ var DuelEngine = class {
     this.db = opts.db;
     this.fusion = opts.fusion ?? noFusions;
     const rng = createRng(opts.seed);
+    const daySign = pickDaySign(opts.seed, opts.signs);
+    const startLife = signRules(daySign, "startLife").at(-1)?.amount ?? START_LIFE;
     const makePlayer = (p) => {
       const deck = buildShuffledDeck(opts.decks[p], p, this.db, this.ids, rng);
       deck.forEach((c) => this.cards.set(c.instanceId, c));
-      return { life: START_LIFE, deck, hand: [], field: Array(FIELD_SLOTS).fill(null), support: Array(FIELD_SLOTS).fill(null), mictlan: [] };
+      return { life: startLife, deck, hand: [], field: Array(FIELD_SLOTS).fill(null), support: Array(FIELD_SLOTS).fill(null), mictlan: [] };
     };
     this.state = {
       players: [makePlayer(0), makePlayer(1)],
@@ -595,7 +2689,8 @@ var DuelEngine = class {
       phase: "main",
       supportUsedThisTurn: false,
       monsterPlayedThisTurn: false,
-      winner: null
+      winner: null,
+      daySign
     };
   }
   /** Reparte las manos y empieza el turno 1. */
@@ -604,6 +2699,8 @@ var DuelEngine = class {
     this.started = true;
     const events = [];
     for (const p of [0, 1]) this.refillHand(p, events);
+    const extra = signTotal(this.state.daySign, "extraDraw");
+    if (extra > 0) for (const p of [0, 1]) this.drawCards(p, extra, events);
     events.push({ type: "turnStarted", player: this.state.turnPlayer, turn: 1 });
     this.recomputeAuras();
     return events;
@@ -700,6 +2797,8 @@ var DuelEngine = class {
       position: current.position,
       faceDown: current.faceDown
     });
+    const fusionBonus = signTotal(s.daySign, "fusionBonus");
+    if (fused && fusionBonus) current.addModifier({ atk: fusionBonus, def: 0, sourceId: SOURCE_FUSION_SIGN, untilEndOfTurn: false });
     if (!current.faceDown) {
       if (fused) this.runEffects(current, "onFusionSummon", events);
       this.runEffects(current, "onSummon", events);
@@ -804,7 +2903,7 @@ var DuelEngine = class {
     if (s.winner !== null || attacker.zone !== "field") return null;
     if (target && target.zone !== "field") return null;
     if (!target) {
-      this.damage(foePlayer, attacker.atk, events);
+      this.damage(foePlayer, attacker.atk + signTotal(s.daySign, "directBonus"), events);
       return null;
     }
     if (target.faceDown) {
@@ -834,7 +2933,7 @@ var DuelEngine = class {
   // ---------------------------------------------------------------- turnos
   endTurn(events) {
     const s = this.state;
-    const wasNight = isNightTurn(s.turn);
+    const wasPhase = phaseOf(s.turn);
     for (const p of s.players) {
       for (const c of p.field) {
         if (!c) continue;
@@ -850,7 +2949,16 @@ var DuelEngine = class {
     s.supportUsedThisTurn = false;
     s.monsterPlayedThisTurn = false;
     events.push({ type: "turnStarted", player: s.turnPlayer, turn: s.turn });
-    if (isNightTurn(s.turn) !== wasNight) events.push({ type: "timeChanged", night: isNightTurn(s.turn) });
+    const phase = phaseOf(s.turn);
+    if (phase !== wasPhase) {
+      events.push({ type: "timeChanged", phase, night: PHASE_INFO[phase].night });
+      if (PHASE_INFO[phase].night !== PHASE_INFO[wasPhase].night) {
+        const nahuales = s.players.flatMap((p) => p.field).filter((c) => !!c && !!c.def.nahual);
+        if (nahuales.length) events.push({ type: "nahualShift", instanceIds: nahuales.map((c) => c.instanceId), night: PHASE_INFO[phase].night });
+      }
+    }
+    const heal = signTotal(s.daySign, "turnHeal");
+    if (heal > 0) this.heal(s.turnPlayer, heal, events);
     this.refillHand(s.turnPlayer, events);
     for (const c of [...s.players[s.turnPlayer].field]) {
       if (c && !c.faceDown && c.zone === "field") this.runEffects(c, "onTurnStart", events);
@@ -882,12 +2990,32 @@ var DuelEngine = class {
     const wasFaceUp = !card.faceDown;
     this.sendToMictlan(card, reason, events);
     if (wasFaceUp) this.runEffects(card, "onDestroyed", events);
+    const burn = signTotal(this.state.daySign, "destroyBurn");
+    if (burn > 0) this.damage(card.owner, burn, events);
+    const heal = signTotal(this.state.daySign, "destroyHeal");
+    if (heal > 0 && this.state.winner === null) this.heal(opponentOf(card.owner), heal, events);
   }
   sendToMictlan(card, reason, events) {
     card.resetForZoneChange();
     card.zone = "mictlan";
     this.state.players[card.owner].mictlan.push(card);
     events.push({ type: "sentToMictlan", instanceId: card.instanceId, reason });
+  }
+  heal(player, amount, events) {
+    if (amount <= 0) return;
+    const p = this.state.players[player];
+    p.life += amount;
+    events.push({ type: "healed", player, amount, lifeAfter: p.life });
+  }
+  /** Robar por efecto: si el mazo se acaba no se pierde. */
+  drawCards(player, amount, events) {
+    const me = this.state.players[player];
+    const drawn = me.deck.splice(0, Math.max(0, amount));
+    for (const c of drawn) {
+      c.zone = "hand";
+      me.hand.push(c);
+    }
+    if (drawn.length) events.push({ type: "cardsDrawn", player, instanceIds: drawn.map((c) => c.instanceId) });
   }
   damage(player, amount, events) {
     if (amount <= 0) return;
@@ -926,6 +3054,8 @@ var DuelEngine = class {
           return isNightTurn(s.turn);
         case "isDay":
           return !isNightTurn(s.turn);
+        case "isPhase":
+          return phaseOf(s.turn) === c.phase;
         case "lifeBelow":
           return me.life < c.amount;
         case "hasTagOnField":
@@ -984,18 +3114,11 @@ var DuelEngine = class {
         this.damage(a.who === "self" ? owner : opponentOf(owner), a.amount, events);
         return;
       case "heal":
-        me.life += a.amount;
-        events.push({ type: "healed", player: owner, amount: a.amount, lifeAfter: me.life });
+        this.heal(owner, a.amount, events);
         return;
-      case "draw": {
-        const drawn = me.deck.splice(0, Math.max(0, a.amount));
-        for (const c of drawn) {
-          c.zone = "hand";
-          me.hand.push(c);
-        }
-        if (drawn.length) events.push({ type: "cardsDrawn", player: owner, instanceIds: drawn.map((c) => c.instanceId) });
+      case "draw":
+        this.drawCards(owner, a.amount, events);
         return;
-      }
       case "destroy":
         for (const t of this.resolveTargets(card, a.target, a.tag, ctx)) this.destroy(t, events, "effect");
         return;
@@ -1020,6 +3143,19 @@ var DuelEngine = class {
   recomputeAuras() {
     const field = this.state.players.flatMap((p) => p.field).filter((c) => c !== null);
     field.forEach((c) => c.clearAuraModifiers());
+    const phase = phaseOf(this.state.turn);
+    const night = PHASE_INFO[phase].night;
+    for (const c of field) {
+      c.nightForm = night && !!c.def.nahual;
+      let atk = phaseAtkBonus(phase, c.def);
+      let def = 0;
+      for (const r of signRules(this.state.daySign, "stat")) {
+        if (!matches(c.def, r)) continue;
+        atk += r.atk ?? 0;
+        def += r.def ?? 0;
+      }
+      if (atk || def) c.addModifier({ atk, def, sourceId: SOURCE_ENVIRONMENT, untilEndOfTurn: false, aura: true });
+    }
     for (const source of field) {
       if (source.faceDown) continue;
       for (const effect of source.def.effects ?? []) {
@@ -1156,9 +3292,10 @@ function aiStep(engine, opponent, fusion) {
   return result;
 }
 function createDuel(seed, playerDeck, opponent, db, fusion) {
-  return new DuelEngine({ db, decks: [playerDeck, opponent.deck], seed, firstPlayer: HUMAN, fusion });
+  return new DuelEngine({ db, decks: [playerDeck, opponent.deck], seed, firstPlayer: HUMAN, fusion, signs: daySigns });
 }
 function replayDuel(input, db, fusion) {
+  if (input.intents.some((i) => i?.type === "surrender")) return { ok: true, winner: AI, turns: 0 };
   const engine = createDuel(input.seed, input.playerDeck, input.opponent, db, fusion);
   engine.start();
   let next = 0;

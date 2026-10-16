@@ -1,7 +1,415 @@
 [
-  {"id": "tianguis", "name": "Macehual del tianguis", "title": "Mercado de Tlatelolco", "level": 1, "glyph": "☘", "intro": "Un comerciante que aprendió a pelear entre puestos de cacao y obsidiana.", "deck": [1, 1, 1, 2, 2, 2, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 16, 16, 16, 3, 3, 15, 15, 18, 18, 18, 19, 19, 19, 21, 21, 21, 22, 22, 22], "signature": 3, "rewards": [{"card": 1, "weight": 6}, {"card": 2, "weight": 6}, {"card": 9, "weight": 6}, {"card": 11, "weight": 6}, {"card": 13, "weight": 3}, {"card": 19, "weight": 3}, {"card": 21, "weight": 3}, {"card": 3, "weight": 1}]},
-  {"id": "chalchiuhtlicue", "name": "Sacerdotisa de Chalchiuhtlicue", "title": "Lago de Texcoco", "level": 2, "glyph": "≈", "intro": "Guardiana de las aguas. Sus criaturas del lago se fortalecen con Tláloc.", "deck": [10, 10, 10, 13, 13, 13, 14, 14, 6, 11, 11, 11, 1, 1, 1, 16, 16, 16, 9, 9, 9, 15, 15, 18, 18, 18, 24, 24, 24, 21, 21, 21, 20, 20, 20, 25, 25, 25, 12, 12], "signature": 14, "rewards": [{"card": 10, "weight": 6}, {"card": 13, "weight": 6}, {"card": 18, "weight": 6}, {"card": 24, "weight": 6}, {"card": 14, "weight": 3}, {"card": 6, "weight": 1}]},
-  {"id": "jaguar", "name": "Capitán Jaguar", "title": "Casa de los guerreros", "level": 2, "glyph": "⚔", "intro": "Líder de la orden jaguar. De noche sus guerreros son más peligrosos.", "deck": [2, 2, 2, 1, 1, 1, 3, 3, 3, 4, 4, 9, 9, 9, 16, 16, 16, 17, 17, 11, 11, 11, 22, 22, 22, 21, 21, 21, 19, 19, 19, 23, 23, 23, 20, 20, 20, 13, 13, 13], "signature": 17, "rewards": [{"card": 2, "weight": 6}, {"card": 1, "weight": 6}, {"card": 22, "weight": 6}, {"card": 23, "weight": 6}, {"card": 3, "weight": 3}, {"card": 4, "weight": 3}, {"card": 17, "weight": 1}]},
-  {"id": "xiuhtecuhtli", "name": "Sacerdote de Xiuhtecuhtli", "title": "Templo del fuego", "level": 3, "glyph": "✹", "intro": "Señor del fuego nuevo. Quema con serpientes de fuego y lluvia de obsidiana.", "deck": [12, 12, 12, 10, 10, 10, 5, 5, 15, 15, 15, 9, 9, 9, 4, 4, 2, 2, 2, 13, 13, 13, 20, 20, 20, 19, 19, 19, 23, 23, 23, 25, 25, 25, 18, 18, 18, 22, 22, 22], "signature": 5, "rewards": [{"card": 12, "weight": 6}, {"card": 20, "weight": 6}, {"card": 25, "weight": 6}, {"card": 15, "weight": 3}, {"card": 5, "weight": 1}]},
-  {"id": "mictlantecuhtli", "name": "Mictlantecuhtli", "title": "Señor del Mictlán", "level": 3, "glyph": "☠", "intro": "El señor de los muertos. Lo que destruyes, él lo trae de regreso.", "deck": [11, 11, 11, 16, 16, 16, 17, 17, 17, 14, 14, 14, 7, 7, 13, 13, 13, 2, 2, 2, 1, 1, 1, 10, 10, 10, 24, 24, 24, 23, 23, 23, 25, 25, 25, 20, 20, 20, 21, 21], "signature": 7, "rewards": [{"card": 16, "weight": 6}, {"card": 25, "weight": 6}, {"card": 24, "weight": 6}, {"card": 17, "weight": 3}, {"card": 14, "weight": 3}, {"card": 7, "weight": 1}, {"card": 8, "weight": 1}]}
+  {
+    "id": "tianguis",
+    "name": "Macehual del tianguis",
+    "title": "Mercado de Tlatelolco",
+    "level": 1,
+    "glyph": "☘",
+    "intro": "Un comerciante que aprendió a pelear entre puestos de cacao y obsidiana.",
+    "deck": [
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      78,
+      9,
+      9,
+      10,
+      10,
+      10,
+      11,
+      11,
+      11,
+      12,
+      12,
+      12,
+      13,
+      13,
+      13,
+      16,
+      16,
+      16,
+      3,
+      3,
+      15,
+      15,
+      18,
+      18,
+      18,
+      19,
+      19,
+      19,
+      21,
+      21,
+      21,
+      22,
+      22,
+      22
+    ],
+    "signature": 3,
+    "rewards": [
+      {
+        "card": 1,
+        "weight": 6
+      },
+      {
+        "card": 2,
+        "weight": 6
+      },
+      {
+        "card": 9,
+        "weight": 6
+      },
+      {
+        "card": 11,
+        "weight": 6
+      },
+      {
+        "card": 13,
+        "weight": 3
+      },
+      {
+        "card": 19,
+        "weight": 3
+      },
+      {
+        "card": 21,
+        "weight": 3
+      },
+      {
+        "card": 3,
+        "weight": 1
+      },
+      {
+        "card": 78,
+        "weight": 3
+      }
+    ]
+  },
+  {
+    "id": "chalchiuhtlicue",
+    "name": "Sacerdotisa de Chalchiuhtlicue",
+    "title": "Lago de Texcoco",
+    "level": 2,
+    "glyph": "≈",
+    "intro": "Guardiana de las aguas. Sus criaturas del lago se fortalecen con Tláloc.",
+    "deck": [
+      10,
+      10,
+      10,
+      13,
+      13,
+      13,
+      14,
+      14,
+      6,
+      11,
+      11,
+      11,
+      1,
+      1,
+      1,
+      16,
+      16,
+      16,
+      9,
+      9,
+      9,
+      15,
+      15,
+      18,
+      18,
+      18,
+      24,
+      24,
+      24,
+      21,
+      21,
+      21,
+      20,
+      20,
+      20,
+      25,
+      25,
+      25,
+      12,
+      12
+    ],
+    "signature": 14,
+    "rewards": [
+      {
+        "card": 10,
+        "weight": 6
+      },
+      {
+        "card": 13,
+        "weight": 6
+      },
+      {
+        "card": 18,
+        "weight": 6
+      },
+      {
+        "card": 24,
+        "weight": 6
+      },
+      {
+        "card": 14,
+        "weight": 3
+      },
+      {
+        "card": 6,
+        "weight": 1
+      },
+      {
+        "card": 77,
+        "weight": 2
+      }
+    ]
+  },
+  {
+    "id": "jaguar",
+    "name": "Capitán Jaguar",
+    "title": "Casa de los guerreros",
+    "level": 2,
+    "glyph": "⚔",
+    "intro": "Líder de la orden jaguar. De noche sus guerreros son más peligrosos.",
+    "deck": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      3,
+      3,
+      3,
+      4,
+      4,
+      76,
+      76,
+      9,
+      16,
+      16,
+      16,
+      17,
+      17,
+      11,
+      11,
+      11,
+      22,
+      22,
+      22,
+      21,
+      21,
+      21,
+      19,
+      19,
+      19,
+      23,
+      23,
+      23,
+      20,
+      20,
+      20,
+      13,
+      13,
+      13
+    ],
+    "signature": 17,
+    "rewards": [
+      {
+        "card": 2,
+        "weight": 6
+      },
+      {
+        "card": 1,
+        "weight": 6
+      },
+      {
+        "card": 22,
+        "weight": 6
+      },
+      {
+        "card": 23,
+        "weight": 6
+      },
+      {
+        "card": 3,
+        "weight": 3
+      },
+      {
+        "card": 4,
+        "weight": 3
+      },
+      {
+        "card": 17,
+        "weight": 1
+      },
+      {
+        "card": 76,
+        "weight": 2
+      }
+    ]
+  },
+  {
+    "id": "xiuhtecuhtli",
+    "name": "Sacerdote de Xiuhtecuhtli",
+    "title": "Templo del fuego",
+    "level": 3,
+    "glyph": "✹",
+    "intro": "Señor del fuego nuevo. Quema con serpientes de fuego y lluvia de obsidiana.",
+    "deck": [
+      12,
+      12,
+      12,
+      10,
+      10,
+      10,
+      5,
+      5,
+      15,
+      15,
+      15,
+      9,
+      9,
+      9,
+      4,
+      4,
+      2,
+      2,
+      2,
+      13,
+      13,
+      13,
+      20,
+      20,
+      20,
+      19,
+      19,
+      19,
+      23,
+      23,
+      23,
+      25,
+      25,
+      25,
+      18,
+      18,
+      18,
+      22,
+      22,
+      22
+    ],
+    "signature": 5,
+    "rewards": [
+      {
+        "card": 12,
+        "weight": 6
+      },
+      {
+        "card": 20,
+        "weight": 6
+      },
+      {
+        "card": 25,
+        "weight": 6
+      },
+      {
+        "card": 15,
+        "weight": 3
+      },
+      {
+        "card": 5,
+        "weight": 1
+      }
+    ]
+  },
+  {
+    "id": "mictlantecuhtli",
+    "name": "Mictlantecuhtli",
+    "title": "Señor del Mictlán",
+    "level": 3,
+    "glyph": "☠",
+    "intro": "El señor de los muertos. Lo que destruyes, él lo trae de regreso.",
+    "deck": [
+      11,
+      11,
+      11,
+      16,
+      16,
+      16,
+      17,
+      17,
+      17,
+      14,
+      14,
+      14,
+      7,
+      7,
+      13,
+      13,
+      13,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      77,
+      77,
+      10,
+      24,
+      24,
+      24,
+      23,
+      23,
+      23,
+      25,
+      25,
+      25,
+      20,
+      20,
+      20,
+      21,
+      21
+    ],
+    "signature": 7,
+    "rewards": [
+      {
+        "card": 16,
+        "weight": 6
+      },
+      {
+        "card": 25,
+        "weight": 6
+      },
+      {
+        "card": 24,
+        "weight": 6
+      },
+      {
+        "card": 17,
+        "weight": 3
+      },
+      {
+        "card": 14,
+        "weight": 3
+      },
+      {
+        "card": 7,
+        "weight": 1
+      },
+      {
+        "card": 8,
+        "weight": 1
+      },
+      {
+        "card": 77,
+        "weight": 3
+      }
+    ]
+  }
 ]

@@ -29,6 +29,15 @@ export interface CardDef {
   readonly art?: string;        // ruta de la imagen (public/cards/...)
   readonly rarity?: CardRarity; // si falta, cuenta como N
   readonly effects?: readonly EffectDef[];
+  /** Nahual: de NOCHE (Ocaso y Medianoche) esta carta toma su forma animal en el campo. */
+  readonly nahual?: NahualForm;
+}
+
+export interface NahualForm {
+  readonly name: string;
+  readonly atk: number;
+  readonly def: number;
+  readonly description?: string;
 }
 
 // ---------------------------------------------------------------- efectos (datos)
@@ -56,6 +65,7 @@ export type EffectTarget = (typeof EFFECT_TARGETS)[number];
 export type EffectCondition =
   | { type: 'isNight' }
   | { type: 'isDay' }
+  | { type: 'isPhase'; phase: 'alba' | 'mediodia' | 'ocaso' | 'medianoche' }   // fase exacta del Reloj Solar
   | { type: 'lifeBelow'; amount: number }               // la vida del dueño es menor a
   | { type: 'hasTagOnField'; tag: CardTag }             // el dueño tiene otro monstruo con esa etiqueta
   | { type: 'opponentHasMoreMonsters' };

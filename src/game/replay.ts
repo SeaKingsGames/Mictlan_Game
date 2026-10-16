@@ -3,6 +3,7 @@ import { DuelEngine } from '../core/DuelEngine.ts';
 import type { Intent, PlayerIndex } from '../core/DuelState.ts';
 import type { FusionResolver } from '../core/fusion.ts';
 import type { CardDatabase } from '../data/cardDatabase.ts';
+import { daySigns } from '../data/index.ts';
 import type { Duelist } from './duelists.ts';
 
 /**
@@ -40,7 +41,7 @@ export function aiStep(engine: DuelEngine, opponent: Duelist, fusion: FusionReso
 }
 
 export function createDuel(seed: number, playerDeck: readonly number[], opponent: Duelist, db: CardDatabase, fusion: FusionResolver): DuelEngine {
-  return new DuelEngine({ db, decks: [playerDeck, opponent.deck], seed, firstPlayer: HUMAN, fusion });
+  return new DuelEngine({ db, decks: [playerDeck, opponent.deck], seed, firstPlayer: HUMAN, fusion, signs: daySigns });
 }
 
 export function replayDuel(input: ReplayInput, db: CardDatabase, fusion: FusionResolver): ReplayResult {

@@ -45,6 +45,7 @@ function defaultCondition(type: EffectCondition['type']): EffectCondition {
   switch (type) {
     case 'lifeBelow': return { type, amount: 3000 };
     case 'hasTagOnField': return { type, tag: 'guerrero' };
+    case 'isPhase': return { type, phase: 'medianoche' };
     default: return { type } as EffectCondition;
   }
 }
@@ -168,6 +169,10 @@ export function renderEffectEditor(container: HTMLElement, card: EditableCard, o
           conds[ci] = defaultCondition(v); fx.conditions = conds; changed();
         }));
       if (c.type === 'lifeBelow') row.append(label('PV', numberInput(c.amount, v => { (c as Mutable<typeof c>).amount = v; changed(); })));
+      if (c.type === 'isPhase') row.append(label('Fase', select([
+        { value: 'alba', label: '🌅 Alba' }, { value: 'mediodia', label: '☀ Mediodía' },
+        { value: 'ocaso', label: '🌇 Ocaso' }, { value: 'medianoche', label: '☾ Medianoche' },
+      ] as const, c.phase, v => { (c as Mutable<typeof c>).phase = v; changed(); })));
       if (c.type === 'hasTagOnField') row.append(label('Etiqueta', tagSelect(c.tag, v => { (c as Mutable<typeof c>).tag = v ?? 'guerrero'; changed(); }, false)));
       row.append(el('span', 'grow'), smallButton('✕', () => {
         fx.conditions = conds.filter(x => x !== c);

@@ -1,4 +1,6 @@
 import type { BattlePosition, CardInstance } from './CardInstance.ts';
+import type { DaySign } from './daySign.ts';
+import type { TimePhase } from './time.ts';
 
 export type PlayerIndex = 0 | 1;
 export type Phase = 'main' | 'battle' | 'ended';
@@ -23,6 +25,8 @@ export interface DuelState {
   supportUsedThisTurn: boolean;
   monsterPlayedThisTurn: boolean;   // después de bajar monstruo ya no se usan mágicas ni trampas
   winner: PlayerIndex | null;
+  /** Signo del día (Tonalpohualli) de este duelo. null = sin signo. */
+  daySign: DaySign | null;
 }
 
 /** Lo que un jugador QUIERE hacer. El motor decide si se puede. */
@@ -55,7 +59,8 @@ export type DuelEvent =
   | { type: 'statChanged'; instanceId: number; atk: number; def: number }
   | { type: 'healed'; player: PlayerIndex; amount: number; lifeAfter: number }
   | { type: 'revived'; instanceId: number; slot: number }
-  | { type: 'timeChanged'; night: boolean }
+  | { type: 'timeChanged'; phase: TimePhase; night: boolean }
+  | { type: 'nahualShift'; instanceIds: number[]; night: boolean }   // nahuales que cambiaron de forma
   | { type: 'trapSet'; player: PlayerIndex; slot: number; instanceId: number }   // la UI la oculta al rival
   | { type: 'trapActivated'; player: PlayerIndex; instanceId: number; attackerId: number }
   | { type: 'attackNegated'; attackerId: number }
@@ -70,5 +75,5 @@ export type ApplyResult = { ok: true; events: DuelEvent[] } | { ok: false; error
 
 export const opponentOf = (p: PlayerIndex): PlayerIndex => (p === 0 ? 1 : 0);
 
-/** Ciclo Día/Noche: cambia cada 2 turnos (turnos 1-2 día, 3-4 noche, 5-6 día...). */
-export const isNightTurn = (turn: number): boolean => Math.floor((turn - 1) / 2) % 2 === 1;
+// El Reloj Solar vive en time.ts; se re-exporta aquí para no romper imports viejos.
+export { isNightTurn, phaseOf } from './time.ts';

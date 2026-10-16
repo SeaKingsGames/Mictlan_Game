@@ -1,77 +1,1421 @@
 [
-  {"id": 1, "name": "Ocelote joven", "description": "Cachorro de la selva, material de fusión.", "type": "monster", "attribute": "tierra", "tags": ["jaguar", "bestia"], "atk": 800, "def": 600, "rarity": "N"},
-  {"id": 2, "name": "Macehual con macuahuitl", "description": "Guerrero del pueblo armado con obsidiana.", "type": "monster", "attribute": "tierra", "tags": ["guerrero"], "atk": 900, "def": 700, "rarity": "N"},
-  {"id": 3, "name": "Guerrero Jaguar", "description": "De noche, gana +300 ATK al atacar.", "type": "monster", "attribute": "tierra", "tags": ["guerrero", "jaguar"], "atk": 1800, "def": 1400, "rarity": "R", "effects": [{"trigger": "onAttack", "conditions": [{"type": "isNight"}], "actions": [{"type": "modifyAtk", "amount": 300, "target": "self", "untilEndOfTurn": true}]}]},
-  {"id": 4, "name": "Guerrero Águila", "description": "Élite del sol. Al ser invocado por fusión, robas 1 carta.", "type": "monster", "attribute": "sol", "tags": ["guerrero", "ave", "sol"], "atk": 1700, "def": 1500, "rarity": "R", "effects": [{"trigger": "onFusionSummon", "actions": [{"type": "draw", "amount": 1}]}]},
-  {"id": 5, "name": "Xiuhcóatl", "description": "Serpiente de fuego. Al ser invocada, hace 500 de daño al rival.", "type": "monster", "attribute": "sol", "tags": ["serpiente", "fuego", "sol"], "atk": 2200, "def": 1600, "rarity": "SR", "effects": [{"trigger": "onSummon", "actions": [{"type": "damage", "amount": 500, "who": "opponent"}]}]},
-  {"id": 6, "name": "Tláloc", "description": "Señor de la lluvia. Tus otros monstruos de agua ganan +300 ATK.", "type": "monster", "attribute": "agua", "tags": ["deidad", "agua"], "atk": 2600, "def": 2400, "rarity": "UR", "effects": [{"trigger": "continuous", "actions": [{"type": "modifyAtk", "amount": 300, "target": "otherAlliesWithTag", "tag": "agua"}]}]},
-  {"id": 7, "name": "Mictlantecuhtli", "description": "Señor del Mictlán. Al ser destruido, revive tu monstruo de muerte más fuerte del Mictlán.", "type": "monster", "attribute": "tierra", "tags": ["deidad", "muerte"], "atk": 2800, "def": 2000, "rarity": "UR", "effects": [{"trigger": "onDestroyed", "actions": [{"type": "revive", "tag": "muerte"}]}]},
-  {"id": 8, "name": "Quetzalcóatl", "description": "Serpiente emplumada. Solo por receta. Al ser invocada por fusión, destruye al monstruo rival más fuerte.", "type": "monster", "attribute": "viento", "tags": ["deidad", "serpiente", "ave", "viento"], "atk": 3000, "def": 2500, "rarity": "UR", "effects": [{"trigger": "onFusionSummon", "actions": [{"type": "destroy", "target": "highestAtkEnemy"}]}]},
-  {"id": 9, "name": "Colibrí guerrero", "description": "Mensajero veloz. Al ser invocado, robas 1 carta.", "type": "monster", "attribute": "viento", "tags": ["ave"], "atk": 500, "def": 400, "rarity": "N", "effects": [{"trigger": "onSummon", "actions": [{"type": "draw", "amount": 1}]}]},
-  {"id": 10, "name": "Serpiente de lago", "description": "Habita los canales de Tenochtitlan.", "type": "monster", "attribute": "agua", "tags": ["serpiente", "agua"], "atk": 700, "def": 900, "rarity": "N"},
-  {"id": 11, "name": "Xoloitzcuintle", "description": "Guía de las almas rumbo al Mictlán.", "type": "monster", "attribute": "tierra", "tags": ["bestia", "muerte"], "atk": 1000, "def": 800, "rarity": "N"},
-  {"id": 12, "name": "Sacerdote del Fuego Nuevo", "description": "Guardián del Fuego Nuevo. Al ser invocado, recuperas 500 PV.", "type": "monster", "attribute": "sol", "tags": ["fuego"], "atk": 600, "def": 1200, "rarity": "N", "effects": [{"trigger": "onSummon", "actions": [{"type": "heal", "amount": 500}]}]},
-  {"id": 13, "name": "Cipactli", "description": "Caimán primordial de cuyo cuerpo se hizo la tierra.", "type": "monster", "attribute": "agua", "tags": ["bestia", "agua"], "atk": 1500, "def": 1200, "rarity": "R"},
-  {"id": 14, "name": "Ahuízotl", "description": "Bestia de los lagos. Si es de noche al ser invocado, destruye al monstruo rival más débil.", "type": "monster", "attribute": "agua", "tags": ["bestia", "agua", "muerte"], "atk": 2000, "def": 1500, "rarity": "SR", "effects": [{"trigger": "onSummon", "conditions": [{"type": "isNight"}], "actions": [{"type": "destroy", "target": "lowestAtkEnemy"}]}]},
-  {"id": 15, "name": "Serpiente de plumas", "description": "Serpiente cubierta de plumas de quetzal.", "type": "monster", "attribute": "viento", "tags": ["serpiente", "ave", "viento"], "atk": 1600, "def": 1200, "rarity": "R"},
-  {"id": 16, "name": "Tecolote del Mictlán", "description": "Su canto anuncia la muerte. Al ser destruido, hace 500 de daño al rival.", "type": "monster", "attribute": "viento", "tags": ["ave", "muerte"], "atk": 1300, "def": 900, "rarity": "R", "effects": [{"trigger": "onDestroyed", "actions": [{"type": "damage", "amount": 500, "who": "opponent"}]}]},
-  {"id": 17, "name": "Guerrero del Mictlán", "description": "Guerrero caído que regresó del inframundo. De noche tiene +500 ATK.", "type": "monster", "attribute": "tierra", "tags": ["guerrero", "muerte"], "atk": 2100, "def": 1600, "rarity": "SR", "effects": [{"trigger": "continuous", "conditions": [{"type": "isNight"}], "actions": [{"type": "modifyAtk", "amount": 500, "target": "self"}]}]},
-  {"id": 18, "name": "Temazcal", "description": "Baño de vapor sagrado. Recuperas 1000 PV.", "type": "spell", "attribute": "agua", "tags": [], "atk": 0, "def": 0, "rarity": "N", "effects": [{"trigger": "onActivate", "actions": [{"type": "heal", "amount": 1000}]}]},
-  {"id": 19, "name": "Juego de pelota", "description": "Tlachtli. Tus monstruos ganan +400 ATK hasta el final del turno.", "type": "spell", "attribute": "sol", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyAtk", "amount": 400, "target": "allAllies", "untilEndOfTurn": true}]}]},
-  {"id": 20, "name": "Lluvia de obsidiana", "description": "Hace 800 de daño al rival.", "type": "spell", "attribute": "tierra", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onActivate", "actions": [{"type": "damage", "amount": 800, "who": "opponent"}]}]},
-  {"id": 21, "name": "Chimalli", "description": "Escudo de guerra. El monstruo equipado gana +600 DEF.", "type": "equip", "attribute": "tierra", "tags": [], "atk": 0, "def": 0, "rarity": "N", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyDef", "amount": 600, "target": "equipTarget"}]}]},
-  {"id": 22, "name": "Macuahuitl de obsidiana", "description": "El monstruo equipado gana +500 ATK.", "type": "equip", "attribute": "tierra", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyAtk", "amount": 500, "target": "equipTarget"}]}]},
-  {"id": 23, "name": "Fosa de estacas", "description": "Trampa. Cuando el rival ataca, destruye al monstruo atacante.", "type": "trap", "attribute": "tierra", "tags": [], "atk": 0, "def": 0, "rarity": "SR", "effects": [{"trigger": "onOpponentAttack", "actions": [{"type": "destroy", "target": "attacker"}]}]},
-  {"id": 24, "name": "Niebla de Tláloc", "description": "Trampa. Cuando el rival ataca, la niebla detiene el ataque.", "type": "trap", "attribute": "agua", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onOpponentAttack", "actions": [{"type": "negateAttack"}]}]},
-  {"id": 25, "name": "Espejo humeante", "description": "Trampa de Tezcatlipoca. Cuando el rival ataca, el atacante pierde 800 ATK este turno.", "type": "trap", "attribute": "viento", "tags": [], "atk": 0, "def": 0, "rarity": "SR", "effects": [{"trigger": "onOpponentAttack", "actions": [{"type": "modifyAtk", "amount": -800, "target": "attacker", "untilEndOfTurn": true}]}]},
-  {"id": 26, "name": "Tlacuache ladrón", "description": "Robó el fuego a los dioses y lo trajo a los hombres.", "type": "monster", "attribute": "tierra", "tags": ["bestia"], "atk": 400, "def": 300, "rarity": "N"},
-  {"id": 27, "name": "Ajolote del lago", "description": "Xólotl escondido en las aguas de Xochimilco.", "type": "monster", "attribute": "agua", "tags": ["agua", "bestia"], "atk": 300, "def": 500, "rarity": "N"},
-  {"id": 28, "name": "Chapulín de Chapultepec", "description": "Salta entre los ahuehuetes del cerro.", "type": "monster", "attribute": "tierra", "tags": ["bestia"], "atk": 500, "def": 200, "rarity": "N"},
-  {"id": 29, "name": "Guacamaya roja", "description": "Sus plumas se ofrecen al sol.", "type": "monster", "attribute": "sol", "tags": ["ave", "sol"], "atk": 700, "def": 500, "rarity": "N"},
-  {"id": 30, "name": "Tortuga de río", "description": "Lenta pero difícil de romper.", "type": "monster", "attribute": "agua", "tags": ["agua", "bestia"], "atk": 600, "def": 1100, "rarity": "N"},
-  {"id": 31, "name": "Venado sagrado", "description": "Animal del sol y de la cacería.", "type": "monster", "attribute": "tierra", "tags": ["bestia", "sol"], "atk": 900, "def": 700, "rarity": "N"},
-  {"id": 32, "name": "Pescador de Texcoco", "description": "Defiende su canoa con lanza y red.", "type": "monster", "attribute": "agua", "tags": ["guerrero", "agua"], "atk": 700, "def": 600, "rarity": "N"},
-  {"id": 33, "name": "Aprendiz de tlacuilo", "description": "Pinta códices; conoce los nombres de los dioses.", "type": "monster", "attribute": "viento", "tags": ["viento"], "atk": 600, "def": 800, "rarity": "N"},
-  {"id": 34, "name": "Murciélago de Tzinacan", "description": "Vuela en la casa de los murciélagos del inframundo.", "type": "monster", "attribute": "viento", "tags": ["ave", "muerte"], "atk": 800, "def": 600, "rarity": "N"},
-  {"id": 35, "name": "Coyote astuto", "description": "Nunca cae en la misma trampa dos veces.", "type": "monster", "attribute": "tierra", "tags": ["bestia"], "atk": 1000, "def": 700, "rarity": "N"},
-  {"id": 36, "name": "Halcón mensajero", "description": "Lleva noticias de una ciudad a otra.", "type": "monster", "attribute": "viento", "tags": ["ave", "viento"], "atk": 900, "def": 600, "rarity": "N"},
-  {"id": 37, "name": "Lagartija de obsidiana", "description": "Su piel brilla como vidrio volcánico.", "type": "monster", "attribute": "tierra", "tags": ["serpiente", "fuego"], "atk": 600, "def": 500, "rarity": "N"},
-  {"id": 38, "name": "Guerrero cuextécatl", "description": "Guerrero huasteco de gorro cónico.", "type": "monster", "attribute": "tierra", "tags": ["guerrero"], "atk": 1100, "def": 900, "rarity": "N"},
-  {"id": 39, "name": "Arquero chichimeca", "description": "Cazador del norte; no falla un tiro.", "type": "monster", "attribute": "viento", "tags": ["guerrero", "viento"], "atk": 1200, "def": 800, "rarity": "R"},
-  {"id": 40, "name": "Guerrero coyote", "description": "Viste la piel del coyote en batalla.", "type": "monster", "attribute": "tierra", "tags": ["guerrero", "bestia"], "atk": 1400, "def": 1100, "rarity": "R"},
-  {"id": 41, "name": "Serpiente de cascabel", "description": "Avisa antes de morder.", "type": "monster", "attribute": "tierra", "tags": ["serpiente", "muerte"], "atk": 1300, "def": 900, "rarity": "R"},
-  {"id": 42, "name": "Águila real", "description": "La que se posó sobre el nopal.", "type": "monster", "attribute": "sol", "tags": ["ave", "sol"], "atk": 1500, "def": 1000, "rarity": "R"},
-  {"id": 43, "name": "Jaguar negro", "description": "Sombra de la selva, animal de Tezcatlipoca.", "type": "monster", "attribute": "tierra", "tags": ["jaguar", "bestia", "muerte"], "atk": 1600, "def": 1200, "rarity": "R"},
-  {"id": 44, "name": "Sacerdotisa de la luna", "description": "Cuenta los días del calendario lunar.", "type": "monster", "attribute": "agua", "tags": ["agua"], "atk": 1200, "def": 1500, "rarity": "R"},
-  {"id": 45, "name": "Tlaloque de la lluvia", "description": "Ayudante de Tláloc que rompe las jarras del cielo.", "type": "monster", "attribute": "agua", "tags": ["deidad", "agua"], "atk": 1500, "def": 1400, "rarity": "R"},
-  {"id": 46, "name": "Capitán tequihua", "description": "Veterano que capturó a cuatro enemigos.", "type": "monster", "attribute": "tierra", "tags": ["guerrero"], "atk": 1700, "def": 1300, "rarity": "R"},
-  {"id": 47, "name": "Sapo de la lluvia", "description": "Canta para llamar a Tláloc.", "type": "monster", "attribute": "agua", "tags": ["agua", "bestia"], "atk": 1100, "def": 1300, "rarity": "N"},
-  {"id": 48, "name": "Colibrí de Huitzilopochtli", "description": "El alma de un guerrero caído que volvió como colibrí.", "type": "monster", "attribute": "sol", "tags": ["ave", "sol", "guerrero"], "atk": 1700, "def": 900, "rarity": "R"},
-  {"id": 49, "name": "Guerrera cihuateteo", "description": "Mujer guerrera que acompaña al sol al atardecer.", "type": "monster", "attribute": "viento", "tags": ["guerrero", "muerte"], "atk": 1900, "def": 1500, "rarity": "SR"},
-  {"id": 50, "name": "Centéotl, señor del maíz", "description": "Dios del maíz tierno que alimenta al pueblo.", "type": "monster", "attribute": "sol", "tags": ["deidad", "sol"], "atk": 2000, "def": 2200, "rarity": "SR"},
-  {"id": 51, "name": "Xochiquetzal", "description": "Diosa de las flores, la belleza y el arte.", "type": "monster", "attribute": "viento", "tags": ["deidad", "ave"], "atk": 1800, "def": 2400, "rarity": "SR"},
-  {"id": 52, "name": "Chalchiuhtlicue", "description": "Señora de la falda de jade, diosa de lagos y ríos.", "type": "monster", "attribute": "agua", "tags": ["deidad", "agua"], "atk": 2500, "def": 2300, "rarity": "SR"},
-  {"id": 53, "name": "Huehuecóyotl", "description": "El coyote viejo, dios de la música y el engaño.", "type": "monster", "attribute": "tierra", "tags": ["deidad", "bestia"], "atk": 2200, "def": 1800, "rarity": "SR"},
-  {"id": 54, "name": "Mixcóatl", "description": "Serpiente de nubes, dios de la caza.", "type": "monster", "attribute": "viento", "tags": ["deidad", "serpiente", "guerrero"], "atk": 2300, "def": 1700, "rarity": "SR"},
-  {"id": 55, "name": "Xólotl", "description": "Hermano de Quetzalcóatl; guía a los muertos al Mictlán.", "type": "monster", "attribute": "tierra", "tags": ["deidad", "muerte", "bestia"], "atk": 2400, "def": 1600, "rarity": "SR"},
-  {"id": 56, "name": "Tecciztécatl", "description": "Se volvió la luna al dudar ante la hoguera.", "type": "monster", "attribute": "agua", "tags": ["deidad"], "atk": 2200, "def": 2000, "rarity": "SR"},
-  {"id": 57, "name": "Tzitzimitl", "description": "Estrella demonio que baja en los eclipses.", "type": "monster", "attribute": "viento", "tags": ["deidad", "muerte", "viento"], "atk": 2500, "def": 1800, "rarity": "SR"},
-  {"id": 58, "name": "Cihuacóatl", "description": "Mujer serpiente; su llanto anuncia desgracias.", "type": "monster", "attribute": "tierra", "tags": ["deidad", "serpiente", "muerte"], "atk": 2400, "def": 1900, "rarity": "SR"},
-  {"id": 59, "name": "Coyolxauhqui", "description": "Diosa de la luna que guió a los cuatrocientos guerreros del sur.", "type": "monster", "attribute": "viento", "tags": ["deidad", "guerrero"], "atk": 2900, "def": 2100, "rarity": "UR"},
-  {"id": 60, "name": "Huitzilopochtli", "description": "Colibrí del sur, dios de la guerra y del sol.", "type": "monster", "attribute": "sol", "tags": ["deidad", "guerrero", "sol", "ave"], "atk": 3300, "def": 2600, "rarity": "UR"},
-  {"id": 61, "name": "Tezcatlipoca", "description": "Espejo humeante, señor de la noche.", "type": "monster", "attribute": "viento", "tags": ["deidad", "jaguar", "muerte"], "atk": 3300, "def": 2800, "rarity": "UR"},
-  {"id": 62, "name": "Xipe Tótec", "description": "Nuestro señor el desollado, dios de la renovación.", "type": "monster", "attribute": "tierra", "tags": ["deidad", "sol"], "atk": 3000, "def": 2400, "rarity": "UR"},
-  {"id": 63, "name": "Tonatiuh", "description": "El Quinto Sol, que pide energía para moverse.", "type": "monster", "attribute": "sol", "tags": ["deidad", "sol", "fuego"], "atk": 3400, "def": 2900, "rarity": "UR"},
-  {"id": 64, "name": "Xiuhtecuhtli", "description": "Señor del fuego y del año.", "type": "monster", "attribute": "sol", "tags": ["deidad", "fuego"], "atk": 3100, "def": 2500, "rarity": "UR"},
-  {"id": 65, "name": "Tlaltecuhtli", "description": "Señora de la tierra que devora a los muertos.", "type": "monster", "attribute": "tierra", "tags": ["deidad", "bestia"], "atk": 3000, "def": 3000, "rarity": "UR"},
-  {"id": 66, "name": "Ofrenda de cacao", "description": "Recuperas 800 PV.", "type": "spell", "attribute": "tierra", "tags": [], "atk": 0, "def": 0, "rarity": "N", "effects": [{"trigger": "onActivate", "actions": [{"type": "heal", "amount": 800}]}]},
-  {"id": 67, "name": "Danza del venado", "description": "Tus monstruos ganan +300 ATK hasta el final del turno.", "type": "spell", "attribute": "sol", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyAtk", "amount": 300, "target": "allAllies", "untilEndOfTurn": true}]}]},
-  {"id": 68, "name": "Ceremonia del Fuego Nuevo", "description": "Hace 1000 de daño al rival.", "type": "spell", "attribute": "sol", "tags": [], "atk": 0, "def": 0, "rarity": "SR", "effects": [{"trigger": "onActivate", "actions": [{"type": "damage", "amount": 1000, "who": "opponent"}]}]},
-  {"id": 69, "name": "Códice sagrado", "description": "Robas 2 cartas.", "type": "spell", "attribute": "viento", "tags": [], "atk": 0, "def": 0, "rarity": "SR", "effects": [{"trigger": "onActivate", "actions": [{"type": "draw", "amount": 2}]}]},
-  {"id": 70, "name": "Rodela de plumas", "description": "El monstruo equipado gana +400 ATK.", "type": "equip", "attribute": "viento", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyAtk", "amount": 400, "target": "equipTarget"}]}]},
-  {"id": 71, "name": "Átlatl", "description": "El monstruo equipado gana +700 ATK.", "type": "equip", "attribute": "viento", "tags": [], "atk": 0, "def": 0, "rarity": "SR", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyAtk", "amount": 700, "target": "equipTarget"}]}]},
-  {"id": 72, "name": "Penacho de quetzal", "description": "El monstruo equipado gana +300 ATK y +300 DEF.", "type": "equip", "attribute": "sol", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onActivate", "actions": [{"type": "modifyAtk", "amount": 300, "target": "equipTarget"}, {"type": "modifyDef", "amount": 300, "target": "equipTarget"}]}]},
-  {"id": 73, "name": "Red de pescador", "description": "Cuando el rival ataca, el atacante pierde 1000 ATK este turno.", "type": "trap", "attribute": "agua", "tags": [], "atk": 0, "def": 0, "rarity": "R", "effects": [{"trigger": "onOpponentAttack", "actions": [{"type": "modifyAtk", "amount": -1000, "target": "attacker", "untilEndOfTurn": true}]}]},
-  {"id": 74, "name": "Eclipse", "description": "Cuando el rival ataca, la oscuridad detiene el ataque.", "type": "trap", "attribute": "viento", "tags": [], "atk": 0, "def": 0, "rarity": "SR", "effects": [{"trigger": "onOpponentAttack", "actions": [{"type": "negateAttack"}]}]},
-  {"id": 75, "name": "Furia de Tláloc", "description": "Cuando el rival ataca, destruye a todos los monstruos rivales.", "type": "trap", "attribute": "agua", "tags": [], "atk": 0, "def": 0, "rarity": "UR", "effects": [{"trigger": "onOpponentAttack", "actions": [{"type": "destroy", "target": "allEnemies"}]}]}
+  {
+    "id": 1,
+    "name": "Ocelote joven",
+    "description": "Cachorro de la selva, material de fusión.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "jaguar",
+      "bestia"
+    ],
+    "atk": 800,
+    "def": 600,
+    "rarity": "N"
+  },
+  {
+    "id": 2,
+    "name": "Macehual con macuahuitl",
+    "description": "Guerrero del pueblo armado con obsidiana.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero"
+    ],
+    "atk": 900,
+    "def": 700,
+    "rarity": "N"
+  },
+  {
+    "id": 3,
+    "name": "Guerrero Jaguar",
+    "description": "De noche, gana +300 ATK al atacar.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero",
+      "jaguar"
+    ],
+    "atk": 1800,
+    "def": 1400,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onAttack",
+        "conditions": [
+          {
+            "type": "isNight"
+          }
+        ],
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 300,
+            "target": "self",
+            "untilEndOfTurn": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Guerrero Águila",
+    "description": "Élite del sol. Al ser invocado por fusión, robas 1 carta.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "guerrero",
+      "ave",
+      "sol"
+    ],
+    "atk": 1700,
+    "def": 1500,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onFusionSummon",
+        "actions": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Xiuhcóatl",
+    "description": "Serpiente de fuego. Al ser invocada, hace 500 de daño al rival.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "serpiente",
+      "fuego",
+      "sol"
+    ],
+    "atk": 2200,
+    "def": 1600,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onSummon",
+        "actions": [
+          {
+            "type": "damage",
+            "amount": 500,
+            "who": "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Tláloc",
+    "description": "Señor de la lluvia. Tus otros monstruos de agua ganan +300 ATK.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "deidad",
+      "agua"
+    ],
+    "atk": 2600,
+    "def": 2400,
+    "rarity": "UR",
+    "effects": [
+      {
+        "trigger": "continuous",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 300,
+            "target": "otherAlliesWithTag",
+            "tag": "agua"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Mictlantecuhtli",
+    "description": "Señor del Mictlán. Al ser destruido, revive tu monstruo de muerte más fuerte del Mictlán.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "deidad",
+      "muerte"
+    ],
+    "atk": 2800,
+    "def": 2000,
+    "rarity": "UR",
+    "effects": [
+      {
+        "trigger": "onDestroyed",
+        "actions": [
+          {
+            "type": "revive",
+            "tag": "muerte"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Quetzalcóatl",
+    "description": "Serpiente emplumada. Solo por receta. Al ser invocada por fusión, destruye al monstruo rival más fuerte.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "serpiente",
+      "ave",
+      "viento"
+    ],
+    "atk": 3000,
+    "def": 2500,
+    "rarity": "UR",
+    "effects": [
+      {
+        "trigger": "onFusionSummon",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "highestAtkEnemy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Colibrí guerrero",
+    "description": "Mensajero veloz. Al ser invocado, robas 1 carta.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "ave"
+    ],
+    "atk": 500,
+    "def": 400,
+    "rarity": "N",
+    "effects": [
+      {
+        "trigger": "onSummon",
+        "actions": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Serpiente de lago",
+    "description": "Habita los canales de Tenochtitlan.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "serpiente",
+      "agua"
+    ],
+    "atk": 700,
+    "def": 900,
+    "rarity": "N"
+  },
+  {
+    "id": 11,
+    "name": "Xoloitzcuintle",
+    "description": "Guía de las almas rumbo al Mictlán.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "bestia",
+      "muerte"
+    ],
+    "atk": 1000,
+    "def": 800,
+    "rarity": "N"
+  },
+  {
+    "id": 12,
+    "name": "Sacerdote del Fuego Nuevo",
+    "description": "Guardián del Fuego Nuevo. Al ser invocado, recuperas 500 PV.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "fuego"
+    ],
+    "atk": 600,
+    "def": 1200,
+    "rarity": "N",
+    "effects": [
+      {
+        "trigger": "onSummon",
+        "actions": [
+          {
+            "type": "heal",
+            "amount": 500
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "Cipactli",
+    "description": "Caimán primordial de cuyo cuerpo se hizo la tierra.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "bestia",
+      "agua"
+    ],
+    "atk": 1500,
+    "def": 1200,
+    "rarity": "R"
+  },
+  {
+    "id": 14,
+    "name": "Ahuízotl",
+    "description": "Bestia de los lagos. Si es de noche al ser invocado, destruye al monstruo rival más débil.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "bestia",
+      "agua",
+      "muerte"
+    ],
+    "atk": 2000,
+    "def": 1500,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onSummon",
+        "conditions": [
+          {
+            "type": "isNight"
+          }
+        ],
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "lowestAtkEnemy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "Serpiente de plumas",
+    "description": "Serpiente cubierta de plumas de quetzal.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "serpiente",
+      "ave",
+      "viento"
+    ],
+    "atk": 1600,
+    "def": 1200,
+    "rarity": "R"
+  },
+  {
+    "id": 16,
+    "name": "Tecolote del Mictlán",
+    "description": "Su canto anuncia la muerte. Al ser destruido, hace 500 de daño al rival.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "ave",
+      "muerte"
+    ],
+    "atk": 1300,
+    "def": 900,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onDestroyed",
+        "actions": [
+          {
+            "type": "damage",
+            "amount": 500,
+            "who": "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "Guerrero del Mictlán",
+    "description": "Guerrero caído que regresó del inframundo. De noche tiene +500 ATK.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero",
+      "muerte"
+    ],
+    "atk": 2100,
+    "def": 1600,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "continuous",
+        "conditions": [
+          {
+            "type": "isNight"
+          }
+        ],
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 500,
+            "target": "self"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "Temazcal",
+    "description": "Baño de vapor sagrado. Recuperas 1000 PV.",
+    "type": "spell",
+    "attribute": "agua",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "N",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "heal",
+            "amount": 1000
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Juego de pelota",
+    "description": "Tlachtli. Tus monstruos ganan +400 ATK hasta el final del turno.",
+    "type": "spell",
+    "attribute": "sol",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 400,
+            "target": "allAllies",
+            "untilEndOfTurn": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Lluvia de obsidiana",
+    "description": "Hace 800 de daño al rival.",
+    "type": "spell",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "damage",
+            "amount": 800,
+            "who": "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Chimalli",
+    "description": "Escudo de guerra. El monstruo equipado gana +600 DEF.",
+    "type": "equip",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "N",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyDef",
+            "amount": 600,
+            "target": "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "Macuahuitl de obsidiana",
+    "description": "El monstruo equipado gana +500 ATK.",
+    "type": "equip",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 500,
+            "target": "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "name": "Fosa de estacas",
+    "description": "Trampa. Cuando el rival ataca, destruye al monstruo atacante.",
+    "type": "trap",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "attacker"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "name": "Niebla de Tláloc",
+    "description": "Trampa. Cuando el rival ataca, la niebla detiene el ataque.",
+    "type": "trap",
+    "attribute": "agua",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "negateAttack"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "Espejo humeante",
+    "description": "Trampa de Tezcatlipoca. Cuando el rival ataca, el atacante pierde 800 ATK este turno.",
+    "type": "trap",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": -800,
+            "target": "attacker",
+            "untilEndOfTurn": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "name": "Tlacuache ladrón",
+    "description": "Robó el fuego a los dioses y lo trajo a los hombres.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "bestia"
+    ],
+    "atk": 400,
+    "def": 300,
+    "rarity": "N"
+  },
+  {
+    "id": 27,
+    "name": "Ajolote del lago",
+    "description": "Xólotl escondido en las aguas de Xochimilco.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "agua",
+      "bestia"
+    ],
+    "atk": 300,
+    "def": 500,
+    "rarity": "N"
+  },
+  {
+    "id": 28,
+    "name": "Chapulín de Chapultepec",
+    "description": "Salta entre los ahuehuetes del cerro.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "bestia"
+    ],
+    "atk": 500,
+    "def": 200,
+    "rarity": "N"
+  },
+  {
+    "id": 29,
+    "name": "Guacamaya roja",
+    "description": "Sus plumas se ofrecen al sol.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "ave",
+      "sol"
+    ],
+    "atk": 700,
+    "def": 500,
+    "rarity": "N"
+  },
+  {
+    "id": 30,
+    "name": "Tortuga de río",
+    "description": "Lenta pero difícil de romper.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "agua",
+      "bestia"
+    ],
+    "atk": 600,
+    "def": 1100,
+    "rarity": "N"
+  },
+  {
+    "id": 31,
+    "name": "Venado sagrado",
+    "description": "Animal del sol y de la cacería.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "bestia",
+      "sol"
+    ],
+    "atk": 900,
+    "def": 700,
+    "rarity": "N"
+  },
+  {
+    "id": 32,
+    "name": "Pescador de Texcoco",
+    "description": "Defiende su canoa con lanza y red.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "guerrero",
+      "agua"
+    ],
+    "atk": 700,
+    "def": 600,
+    "rarity": "N"
+  },
+  {
+    "id": 33,
+    "name": "Aprendiz de tlacuilo",
+    "description": "Pinta códices; conoce los nombres de los dioses.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "viento"
+    ],
+    "atk": 600,
+    "def": 800,
+    "rarity": "N"
+  },
+  {
+    "id": 34,
+    "name": "Murciélago de Tzinacan",
+    "description": "Vuela en la casa de los murciélagos del inframundo.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "ave",
+      "muerte"
+    ],
+    "atk": 800,
+    "def": 600,
+    "rarity": "N"
+  },
+  {
+    "id": 35,
+    "name": "Coyote astuto",
+    "description": "Nunca cae en la misma trampa dos veces.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "bestia"
+    ],
+    "atk": 1000,
+    "def": 700,
+    "rarity": "N"
+  },
+  {
+    "id": 36,
+    "name": "Halcón mensajero",
+    "description": "Lleva noticias de una ciudad a otra.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "ave",
+      "viento"
+    ],
+    "atk": 900,
+    "def": 600,
+    "rarity": "N"
+  },
+  {
+    "id": 37,
+    "name": "Lagartija de obsidiana",
+    "description": "Su piel brilla como vidrio volcánico.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "serpiente",
+      "fuego"
+    ],
+    "atk": 600,
+    "def": 500,
+    "rarity": "N"
+  },
+  {
+    "id": 38,
+    "name": "Guerrero cuextécatl",
+    "description": "Guerrero huasteco de gorro cónico.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero"
+    ],
+    "atk": 1100,
+    "def": 900,
+    "rarity": "N"
+  },
+  {
+    "id": 39,
+    "name": "Arquero chichimeca",
+    "description": "Cazador del norte; no falla un tiro.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "guerrero",
+      "viento"
+    ],
+    "atk": 1200,
+    "def": 800,
+    "rarity": "R"
+  },
+  {
+    "id": 40,
+    "name": "Guerrero coyote",
+    "description": "Viste la piel del coyote en batalla.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero",
+      "bestia"
+    ],
+    "atk": 1400,
+    "def": 1100,
+    "rarity": "R"
+  },
+  {
+    "id": 41,
+    "name": "Serpiente de cascabel",
+    "description": "Avisa antes de morder.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "serpiente",
+      "muerte"
+    ],
+    "atk": 1300,
+    "def": 900,
+    "rarity": "R"
+  },
+  {
+    "id": 42,
+    "name": "Águila real",
+    "description": "La que se posó sobre el nopal.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "ave",
+      "sol"
+    ],
+    "atk": 1500,
+    "def": 1000,
+    "rarity": "R"
+  },
+  {
+    "id": 43,
+    "name": "Jaguar negro",
+    "description": "Sombra de la selva, animal de Tezcatlipoca.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "jaguar",
+      "bestia",
+      "muerte"
+    ],
+    "atk": 1600,
+    "def": 1200,
+    "rarity": "R"
+  },
+  {
+    "id": 44,
+    "name": "Sacerdotisa de la luna",
+    "description": "Cuenta los días del calendario lunar.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "agua"
+    ],
+    "atk": 1200,
+    "def": 1500,
+    "rarity": "R"
+  },
+  {
+    "id": 45,
+    "name": "Tlaloque de la lluvia",
+    "description": "Ayudante de Tláloc que rompe las jarras del cielo.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "deidad",
+      "agua"
+    ],
+    "atk": 1500,
+    "def": 1400,
+    "rarity": "R"
+  },
+  {
+    "id": 46,
+    "name": "Capitán tequihua",
+    "description": "Veterano que capturó a cuatro enemigos.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero"
+    ],
+    "atk": 1700,
+    "def": 1300,
+    "rarity": "R"
+  },
+  {
+    "id": 47,
+    "name": "Sapo de la lluvia",
+    "description": "Canta para llamar a Tláloc.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "agua",
+      "bestia"
+    ],
+    "atk": 1100,
+    "def": 1300,
+    "rarity": "N"
+  },
+  {
+    "id": 48,
+    "name": "Colibrí de Huitzilopochtli",
+    "description": "El alma de un guerrero caído que volvió como colibrí.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "ave",
+      "sol",
+      "guerrero"
+    ],
+    "atk": 1700,
+    "def": 900,
+    "rarity": "R"
+  },
+  {
+    "id": 49,
+    "name": "Guerrera cihuateteo",
+    "description": "Mujer guerrera que acompaña al sol al atardecer.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "guerrero",
+      "muerte"
+    ],
+    "atk": 1900,
+    "def": 1500,
+    "rarity": "SR"
+  },
+  {
+    "id": 50,
+    "name": "Centéotl, señor del maíz",
+    "description": "Dios del maíz tierno que alimenta al pueblo.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "deidad",
+      "sol"
+    ],
+    "atk": 2000,
+    "def": 2200,
+    "rarity": "SR"
+  },
+  {
+    "id": 51,
+    "name": "Xochiquetzal",
+    "description": "Diosa de las flores, la belleza y el arte.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "ave"
+    ],
+    "atk": 1800,
+    "def": 2400,
+    "rarity": "SR"
+  },
+  {
+    "id": 52,
+    "name": "Chalchiuhtlicue",
+    "description": "Señora de la falda de jade, diosa de lagos y ríos.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "deidad",
+      "agua"
+    ],
+    "atk": 2500,
+    "def": 2300,
+    "rarity": "SR"
+  },
+  {
+    "id": 53,
+    "name": "Huehuecóyotl",
+    "description": "El coyote viejo, dios de la música y el engaño.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "deidad",
+      "bestia"
+    ],
+    "atk": 2200,
+    "def": 1800,
+    "rarity": "SR"
+  },
+  {
+    "id": 54,
+    "name": "Mixcóatl",
+    "description": "Serpiente de nubes, dios de la caza.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "serpiente",
+      "guerrero"
+    ],
+    "atk": 2300,
+    "def": 1700,
+    "rarity": "SR"
+  },
+  {
+    "id": 55,
+    "name": "Xólotl",
+    "description": "Hermano de Quetzalcóatl; guía a los muertos al Mictlán.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "deidad",
+      "muerte",
+      "bestia"
+    ],
+    "atk": 2400,
+    "def": 1600,
+    "rarity": "SR"
+  },
+  {
+    "id": 56,
+    "name": "Tecciztécatl",
+    "description": "Se volvió la luna al dudar ante la hoguera.",
+    "type": "monster",
+    "attribute": "agua",
+    "tags": [
+      "deidad"
+    ],
+    "atk": 2200,
+    "def": 2000,
+    "rarity": "SR"
+  },
+  {
+    "id": 57,
+    "name": "Tzitzimitl",
+    "description": "Estrella demonio que baja en los eclipses.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "muerte",
+      "viento"
+    ],
+    "atk": 2500,
+    "def": 1800,
+    "rarity": "SR"
+  },
+  {
+    "id": 58,
+    "name": "Cihuacóatl",
+    "description": "Mujer serpiente; su llanto anuncia desgracias.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "deidad",
+      "serpiente",
+      "muerte"
+    ],
+    "atk": 2400,
+    "def": 1900,
+    "rarity": "SR"
+  },
+  {
+    "id": 59,
+    "name": "Coyolxauhqui",
+    "description": "Diosa de la luna que guió a los cuatrocientos guerreros del sur.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "guerrero"
+    ],
+    "atk": 2900,
+    "def": 2100,
+    "rarity": "UR"
+  },
+  {
+    "id": 60,
+    "name": "Huitzilopochtli",
+    "description": "Colibrí del sur, dios de la guerra y del sol.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "deidad",
+      "guerrero",
+      "sol",
+      "ave"
+    ],
+    "atk": 3300,
+    "def": 2600,
+    "rarity": "UR"
+  },
+  {
+    "id": 61,
+    "name": "Tezcatlipoca",
+    "description": "Espejo humeante, señor de la noche.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "jaguar",
+      "muerte"
+    ],
+    "atk": 3300,
+    "def": 2800,
+    "rarity": "UR"
+  },
+  {
+    "id": 62,
+    "name": "Xipe Tótec",
+    "description": "Nuestro señor el desollado, dios de la renovación.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "deidad",
+      "sol"
+    ],
+    "atk": 3000,
+    "def": 2400,
+    "rarity": "UR"
+  },
+  {
+    "id": 63,
+    "name": "Tonatiuh",
+    "description": "El Quinto Sol, que pide energía para moverse.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "deidad",
+      "sol",
+      "fuego"
+    ],
+    "atk": 3400,
+    "def": 2900,
+    "rarity": "UR"
+  },
+  {
+    "id": 64,
+    "name": "Xiuhtecuhtli",
+    "description": "Señor del fuego y del año.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "deidad",
+      "fuego"
+    ],
+    "atk": 3100,
+    "def": 2500,
+    "rarity": "UR"
+  },
+  {
+    "id": 65,
+    "name": "Tlaltecuhtli",
+    "description": "Señora de la tierra que devora a los muertos.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "deidad",
+      "bestia"
+    ],
+    "atk": 3000,
+    "def": 3000,
+    "rarity": "UR"
+  },
+  {
+    "id": 66,
+    "name": "Ofrenda de cacao",
+    "description": "Recuperas 800 PV.",
+    "type": "spell",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "N",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "heal",
+            "amount": 800
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 67,
+    "name": "Danza del venado",
+    "description": "Tus monstruos ganan +300 ATK hasta el final del turno.",
+    "type": "spell",
+    "attribute": "sol",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 300,
+            "target": "allAllies",
+            "untilEndOfTurn": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 68,
+    "name": "Ceremonia del Fuego Nuevo",
+    "description": "Hace 1000 de daño al rival.",
+    "type": "spell",
+    "attribute": "sol",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "damage",
+            "amount": 1000,
+            "who": "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 69,
+    "name": "Códice sagrado",
+    "description": "Robas 2 cartas.",
+    "type": "spell",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "draw",
+            "amount": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 70,
+    "name": "Rodela de plumas",
+    "description": "El monstruo equipado gana +400 ATK.",
+    "type": "equip",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 400,
+            "target": "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 71,
+    "name": "Átlatl",
+    "description": "El monstruo equipado gana +700 ATK.",
+    "type": "equip",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 700,
+            "target": "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 72,
+    "name": "Penacho de quetzal",
+    "description": "El monstruo equipado gana +300 ATK y +300 DEF.",
+    "type": "equip",
+    "attribute": "sol",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": 300,
+            "target": "equipTarget"
+          },
+          {
+            "type": "modifyDef",
+            "amount": 300,
+            "target": "equipTarget"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 73,
+    "name": "Red de pescador",
+    "description": "Cuando el rival ataca, el atacante pierde 1000 ATK este turno.",
+    "type": "trap",
+    "attribute": "agua",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "modifyAtk",
+            "amount": -1000,
+            "target": "attacker",
+            "untilEndOfTurn": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 74,
+    "name": "Eclipse",
+    "description": "Cuando el rival ataca, la oscuridad detiene el ataque.",
+    "type": "trap",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "negateAttack"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 75,
+    "name": "Furia de Tláloc",
+    "description": "Cuando el rival ataca, destruye a todos los monstruos rivales.",
+    "type": "trap",
+    "attribute": "agua",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "UR",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "allEnemies"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 76,
+    "name": "Brujo nahualli",
+    "description": "Hechicero de la sierra. Dicen que de noche camina en cuatro patas.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero",
+      "jaguar"
+    ],
+    "atk": 1200,
+    "def": 1500,
+    "rarity": "SR",
+    "nahual": {
+      "name": "Jaguar nahual",
+      "atk": 2300,
+      "def": 900,
+      "description": "La forma de noche del brujo: un jaguar de ojos humanos."
+    }
+  },
+  {
+    "id": 77,
+    "name": "Anciana del pueblo",
+    "description": "Curandera que sabe los nombres de todas las hierbas.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "ave",
+      "muerte"
+    ],
+    "atk": 500,
+    "def": 1300,
+    "rarity": "R",
+    "nahual": {
+      "name": "Tecolote nahual",
+      "atk": 1700,
+      "def": 1000,
+      "description": "Cuando canta el tecolote, alguien va a morir."
+    }
+  },
+  {
+    "id": 78,
+    "name": "Comerciante viajero",
+    "description": "Pochteca que recorre los caminos con su carga de cacao.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "bestia"
+    ],
+    "atk": 900,
+    "def": 900,
+    "rarity": "R",
+    "nahual": {
+      "name": "Coyote nahual",
+      "atk": 1600,
+      "def": 1100,
+      "description": "Astuto y veloz: nadie lo ve llegar a la caravana."
+    }
+  }
 ]

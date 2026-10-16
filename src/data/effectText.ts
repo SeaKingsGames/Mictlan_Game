@@ -29,6 +29,7 @@ export const TARGET_TEXT: Record<EffectTarget, string> = {
 export const CONDITION_TEXT: Record<EffectCondition['type'], string> = {
   isNight: 'si es de noche',
   isDay: 'si es de día',
+  isPhase: 'en una fase del Reloj Solar',
   lifeBelow: 'si tienes menos de N PV',
   hasTagOnField: 'si tienes otro monstruo de la etiqueta',
   opponentHasMoreMonsters: 'si el rival tiene más monstruos',
@@ -53,6 +54,7 @@ function targetText(target: EffectTarget, tag?: CardTag): string {
 function conditionText(c: EffectCondition): string {
   switch (c.type) {
     case 'lifeBelow': return `si tienes menos de ${c.amount} PV`;
+    case 'isPhase': return `durante ${({ alba: 'el Alba', mediodia: 'el Mediodía', ocaso: 'el Ocaso', medianoche: 'la Medianoche' } as const)[c.phase]}`;
     case 'hasTagOnField': return `si tienes otro monstruo de ${c.tag}`;
     default: return CONDITION_TEXT[c.type];
   }

@@ -25,8 +25,13 @@ export interface CardElementOptions {
  */
 export function createCardElement(source: CardDef | CardInstance, opts: CardElementOptions = {}): HTMLElement {
   const def = source instanceof CardInstance ? source.def : source;
-  const atk = source instanceof CardInstance ? source.atk : def.atk;
-  const defense = source instanceof CardInstance ? source.defense : def.def;
+  const inst = source instanceof CardInstance ? source : null;
+  const atk = inst ? inst.atk : def.atk;
+  const defense = inst ? inst.defense : def.def;
+  const night = !!inst?.nightForm;
+  const name = inst ? inst.name : def.name;
+  const baseAtk = inst ? inst.baseAtk : def.atk;
+  const baseDef = inst ? inst.baseDef : def.def;
 
   const el = document.createElement('article');
   el.className = 'card';
@@ -48,7 +53,9 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
 
   el.dataset.type = def.type;
   el.dataset.rarity = rarityOf(def);
-  el.setAttribute('aria-label', def.type === 'monster' ? `${def.name}, ATK ${atk}, DEF ${defense}` : `${def.name}, ${TYPE_LABEL[def.type]}`);
+  if (def.nahual) el.classList.add('card--nahual');
+  el.classList.toggle('card--night', night);
+  el.setAttribute('aria-label', def.type === 'monster' ? `${name}, ATK ${atk}, DEF ${defense}` : `${name}, ${TYPE_LABEL[def.type]}`);
   el.innerHTML = `
     <header class="card__head">
       <span>${ATTRIBUTE_LABEL[def.attribute]}</span>
@@ -56,18 +63,19 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
     </header>
     <h3 class="card__name"></h3>
     <span class="card__rarity card__rarity--${rarityOf(def)}">${rarityOf(def)}</span>
+    ${def.nahual ? `<span class="card__nahual" title="Nahual: cambia de forma de noche">${night ? '🐾' : '🌙'}</span>` : ''}
     <div class="card__art"><span class="card__glyph"></span></div>
     <p class="card__tags"></p>
     <p class="card__desc"></p>
     <footer class="card__stats">${def.type === 'monster'
-      ? `<span class="${statClass(atk, def.atk)}">ATK ${atk}</span><span class="${statClass(defense, def.def)}">DEF ${defense}</span>`
+      ? `<span class="${statClass(atk, baseAtk)}">ATK ${atk}</span><span class="${statClass(defense, baseDef)}">DEF ${defense}</span>`
       : `<span class="stat stat--type">${TYPE_LABEL[def.type]}</span>`}
     </footer>
     ${opts.selectionOrder !== undefined ? `<span class="card__badge">${opts.selectionOrder}</span>` : ''}
   `;
   // textContent (no innerHTML) para los datos: así un nombre raro nunca rompe la página.
-  el.querySelector('.card__name')!.textContent = def.name;
-  el.querySelector('.card__glyph')!.textContent = def.name.charAt(0);
+  el.querySelector('.card__name')!.textContent = name;
+  el.querySelector('.card__glyph')!.textContent = name.charAt(0);
   if (def.art) {
     // Arte de la carta: archivo en public/cards/ (ej. "art": "/cards/3.webp" en cards.json)
     const img = document.createElement('img');
@@ -78,8 +86,8 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
     img.addEventListener('error', () => img.remove());   // si falta el archivo, queda la inicial
     el.querySelector('.card__art')!.append(img);
   }
-  el.querySelector('.card__tags')!.textContent = def.tags.join(' · ');
-  el.querySelector('.card__desc')!.textContent = def.description;
+  el.querySelector('.card__tags')!.textContent = (def.nahual ? ['nahual', ...def.tags] : def.tags).join(' · ');
+  el.querySelector('.card__desc')!.textContent = night && def.nahual?.description ? def.nahual.description : def.description;
   return el;
 }
 

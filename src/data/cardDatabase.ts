@@ -55,11 +55,15 @@ function validateCard(c: CardDef): string[] {
   for (const t of c.tags) if (!CARD_TAGS.includes(t)) p.push(`etiqueta desconocida "${t}"`);
   if (c.rarity !== undefined && !RARITIES.includes(c.rarity)) p.push(`rareza desconocida "${c.rarity}" (usa N, R, SR o UR)`);
   const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive', 'negateAttack'];
-  const conditionTypes = ['isNight', 'isDay', 'lifeBelow', 'hasTagOnField', 'opponentHasMoreMonsters'];
+  const conditionTypes = ['isNight', 'isDay', 'isPhase', 'lifeBelow', 'hasTagOnField', 'opponentHasMoreMonsters'];
+  const phases = ['alba', 'mediodia', 'ocaso', 'medianoche'];
   for (const e of c.effects ?? []) {
     if (!EFFECT_TRIGGERS.includes(e.trigger)) p.push(`efecto con trigger desconocido "${e.trigger}"`);
     if (!Array.isArray(e.actions) || e.actions.length === 0) p.push('efecto sin acciones');
-    for (const cond of e.conditions ?? []) if (!conditionTypes.includes(cond.type)) p.push(`condición desconocida "${cond.type}"`);
+    for (const cond of e.conditions ?? []) {
+      if (!conditionTypes.includes(cond.type)) p.push(`condición desconocida "${cond.type}"`);
+      if (cond.type === 'isPhase' && !phases.includes(cond.phase)) p.push(`fase desconocida "${cond.phase}" (usa alba, mediodia, ocaso o medianoche)`);
+    }
     for (const a of e.actions ?? []) {
       if (!actionTypes.includes(a.type)) p.push(`acción desconocida "${a.type}"`);
       if ('target' in a && !EFFECT_TARGETS.includes(a.target)) p.push(`objetivo desconocido "${a.target}"`);
@@ -69,6 +73,11 @@ function validateCard(c: CardDef): string[] {
   }
   if ((c.type === 'spell' || c.type === 'equip') && !(c.effects ?? []).some(e => e.trigger === 'onActivate')) {
     p.push('las mágicas y equipos necesitan un efecto onActivate');
+  }
+  if (c.nahual) {
+    if (c.type !== 'monster') p.push('solo los monstruos pueden ser nahuales');
+    if (!c.nahual.name?.trim()) p.push('al nahual le falta el nombre de su forma de noche');
+    if (!Number.isInteger(c.nahual.atk) || !Number.isInteger(c.nahual.def) || c.nahual.atk < 0 || c.nahual.def < 0) p.push('ATK/DEF del nahual deben ser enteros ≥ 0');
   }
   if (c.type === 'trap' && !(c.effects ?? []).some(e => e.trigger === 'onOpponentAttack')) {
     p.push('las trampas necesitan un efecto onOpponentAttack');

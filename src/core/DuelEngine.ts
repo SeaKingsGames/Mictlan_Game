@@ -9,8 +9,14 @@ import {
   FIELD_SLOTS, isNightTurn, opponentOf,
   type ApplyResult, type DuelEvent, type DuelState, type Intent, type PlayerIndex, type PlayerState,
 } from './DuelState.ts';
+import { signRules, signTotal, type DaySign } from './daySign.ts';
 import { noFusions, planChain, type FusionResolver } from './fusion.ts';
 import { createRng } from './rng.ts';
+import { matchesFilter, phaseAtkBonus, phaseOf, PHASE_INFO } from './time.ts';
+
+/** Fuentes "del ambiente" para los modificadores (no son cartas). */
+const SOURCE_ENVIRONMENT = -1;
+const SOURCE_FUSION_SIGN = -2;
 
 /** Si el primer jugador puede atacar en el turno 1. */
 export const FIRST_TURN_CAN_ATTACK = false;
@@ -21,6 +27,15 @@ export interface DuelOptions {
   seed: number;
   firstPlayer?: PlayerIndex;
   fusion?: FusionResolver;
+  /** Signos del día posibles. Si se pasan, el duelo elige uno con la semilla. */
+  signs?: readonly DaySign[];
+}
+
+/** Elige el signo del día con la semilla (sin tocar el orden de las barajas). */
+export function pickDaySign(seed: number, signs: readonly DaySign[] | undefined): DaySign | null {
+  if (!signs || signs.length === 0) return null;
+  const rng = createRng((seed ^ 0x51a7e5) >>> 0);
+  return signs[Math.floor(rng() * signs.length)] ?? null;
 }
 
 /**
@@ -42,10 +57,12 @@ export class DuelEngine {
     this.db = opts.db;
     this.fusion = opts.fusion ?? noFusions;
     const rng = createRng(opts.seed);
+    const daySign = pickDaySign(opts.seed, opts.signs);
+    const startLife = signRules(daySign, 'startLife').at(-1)?.amount ?? START_LIFE;
     const makePlayer = (p: PlayerIndex): PlayerState => {
       const deck = buildShuffledDeck(opts.decks[p], p, this.db, this.ids, rng);
       deck.forEach(c => this.cards.set(c.instanceId, c));
-      return { life: START_LIFE, deck, hand: [], field: Array(FIELD_SLOTS).fill(null), support: Array(FIELD_SLOTS).fill(null), mictlan: [] };
+      return { life: startLife, deck, hand: [], field: Array(FIELD_SLOTS).fill(null), support: Array(FIELD_SLOTS).fill(null), mictlan: [] };
     };
     this.state = {
       players: [makePlayer(0), makePlayer(1)],
@@ -55,6 +72,7 @@ export class DuelEngine {
       supportUsedThisTurn: false,
       monsterPlayedThisTurn: false,
       winner: null,
+      daySign,
     };
   }
 
@@ -64,6 +82,8 @@ export class DuelEngine {
     this.started = true;
     const events: DuelEvent[] = [];
     for (const p of [0, 1] as const) this.refillHand(p, events);
+    const extra = signTotal(this.state.daySign, 'extraDraw');
+    if (extra > 0) for (const p of [0, 1] as const) this.drawCards(p, extra, events);
     events.push({ type: 'turnStarted', player: this.state.turnPlayer, turn: 1 });
     this.recomputeAuras();
     return events;
@@ -158,6 +178,8 @@ export class DuelEngine {
       type: 'cardPlayed', player: intent.player, instanceId: current.instanceId,
       slot: intent.slot, position: current.position, faceDown: current.faceDown,
     });
+    const fusionBonus = signTotal(s.daySign, 'fusionBonus');
+    if (fused && fusionBonus) current.addModifier({ atk: fusionBonus, def: 0, sourceId: SOURCE_FUSION_SIGN, untilEndOfTurn: false });
     if (!current.faceDown) {
       if (fused) this.runEffects(current, 'onFusionSummon', events);
       this.runEffects(current, 'onSummon', events);
@@ -282,7 +304,7 @@ export class DuelEngine {
     if (target && target.zone !== 'field') return null;   // el objetivo ya no está: el ataque se pierde
 
     if (!target) {
-      this.damage(foePlayer, attacker.atk, events);
+      this.damage(foePlayer, attacker.atk + signTotal(s.daySign, 'directBonus'), events);
       return null;
     }
 
@@ -316,7 +338,7 @@ export class DuelEngine {
 
   private endTurn(events: DuelEvent[]): string | null {
     const s = this.state;
-    const wasNight = isNightTurn(s.turn);
+    const wasPhase = phaseOf(s.turn);
     for (const p of s.players) {
       for (const c of p.field) {
         if (!c) continue;
@@ -332,7 +354,16 @@ export class DuelEngine {
     s.supportUsedThisTurn = false;
     s.monsterPlayedThisTurn = false;
     events.push({ type: 'turnStarted', player: s.turnPlayer, turn: s.turn });
-    if (isNightTurn(s.turn) !== wasNight) events.push({ type: 'timeChanged', night: isNightTurn(s.turn) });
+    const phase = phaseOf(s.turn);
+    if (phase !== wasPhase) {
+      events.push({ type: 'timeChanged', phase, night: PHASE_INFO[phase].night });
+      if (PHASE_INFO[phase].night !== PHASE_INFO[wasPhase].night) {
+        const nahuales = s.players.flatMap(p => p.field).filter((c): c is CardInstance => !!c && !!c.def.nahual);
+        if (nahuales.length) events.push({ type: 'nahualShift', instanceIds: nahuales.map(c => c.instanceId), night: PHASE_INFO[phase].night });
+      }
+    }
+    const heal = signTotal(s.daySign, 'turnHeal');
+    if (heal > 0) this.heal(s.turnPlayer, heal, events);
     this.refillHand(s.turnPlayer, events);
     for (const c of [...s.players[s.turnPlayer].field]) {
       if (c && !c.faceDown && c.zone === 'field') this.runEffects(c, 'onTurnStart', events);
@@ -364,6 +395,11 @@ export class DuelEngine {
     const wasFaceUp = !card.faceDown;
     this.sendToMictlan(card, reason, events);
     if (wasFaceUp) this.runEffects(card, 'onDestroyed', events);
+    // Signo del día: Miquiztli (daño al dueño) y Cozcacuauhtli (vida para el rival)
+    const burn = signTotal(this.state.daySign, 'destroyBurn');
+    if (burn > 0) this.damage(card.owner, burn, events);
+    const heal = signTotal(this.state.daySign, 'destroyHeal');
+    if (heal > 0 && this.state.winner === null) this.heal(opponentOf(card.owner), heal, events);
   }
 
   private sendToMictlan(card: CardInstance, reason: 'battle' | 'fusionFailed' | 'material' | 'effect' | 'used', events: DuelEvent[]): void {
@@ -371,6 +407,21 @@ export class DuelEngine {
     card.zone = 'mictlan';
     this.state.players[card.owner].mictlan.push(card);
     events.push({ type: 'sentToMictlan', instanceId: card.instanceId, reason });
+  }
+
+  private heal(player: PlayerIndex, amount: number, events: DuelEvent[]): void {
+    if (amount <= 0) return;
+    const p = this.state.players[player];
+    p.life += amount;
+    events.push({ type: 'healed', player, amount, lifeAfter: p.life });
+  }
+
+  /** Robar por efecto: si el mazo se acaba no se pierde. */
+  private drawCards(player: PlayerIndex, amount: number, events: DuelEvent[]): void {
+    const me = this.state.players[player];
+    const drawn = me.deck.splice(0, Math.max(0, amount));
+    for (const c of drawn) { c.zone = 'hand'; me.hand.push(c); }
+    if (drawn.length) events.push({ type: 'cardsDrawn', player, instanceIds: drawn.map(c => c.instanceId) });
   }
 
   private damage(player: PlayerIndex, amount: number, events: DuelEvent[]): void {
@@ -411,6 +462,7 @@ export class DuelEngine {
       switch (c.type) {
         case 'isNight': return isNightTurn(s.turn);
         case 'isDay': return !isNightTurn(s.turn);
+        case 'isPhase': return phaseOf(s.turn) === c.phase;
         case 'lifeBelow': return me.life < c.amount;
         case 'hasTagOnField': return me.field.some(o => o && o !== card && !o.faceDown && o.def.tags.includes(c.tag));
         case 'opponentHasMoreMonsters': return count(foe.field) > count(me.field);
@@ -458,15 +510,11 @@ export class DuelEngine {
         this.damage(a.who === 'self' ? owner : opponentOf(owner), a.amount, events);
         return;
       case 'heal':
-        me.life += a.amount;
-        events.push({ type: 'healed', player: owner, amount: a.amount, lifeAfter: me.life });
+        this.heal(owner, a.amount, events);
         return;
-      case 'draw': {
-        const drawn = me.deck.splice(0, Math.max(0, a.amount));   // por efecto no se pierde si el mazo se acaba
-        for (const c of drawn) { c.zone = 'hand'; me.hand.push(c); }
-        if (drawn.length) events.push({ type: 'cardsDrawn', player: owner, instanceIds: drawn.map(c => c.instanceId) });
+      case 'draw':
+        this.drawCards(owner, a.amount, events);
         return;
-      }
       case 'destroy':
         for (const t of this.resolveTargets(card, a.target, a.tag, ctx)) this.destroy(t, events, 'effect');
         return;
@@ -494,6 +542,22 @@ export class DuelEngine {
   private recomputeAuras(): void {
     const field = this.state.players.flatMap(p => p.field).filter((c): c is CardInstance => c !== null);
     field.forEach(c => c.clearAuraModifiers());
+
+    // Ambiente: forma de los nahuales, bono de la fase del Reloj Solar y signo del día
+    const phase = phaseOf(this.state.turn);
+    const night = PHASE_INFO[phase].night;
+    for (const c of field) {
+      c.nightForm = night && !!c.def.nahual;
+      let atk = phaseAtkBonus(phase, c.def);
+      let def = 0;
+      for (const r of signRules(this.state.daySign, 'stat')) {
+        if (!matchesFilter(c.def, r)) continue;
+        atk += r.atk ?? 0;
+        def += r.def ?? 0;
+      }
+      if (atk || def) c.addModifier({ atk, def, sourceId: SOURCE_ENVIRONMENT, untilEndOfTurn: false, aura: true });
+    }
+
     for (const source of field) {
       if (source.faceDown) continue;
       for (const effect of source.def.effects ?? []) {

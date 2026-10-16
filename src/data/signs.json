@@ -1,0 +1,274 @@
+[
+  {
+    "id": "cipactli",
+    "name": "Cipactli",
+    "meaning": "Lagarto",
+    "glyph": "🐊",
+    "text": "Monstruos de Tierra +200 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "attribute": "tierra",
+        "atk": 200
+      }
+    ]
+  },
+  {
+    "id": "ehecatl",
+    "name": "Ehécatl",
+    "meaning": "Viento",
+    "glyph": "🌬",
+    "text": "Monstruos de Viento +300 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "attribute": "viento",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "calli",
+    "name": "Calli",
+    "meaning": "Casa",
+    "glyph": "🏠",
+    "text": "Todos los monstruos +300 DEF",
+    "rules": [
+      {
+        "kind": "stat",
+        "def": 300
+      }
+    ]
+  },
+  {
+    "id": "cuetzpalin",
+    "name": "Cuetzpalin",
+    "meaning": "Lagartija",
+    "glyph": "🦎",
+    "text": "Ambos roban 1 carta extra al empezar",
+    "rules": [
+      {
+        "kind": "extraDraw",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "coatl",
+    "name": "Cóatl",
+    "meaning": "Serpiente",
+    "glyph": "🐍",
+    "text": "Serpientes +300 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "serpiente",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "miquiztli",
+    "name": "Miquiztli",
+    "meaning": "Muerte",
+    "glyph": "💀",
+    "text": "Si destruyen tu monstruo, recibes 300 de daño",
+    "rules": [
+      {
+        "kind": "destroyBurn",
+        "amount": 300
+      }
+    ]
+  },
+  {
+    "id": "mazatl",
+    "name": "Mázatl",
+    "meaning": "Venado",
+    "glyph": "🦌",
+    "text": "Bestias +200 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "bestia",
+        "atk": 200
+      }
+    ]
+  },
+  {
+    "id": "tochtli",
+    "name": "Tochtli",
+    "meaning": "Conejo",
+    "glyph": "🐇",
+    "text": "Al empezar tu turno recuperas 200 de vida",
+    "rules": [
+      {
+        "kind": "turnHeal",
+        "amount": 200
+      }
+    ]
+  },
+  {
+    "id": "atl",
+    "name": "Atl",
+    "meaning": "Agua",
+    "glyph": "💧",
+    "text": "Monstruos de Agua +300 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "attribute": "agua",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "itzcuintli",
+    "name": "Itzcuintli",
+    "meaning": "Perro",
+    "glyph": "🐕",
+    "text": "Cartas de muerte +300 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "muerte",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "ozomatli",
+    "name": "Ozomatli",
+    "meaning": "Mono",
+    "glyph": "🐒",
+    "text": "Los monstruos de fusión salen con +300 ATK",
+    "rules": [
+      {
+        "kind": "fusionBonus",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "malinalli",
+    "name": "Malinalli",
+    "meaning": "Hierba",
+    "glyph": "🌿",
+    "text": "Ambos empiezan con 6000 de vida",
+    "rules": [
+      {
+        "kind": "startLife",
+        "amount": 6000
+      }
+    ]
+  },
+  {
+    "id": "acatl",
+    "name": "Ácatl",
+    "meaning": "Caña",
+    "glyph": "🎋",
+    "text": "Los ataques directos hacen 400 de daño extra",
+    "rules": [
+      {
+        "kind": "directBonus",
+        "amount": 400
+      }
+    ]
+  },
+  {
+    "id": "ocelotl",
+    "name": "Océlotl",
+    "meaning": "Jaguar",
+    "glyph": "🐆",
+    "text": "Jaguares +400 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "jaguar",
+        "atk": 400
+      }
+    ]
+  },
+  {
+    "id": "cuauhtli",
+    "name": "Cuauhtli",
+    "meaning": "Águila",
+    "glyph": "🦅",
+    "text": "Aves +300 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "ave",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "cozcacuauhtli",
+    "name": "Cozcacuauhtli",
+    "meaning": "Zopilote",
+    "glyph": "🪶",
+    "text": "Si destruyes un monstruo rival, recuperas 300 de vida",
+    "rules": [
+      {
+        "kind": "destroyHeal",
+        "amount": 300
+      }
+    ]
+  },
+  {
+    "id": "ollin",
+    "name": "Ollin",
+    "meaning": "Movimiento",
+    "glyph": "🌀",
+    "text": "Todos los monstruos +300 ATK y −300 DEF",
+    "rules": [
+      {
+        "kind": "stat",
+        "atk": 300,
+        "def": -300
+      }
+    ]
+  },
+  {
+    "id": "tecpatl",
+    "name": "Técpatl",
+    "meaning": "Pedernal",
+    "glyph": "🔪",
+    "text": "Guerreros +300 ATK",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "guerrero",
+        "atk": 300
+      }
+    ]
+  },
+  {
+    "id": "quiahuitl",
+    "name": "Quiáhuitl",
+    "meaning": "Lluvia",
+    "glyph": "🌧",
+    "text": "Deidades +200 ATK y +200 DEF",
+    "rules": [
+      {
+        "kind": "stat",
+        "tag": "deidad",
+        "atk": 200,
+        "def": 200
+      }
+    ]
+  },
+  {
+    "id": "xochitl",
+    "name": "Xóchitl",
+    "meaning": "Flor",
+    "glyph": "🌸",
+    "text": "Ambos empiezan con 10000 de vida",
+    "rules": [
+      {
+        "kind": "startLife",
+        "amount": 10000
+      }
+    ]
+  }
+]

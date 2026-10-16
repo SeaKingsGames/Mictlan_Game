@@ -22,14 +22,15 @@ const pass = (e: DuelEngine) => ok(e.apply({ type: 'endTurn', player: e.state.tu
 const field = (e: DuelEngine, p: PlayerIndex, slot: number) => e.state.players[p].field[slot]!;
 
 describe('Día y noche', () => {
-  it('turnos 1-2 de día, 3-4 de noche, 5-6 de día', () => {
-    expect([1, 2, 3, 4, 5, 6].map(isNightTurn)).toEqual([false, false, true, true, false, false]);
+  it('Reloj Solar: Alba 1-2, Mediodía 3-4 (día) · Ocaso 5-6, Medianoche 7-8 (noche) · vuelve el Alba', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9].map(isNightTurn)).toEqual([false, false, false, false, true, true, true, true, false]);
   });
-  it('avisa cuando cambia', () => {
+  it('avisa cuando cambia la fase', () => {
     const e = duel(many(9), many(9));
     pass(e);
-    const events = pass(e);   // empieza el turno 3
-    expect(events).toContainEqual({ type: 'timeChanged', night: true });
+    expect(pass(e)).toContainEqual({ type: 'timeChanged', phase: 'mediodia', night: false });   // turno 3
+    pass(e);
+    expect(pass(e)).toContainEqual({ type: 'timeChanged', phase: 'ocaso', night: true });       // turno 5
   });
 });
 
@@ -66,11 +67,14 @@ describe('efectos de monstruos', () => {
     play(e, 0, 3, 0);
     pass(e);
     play(e, 1, 13, 0);
-    pass(e);                                   // turno 3: noche
-    ok(e.apply({ type: 'attack', player: 0, attackerId: field(e, 0, 0).instanceId, targetId: field(e, 1, 0).instanceId }));
-    expect(e.state.players[1].life).toBe(START_LIFE - (1800 + 300 - 1500));
+    ok(e.apply({ type: 'changePosition', player: 1, instanceId: field(e, 1, 0).instanceId }));   // defensa: no lo ataca
+    pass(e); pass(e); pass(e);                 // turno 5: Ocaso (noche)
+    const before = field(e, 0, 0).atk;         // ya incluye el bono de la fase, si hay
+    const target = field(e, 1, 0);
+    ok(e.apply({ type: 'attack', player: 0, attackerId: field(e, 0, 0).instanceId, targetId: target.instanceId }));
+    expect(target.zone).toBe('mictlan');       // 1800+300 rompe su defensa
     pass(e);
-    expect(field(e, 0, 0).atk).toBe(1800);
+    expect(field(e, 0, 0).atk).toBe(before);
   });
 
   it('Mictlantecuhtli al ser destruido revive al monstruo de muerte más fuerte de tu Mictlán', () => {

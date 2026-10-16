@@ -1,9 +1,10 @@
 import type { CardInstance } from '../core/CardInstance.ts';
-import { DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
-import { isNightTurn, type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
+import { type DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
+import { type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
+import { describePhase, phaseOf, PHASE_INFO, TIME_PHASES, turnsLeftInPhase } from '../core/time.ts';
 import { cardDb, fusionDb } from '../data/index.ts';
 import type { Duelist } from '../game/duelists.ts';
-import { aiStep } from '../game/replay.ts';
+import { aiStep, createDuel } from '../game/replay.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
@@ -61,7 +62,7 @@ export class DuelView {
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast', HTMLElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast' | 'timeBox' | 'signBox', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'end' | 'surrender' | 'exit', HTMLButtonElement>;
   private readonly setup: DuelSetup;
   private finished: DuelResult | null = null;
@@ -95,6 +96,8 @@ export class DuelView {
             <button class="tag-btn" data-btn="album">Fusiones</button>
             <button class="tag-btn" data-btn="exit">Salir</button>
             <span class="turn-tag" data-ref="turn"></span>
+            <div class="time-box" data-ref="timeBox"></div>
+            <div class="sign-box" data-ref="signBox"></div>
           </nav>
 
           <div class="field-bg" aria-hidden="true"></div>
@@ -138,7 +141,7 @@ export class DuelView {
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
       myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
-      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'),
+      albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'), timeBox: ref('timeBox'), signBox: ref('signBox'),
     };
     this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit') };
     this.btn.exit.addEventListener('click', () => {
@@ -189,10 +192,7 @@ export class DuelView {
     this.finished = null;
     this.finishing = false;
     this.intents = [];
-    this.engine = new DuelEngine({
-      db: cardDb, decks: [this.setup.playerDeck, this.setup.opponent.deck], seed, firstPlayer: HUMAN,
-      fusion: fusionDb,
-    });
+    this.engine = createDuel(seed, this.setup.playerDeck, this.setup.opponent, cardDb, fusionDb);   // igual que el servidor
     this.log = [];
     this.selectedHand = [];
     this.selectedAttacker = null;
@@ -200,6 +200,8 @@ export class DuelView {
     this.message = '';
     this.lastLife = [START_LIFE, START_LIFE];
     this.record(this.engine.start());
+    const sign = this.engine.state.daySign;
+    if (sign) this.toast(`Signo del día: ${sign.glyph} ${sign.name} — ${sign.text}`);
     this.render();
   }
 
@@ -371,10 +373,7 @@ export class DuelView {
     this.el.mySupport.replaceChildren(...me.support.map((c, i) => this.supportZone(c, true, i)));
     this.el.foeSupport.replaceChildren(...foe.support.map((c, i) => this.supportZone(c, false, i)));
     this.el.mySupport.classList.toggle('zones--placing', !!spell && !equipping);
-    const night = isNightTurn(s.turn);
-    this.el.emblem.textContent = night ? '☾' : '☀';
-    this.el.emblem.title = night ? 'Noche' : 'Día';
-    this.el.emblem.classList.toggle('emblem--night', night);
+    this.renderClock();
     this.el.foeField.classList.toggle('zones--targeting', myTurn && canAttackNow && attackerSel?.position === 'attack' && !attackerSel.hasAttackedThisTurn);
 
     // Mano propia
@@ -527,11 +526,17 @@ export class DuelView {
       <p class="inspector__desc"></p>
       <p class="inspector__effect"></p>
       <p class="inspector__where"></p>`;
-    this.el.inspectorInfo.querySelector('.inspector__name')!.textContent = card.def.name;
+    this.el.inspectorInfo.querySelector('.inspector__name')!.textContent = card.name;
     this.el.inspectorInfo.querySelector('.inspector__meta')!.textContent = [ATTR[card.def.attribute], ...card.def.tags].join(' · ');
-    this.el.inspectorInfo.querySelector('.inspector__desc')!.textContent = card.def.description;
+    const nahual = card.def.nahual;
+    this.el.inspectorInfo.querySelector('.inspector__desc')!.textContent = card.nightForm && nahual?.description ? nahual.description : card.def.description;
     const fx = describeEffects(card.def.effects);
-    this.el.inspectorInfo.querySelector('.inspector__effect')!.textContent = fx ? `Efecto: ${fx}` : '';
+    const nahualText = nahual
+      ? (card.nightForm
+        ? `🌙 Nahual. De día es ${card.def.name} (${card.def.atk}/${card.def.def}).`
+        : `🌙 Nahual. De noche se vuelve ${nahual.name} (${nahual.atk}/${nahual.def}).`)
+      : '';
+    this.el.inspectorInfo.querySelector('.inspector__effect')!.textContent = [nahualText, fx ? `Efecto: ${fx}` : ''].filter(Boolean).join(' ');
     this.el.inspectorInfo.querySelector('.inspector__where')!.textContent = where + pos;
   }
 
@@ -628,6 +633,42 @@ export class DuelView {
     }
     this.el.overlay.replaceChildren(box);
     this.el.overlay.hidden = false;
+  }
+
+  /** Reloj Solar (centro del tablero) y el panel de fase + signo del día. */
+  private renderClock(): void {
+    const s = this.engine.state;
+    const phase = phaseOf(s.turn);
+    const info = PHASE_INFO[phase];
+    const left = turnsLeftInPhase(s.turn);
+    const next = PHASE_INFO[TIME_PHASES[(TIME_PHASES.indexOf(phase) + 1) % TIME_PHASES.length]];
+    // La aguja avanza un poco en el segundo turno de cada fase.
+    const step = TIME_PHASES.indexOf(phase) * 2 + (left === 1 ? 1 : 0);
+    const em = this.el.emblem;
+    if (!em.firstElementChild) {
+      em.innerHTML = '<div class="clock"><span class="clock__needle"></span><span class="clock__icon"></span></div>';
+    }
+    em.dataset.phase = phase;
+    em.classList.toggle('emblem--night', info.night);
+    (em.querySelector('.clock__needle') as HTMLElement).style.setProperty('--step', String(step));
+    em.querySelector('.clock__icon')!.textContent = info.icon;
+    em.title = `${info.name} · ${describePhase(phase)}`;
+
+    const tb = this.el.timeBox;
+    tb.dataset.phase = phase;
+    tb.innerHTML = '<b class="time-box__name"></b><span class="time-box__bonus"></span><small class="time-box__next"></small>';
+    tb.querySelector('.time-box__name')!.textContent = `${info.icon} ${info.name}`;
+    tb.querySelector('.time-box__bonus')!.textContent = describePhase(phase);
+    tb.querySelector('.time-box__next')!.textContent = left === 1 ? `Al acabar este turno: ${next.icon} ${next.name}` : `${next.icon} ${next.name} en ${left} turnos`;
+
+    const sign = s.daySign;
+    this.el.signBox.hidden = !sign;
+    if (sign) {
+      this.el.signBox.innerHTML = '<small>Signo del día</small><b class="sign-box__name"></b><span class="sign-box__text"></span>';
+      this.el.signBox.querySelector('.sign-box__name')!.textContent = `${sign.glyph} ${sign.name}`;
+      this.el.signBox.querySelector('.sign-box__text')!.textContent = sign.text;
+      this.el.signBox.title = `${sign.name} (${sign.meaning}): ${sign.text}`;
+    }
   }
 
   private renderAlbum(): void {
@@ -816,7 +857,8 @@ export class DuelView {
         this.showNextFusion();
       }
       if (e.type === 'effect') this.toast(`Efecto: ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
-      if (e.type === 'timeChanged') this.toast(e.night ? 'Cae la noche ☾' : 'Sale el sol ☀');
+      if (e.type === 'timeChanged') this.toast(`${PHASE_INFO[e.phase].icon} ${PHASE_INFO[e.phase].name}: ${describePhase(e.phase)}`);
+      if (e.type === 'nahualShift') this.toast(e.night ? '🐆 Los nahuales toman su forma animal' : 'Los nahuales vuelven a su forma humana');
       if (e.type === 'trapActivated') this.toast(`¡Trampa! ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
       if (e.type === 'attackNegated') this.toast('Ataque detenido');
       const line = this.describe(e);
@@ -826,7 +868,7 @@ export class DuelView {
 
   private describe(e: DuelEvent): string | null {
     const who = (p: PlayerIndex) => (p === HUMAN ? 'Tú' : 'Rival');
-    const name = (id: number) => this.engine.getCard(id)?.def.name ?? '?';
+    const name = (id: number) => this.engine.getCard(id)?.name ?? '?';
     switch (e.type) {
       case 'turnStarted': return `— Turno ${e.turn}: ${who(e.player)} —`;
       case 'cardsDrawn': return e.player === HUMAN ? `Robas ${e.instanceIds.length}` : `Rival roba ${e.instanceIds.length}`;
@@ -846,7 +888,8 @@ export class DuelView {
       case 'statChanged': return `${name(e.instanceId)} queda en ATK ${e.atk} / DEF ${e.def}`;
       case 'healed': return `${who(e.player)} recupera ${e.amount} PV (${e.lifeAfter} PV)`;
       case 'revived': return `${name(e.instanceId)} regresa del Mictlán`;
-      case 'timeChanged': return e.night ? '☾ Cae la noche' : '☀ Sale el sol';
+      case 'timeChanged': return `${PHASE_INFO[e.phase].icon} Empieza ${PHASE_INFO[e.phase].name} (${describePhase(e.phase)})`;
+      case 'nahualShift': return e.night ? 'Los nahuales cambian a su forma de noche' : 'Los nahuales vuelven a su forma de día';
       case 'trapSet': return e.player === HUMAN ? `Colocas ${name(e.instanceId)} boca abajo` : 'Rival coloca una trampa boca abajo';
       case 'trapActivated': return `¡Trampa! ${name(e.instanceId)} responde al ataque de ${name(e.attackerId)}`;
       case 'attackNegated': return `El ataque de ${name(e.attackerId)} se detiene`;

@@ -28,6 +28,8 @@ export class CardInstance {
   hasAttackedThisTurn = false;
   positionChangedThisTurn = false;
   summonedThisTurn = false;
+  /** Nahual en forma de noche (lo decide el motor según el Reloj Solar). */
+  nightForm = false;
 
   private modifiers: StatModifier[] = [];
 
@@ -37,12 +39,18 @@ export class CardInstance {
     this.def = def;
   }
 
+  /** Stats base de la forma actual (de noche, la del nahual). */
+  get baseAtk(): number { return this.nightForm && this.def.nahual ? this.def.nahual.atk : this.def.atk; }
+  get baseDef(): number { return this.nightForm && this.def.nahual ? this.def.nahual.def : this.def.def; }
+  /** Nombre que se ve (de noche, el del nahual). */
+  get name(): string { return this.nightForm && this.def.nahual ? this.def.nahual.name : this.def.name; }
+
   get atk(): number {
-    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.atk, this.def.atk));
+    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.atk, this.baseAtk));
   }
 
   get defense(): number {
-    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.def, this.def.def));
+    return Math.max(0, this.modifiers.reduce((sum, m) => sum + m.def, this.baseDef));
   }
 
   get activeModifiers(): readonly StatModifier[] { return this.modifiers; }
@@ -69,10 +77,11 @@ export class CardInstance {
     this.hasAttackedThisTurn = false;
     this.positionChangedThisTurn = false;
     this.summonedThisTurn = false;
+    this.nightForm = false;
     this.position = 'attack';
   }
 
   toString(): string {
-    return `#${this.instanceId} ${this.def.name} ${this.atk}/${this.defense} [${this.zone}]`;
+    return `#${this.instanceId} ${this.name} ${this.atk}/${this.defense} [${this.zone}]`;
   }
 }
