@@ -26,7 +26,7 @@ export function nextAiIntent(state: DuelState, me: PlayerIndex, fusion?: FusionR
   }
 
   // 2) Batalla: atacar donde gane.
-  const canAttackThisTurn = state.turn > 1 || FIRST_TURN_CAN_ATTACK;
+  const canAttackThisTurn = (state.turn > 1 || FIRST_TURN_CAN_ATTACK) && state.turn > state.attackLockUntil[me];
   if (canAttackThisTurn) {
     const attackers = mine.field
       .filter((c): c is CardInstance => c !== null && c.position === 'attack' && !c.hasAttackedThisTurn)
@@ -37,6 +37,7 @@ export function nextAiIntent(state: DuelState, me: PlayerIndex, fusion?: FusionR
       }
       const target = pickTarget(attacker, foeMonsters);
       if (target) return { type: 'attack', player: me, attackerId: attacker.instanceId, targetId: target.instanceId };
+      if (attacker.hasKeyword('directAttack')) return { type: 'attack', player: me, attackerId: attacker.instanceId, targetId: null };
     }
   }
 
@@ -104,19 +105,57 @@ function chooseSupportPlay(state: DuelState, me: PlayerIndex, myMonsters: CardIn
   if (trap && mine.support.some(c => c === null)) return activate(trap);
   const equip = find('equip');
   if (equip && strongest) return activate(equip, strongest.instanceId);
-  const dmg = find('damage');
-  if (dmg) return activate(dmg);
-  const heal = find('heal');
-  if (heal && mine.life < 6000) return activate(heal);
-  const buff = find('buff');
-  if (buff && canAttack && myMonsters.some(c => c.position === 'attack')) return activate(buff);
-  // Para no atorarse con la mano llena de mágicas: si no hay monstruo que bajar, usa cualquiera.
+  // Mágicas: la que más convenga ahora (las que hoy perjudican, como un Agujero Negro con ventaja, no)
+  const spells = cards.filter(c => c.def.type === 'spell')
+    .map(c => ({ c, v: spellValue(c, state, me, canAttack) }))
+    .sort((a, b) => b.v - a.v);
+  if (spells[0] && spells[0].v > 0) return activate(spells[0].c);
+  // Para no atorarse con la mano llena de mágicas: si no hay monstruo que bajar, usa cualquiera que no estorbe.
   if (!hasMonsterPlay) {
-    const any = cards.find(c => spellKind(c) !== 'equip' && (spellKind(c) !== 'trap' || mine.support.some(z => z === null)))
-      ?? (strongest ? equip : undefined);
+    const harmless = spells.find(x => x.v >= 0)?.c;
+    const any = harmless ?? cards.find(c => spellKind(c) === 'trap' && mine.support.some(z => z === null)) ?? (strongest ? equip : undefined);
     if (any) return activate(any, spellKind(any) === 'equip' ? strongest?.instanceId : undefined);
   }
   return null;
+}
+
+/** Qué tan buena es una mágica AHORA (positivo = úsala; negativo = te perjudica). */
+function spellValue(card: CardInstance, state: DuelState, me: PlayerIndex, canAttack: boolean): number {
+  const mine = state.players[me];
+  const foe = state.players[opponentOf(me)];
+  const myMon = mine.field.filter((c): c is CardInstance => c !== null);
+  const foeMon = foe.field.filter((c): c is CardInstance => c !== null);
+  const power = (list: CardInstance[]) => list.reduce((n, c) => n + Math.max(c.atk, c.defense), 0);
+  const freeSlot = mine.field.some(c => c === null);
+  const enemyTargets = ['allEnemies', 'highestAtkEnemy', 'lowestAtkEnemy', 'randomEnemy'];
+  let v = 0;
+  for (const a of (card.def.effects ?? []).flatMap(e => e.actions)) {
+    switch (a.type) {
+      case 'damage': v += a.who === 'self' ? -a.amount / 200 : a.amount / 100; break;
+      case 'heal': v += mine.life < 6000 ? a.amount / 200 : 0; break;
+      case 'draw': v += 2 * a.amount; break;
+      case 'modifyAtk': case 'modifyDef':
+        if (enemyTargets.includes(a.target)) v += foeMon.length && a.amount < 0 ? 2 : 0;
+        else v += canAttack && myMon.some(c => c.position === 'attack') ? Math.max(0, a.amount) / 100 : 0;
+        break;
+      case 'destroy': case 'returnToHand': case 'takeControl': case 'forceDefense':
+        if (enemyTargets.includes(a.target)) v += foeMon.length ? 2 + power(foeMon) / (a.target === 'allEnemies' ? 400 : 1200) : 0;
+        else if (a.target === 'allMonsters') v += (power(foeMon) - power(myMon)) / 400;
+        else if (a.target === 'randomMonster') v += (foeMon.length - myMon.length) * 1.5;
+        break;
+      case 'destroySupport': {
+        const theirs = foe.support.filter(Boolean).length, ours = mine.support.filter(Boolean).length;
+        v += 3 * (a.who === 'all' ? theirs - ours : theirs);
+        break;
+      }
+      case 'preventAttack': v += foeMon.some(c => c.position === 'attack') ? 3 : 0; break;
+      case 'summonFromDeck': v += freeSlot ? 2 : 0; break;
+      case 'revive': v += freeSlot && mine.mictlan.some(c => c.def.type === 'monster') ? 3 : 0; break;
+      case 'grantKeyword': v += myMon.length ? 1 : 0; break;
+      default: break;
+    }
+  }
+  return v;
 }
 
 /** Qué hace una mágica, equipo o trampa, para que la IA decida cuándo usarla. */

@@ -1533,5 +1533,338 @@
         ]
       }
     ]
+  },
+  {
+    "id": 83,
+    "name": "Tormenta de Tláloc",
+    "description": "Rayos y granizo caen sobre el ejército enemigo.",
+    "type": "spell",
+    "attribute": "agua",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "UR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "allEnemies"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 84,
+    "name": "Soplo de Ehécatl",
+    "description": "El viento barre todo lo que el rival escondió.",
+    "type": "spell",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "destroySupport",
+            "who": "opponent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 85,
+    "name": "Fauces de Tlaltecuhtli",
+    "description": "La tierra abre la boca y se traga a todos por igual.",
+    "type": "spell",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "allMonsters"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 86,
+    "name": "Hechizo de Malinalxóchitl",
+    "description": "La hechicera doblega la voluntad del guerrero más fuerte.",
+    "type": "spell",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onActivate",
+        "actions": [
+          {
+            "type": "takeControl",
+            "target": "highestAtkEnemy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 87,
+    "name": "Aliento del Mictlán",
+    "description": "Un viento frío devuelve a los recién llegados.",
+    "type": "trap",
+    "attribute": "viento",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onOpponentSummon",
+        "actions": [
+          {
+            "type": "returnToHand",
+            "target": "summoned"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 88,
+    "name": "Red de obsidiana",
+    "description": "Ninguna fusión escapa de las navajas negras.",
+    "type": "trap",
+    "attribute": "tierra",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onOpponentFusion",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "summoned"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 89,
+    "name": "Grito de la Llorona",
+    "description": "Su lamento paraliza de miedo a los guerreros.",
+    "type": "trap",
+    "attribute": "agua",
+    "tags": [],
+    "atk": 0,
+    "def": 0,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onOpponentAttack",
+        "actions": [
+          {
+            "type": "negateAttack"
+          },
+          {
+            "type": "forceDefense",
+            "target": "attacker"
+          },
+          {
+            "type": "preventAttack"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 90,
+    "name": "Jaguar de obsidiana",
+    "description": "Sus garras atraviesan escudos de algodón y madera.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "jaguar",
+      "bestia"
+    ],
+    "atk": 1900,
+    "def": 1200,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "continuous",
+        "actions": [
+          {
+            "type": "grantKeyword",
+            "keyword": "piercing",
+            "target": "self"
+          }
+        ]
+      }
+    ],
+    "noFusion": true
+  },
+  {
+    "id": 91,
+    "name": "Guerrero águila veloz",
+    "description": "Baja del cielo dos veces antes de que el rival reaccione.",
+    "type": "monster",
+    "attribute": "sol",
+    "tags": [
+      "guerrero",
+      "ave"
+    ],
+    "atk": 1400,
+    "def": 800,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "continuous",
+        "actions": [
+          {
+            "type": "grantKeyword",
+            "keyword": "doubleAttack",
+            "target": "self"
+          }
+        ]
+      }
+    ],
+    "noFusion": true
+  },
+  {
+    "id": 92,
+    "name": "Tzitzimitl del eclipse",
+    "description": "Al bajar del cielo devora a un monstruo cualquiera.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "deidad",
+      "muerte"
+    ],
+    "atk": 2000,
+    "def": 1600,
+    "rarity": "SR",
+    "effects": [
+      {
+        "trigger": "onSummon",
+        "actions": [
+          {
+            "type": "destroy",
+            "target": "randomEnemy"
+          }
+        ]
+      }
+    ],
+    "noFusion": true
+  },
+  {
+    "id": 93,
+    "name": "Madre serpiente",
+    "description": "Al morir, de su cuerpo nacen nuevas serpientes.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "serpiente"
+    ],
+    "atk": 1300,
+    "def": 1300,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "onDestroyed",
+        "actions": [
+          {
+            "type": "summonFromDeck",
+            "maxAtk": 1500,
+            "sameTag": true
+          }
+        ]
+      }
+    ],
+    "noFusion": true
+  },
+  {
+    "id": 94,
+    "name": "Mensajero de la noche",
+    "description": "Se cuela entre las líneas enemigas sin ser visto.",
+    "type": "monster",
+    "attribute": "viento",
+    "tags": [
+      "ave",
+      "muerte"
+    ],
+    "atk": 1000,
+    "def": 700,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "continuous",
+        "conditions": [
+          {
+            "type": "isNight"
+          }
+        ],
+        "actions": [
+          {
+            "type": "grantKeyword",
+            "keyword": "directAttack",
+            "target": "self"
+          }
+        ]
+      }
+    ],
+    "noFusion": true
+  },
+  {
+    "id": 95,
+    "name": "Escudo de Chimalli",
+    "description": "Una vez por duelo detiene el golpe que debía matarlo.",
+    "type": "monster",
+    "attribute": "tierra",
+    "tags": [
+      "guerrero"
+    ],
+    "atk": 1500,
+    "def": 1700,
+    "rarity": "R",
+    "effects": [
+      {
+        "trigger": "continuous",
+        "actions": [
+          {
+            "type": "grantKeyword",
+            "keyword": "battleImmune",
+            "target": "self"
+          }
+        ]
+      },
+      {
+        "trigger": "onBattleDestroy",
+        "actions": [
+          {
+            "type": "heal",
+            "amount": 300
+          }
+        ]
+      }
+    ],
+    "noFusion": true
   }
 ]

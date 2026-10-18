@@ -1,4 +1,4 @@
-import { CARD_TAGS, DECK_SIZE, EFFECT_TARGETS, EFFECT_TRIGGERS, MAX_COPIES, RARITIES, type CardDef, type DeckDef } from './types.ts';
+import { CARD_TAGS, DECK_SIZE, EFFECT_TARGETS, EFFECT_TRIGGERS, KEYWORDS, MAX_COPIES, RARITIES, type CardDef, type DeckDef } from './types.ts';
 
 /**
  * Registro de todas las cartas. Por red y en la base de datos solo viaja el ID;
@@ -59,7 +59,8 @@ function validateCard(c: CardDef): string[] {
   if (c.atk < 0 || c.def < 0) p.push('ATK/DEF no pueden ser negativos');
   for (const t of c.tags) if (!CARD_TAGS.includes(t)) p.push(`etiqueta desconocida "${t}"`);
   if (c.rarity !== undefined && !RARITIES.includes(c.rarity)) p.push(`rareza desconocida "${c.rarity}" (usa N, R, SR o UR)`);
-  const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive', 'negateAttack'];
+  const actionTypes = ['modifyAtk', 'modifyDef', 'damage', 'heal', 'draw', 'destroy', 'revive', 'negateAttack',
+    'returnToHand', 'forceDefense', 'takeControl', 'preventAttack', 'grantKeyword', 'destroySupport', 'summonFromDeck'];
   const conditionTypes = ['isNight', 'isDay', 'isPhase', 'lifeBelow', 'hasTagOnField', 'opponentHasMoreMonsters'];
   const phases = ['alba', 'mediodia', 'ocaso', 'medianoche'];
   for (const e of c.effects ?? []) {
@@ -73,6 +74,9 @@ function validateCard(c: CardDef): string[] {
       if (!actionTypes.includes(a.type)) p.push(`acción desconocida "${a.type}"`);
       if ('target' in a && !EFFECT_TARGETS.includes(a.target)) p.push(`objetivo desconocido "${a.target}"`);
       if ('tag' in a && a.tag && !CARD_TAGS.includes(a.tag)) p.push(`etiqueta desconocida "${a.tag}" en un efecto`);
+      if (a.type === 'grantKeyword' && !KEYWORDS.includes(a.keyword)) p.push(`habilidad desconocida "${a.keyword}"`);
+      if (a.type === 'summonFromDeck' && !(Number.isInteger(a.maxAtk) && a.maxAtk >= 0)) p.push('"invocar desde tu mazo" necesita un ATK máximo');
+      if (a.type === 'destroySupport' && a.who !== 'opponent' && a.who !== 'all') p.push('"destruir trampas" debe ser del rival o de todos');
     }
     if (e.trigger === 'onActivate' && c.type === 'monster') p.push('un monstruo no puede tener efecto onActivate');
   }
@@ -85,8 +89,9 @@ function validateCard(c: CardDef): string[] {
     if (!c.nahual.name?.trim()) p.push('al nahual le falta el nombre de su forma de noche');
     if (!Number.isInteger(c.nahual.atk) || !Number.isInteger(c.nahual.def) || c.nahual.atk < 0 || c.nahual.def < 0) p.push('ATK/DEF del nahual deben ser enteros ≥ 0');
   }
-  if (c.type === 'trap' && !(c.effects ?? []).some(e => e.trigger === 'onOpponentAttack')) {
-    p.push('las trampas necesitan un efecto onOpponentAttack');
+  const trapTriggers = ['onOpponentAttack', 'onOpponentSummon', 'onOpponentFusion'];
+  if (c.type === 'trap' && !(c.effects ?? []).some(e => trapTriggers.includes(e.trigger))) {
+    p.push('las trampas necesitan un efecto que se active con el rival (al atacar, invocar o fusionar)');
   }
   return p;
 }

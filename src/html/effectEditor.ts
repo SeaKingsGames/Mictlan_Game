@@ -1,6 +1,6 @@
-import { ACTION_TEXT, CONDITION_TEXT, TARGET_TEXT, TRIGGER_TEXT, describeEffect, describeEffects } from '../data/effectText.ts';
+import { ACTION_TEXT, CONDITION_TEXT, KEYWORD_TEXT, TARGET_TEXT, TRIGGER_TEXT, describeEffect, describeEffects } from '../data/effectText.ts';
 import {
-  CARD_TAGS, EFFECT_TARGETS, EFFECT_TRIGGERS,
+  CARD_TAGS, EFFECT_TARGETS, EFFECT_TRIGGERS, KEYWORDS,
   type CardTag, type CardType, type EffectAction, type EffectCondition, type EffectDef, type EffectTarget, type EffectTrigger,
 } from '../data/types.ts';
 
@@ -38,8 +38,17 @@ function defaultAction(type: EffectAction['type'], cardType: CardType): EffectAc
     case 'destroy': return { type, target: cardType === 'trap' ? 'attacker' : 'lowestAtkEnemy' };
     case 'revive': return { type };
     case 'negateAttack': return { type };
+    case 'returnToHand': return { type, target: cardType === 'trap' ? 'attacker' : 'highestAtkEnemy' };
+    case 'forceDefense': return { type, target: cardType === 'trap' ? 'attacker' : 'allEnemies' };
+    case 'takeControl': return { type, target: 'highestAtkEnemy' };
+    case 'preventAttack': return { type };
+    case 'grantKeyword': return { type, keyword: 'piercing', target: cardType === 'equip' ? 'equipTarget' : 'self' };
+    case 'destroySupport': return { type, who: 'opponent' };
+    case 'summonFromDeck': return { type, maxAtk: 1500, sameTag: true };
   }
 }
+
+const TRAP_TRIGGERS: EffectTrigger[] = ['onOpponentAttack', 'onOpponentSummon', 'onOpponentFusion'];
 
 function defaultCondition(type: EffectCondition['type']): EffectCondition {
   switch (type) {
@@ -52,12 +61,14 @@ function defaultCondition(type: EffectCondition['type']): EffectCondition {
 
 /** Qué opciones tienen sentido según el tipo de carta. */
 function triggersFor(type: CardType): EffectTrigger[] {
-  if (type === 'trap') return ['onOpponentAttack'];
+  if (type === 'trap') return TRAP_TRIGGERS;
   if (type === 'spell' || type === 'equip') return ['onActivate'];
-  return EFFECT_TRIGGERS.filter(t => t !== 'onActivate' && t !== 'onOpponentAttack');
+  return EFFECT_TRIGGERS.filter(t => t !== 'onActivate' && !TRAP_TRIGGERS.includes(t));
 }
-function targetsFor(type: CardType): EffectTarget[] {
-  return EFFECT_TARGETS.filter(t => (t !== 'equipTarget' || type === 'equip') && (t !== 'attacker' || type === 'trap'));
+function targetsFor(type: CardType, trigger: EffectTrigger): EffectTarget[] {
+  const hasAttacker = trigger === 'onOpponentAttack' || trigger === 'onAttacked';
+  const hasSummoned = trigger === 'onOpponentSummon' || trigger === 'onOpponentFusion';
+  return EFFECT_TARGETS.filter(t => (t !== 'equipTarget' || type === 'equip') && (t !== 'attacker' || hasAttacker) && (t !== 'summoned' || hasSummoned));
 }
 function actionsFor(type: CardType): EffectAction['type'][] {
   const all = Object.keys(ACTION_TEXT) as EffectAction['type'][];
@@ -128,7 +139,7 @@ export function renderEffectEditor(container: HTMLElement, card: EditableCard, o
     card.type === 'monster'
       ? 'Elige cuándo se activa, las condiciones (opcional) y qué hace. Puedes poner varios efectos.'
       : card.type === 'trap'
-        ? 'Las trampas se activan solas cuando el rival te ataca.'
+        ? 'Las trampas se activan solas: cuando el rival te ataca, invoca o fusiona (según elijas).'
         : 'Las mágicas y equipos hacen su efecto al activarse.');
   const boxes = effects.map((fx, i) => effectBox(fx, i));
 
@@ -195,13 +206,13 @@ export function renderEffectEditor(container: HTMLElement, card: EditableCard, o
           numberInput(a.amount, v => { m.amount = v; changed(); }, a.type === 'draw' ? 1 : 100)));
       }
       if ('target' in a) {
-        row.append(label('A quién', select(targetsFor(card.type).map(t => ({ value: t, label: TARGET_TEXT[t] })), a.target, v => {
+        row.append(label('A quién', select(targetsFor(card.type, fx.trigger).map(t => ({ value: t, label: TARGET_TEXT[t] })), a.target, v => {
           m.target = v;
           if (v === 'alliesWithTag' || v === 'otherAlliesWithTag') m.tag = (m.tag as CardTag | undefined) ?? 'agua';
           changed();
         })));
         const needsTag = a.target === 'alliesWithTag' || a.target === 'otherAlliesWithTag';
-        const canTag = needsTag || ['allAllies', 'otherAllies', 'allEnemies'].includes(a.target);
+        const canTag = needsTag || ['allAllies', 'otherAllies', 'allEnemies', 'randomEnemy', 'randomMonster', 'allMonsters'].includes(a.target);
         if (canTag) {
           row.append(label('Etiqueta', tagSelect(a.tag, v => {
             if (v) m.tag = v; else delete m.tag;
@@ -218,6 +229,26 @@ export function renderEffectEditor(container: HTMLElement, card: EditableCard, o
       }
       if (a.type === 'damage') {
         row.append(label('A quién', select([{ value: 'opponent', label: 'al rival' }, { value: 'self', label: 'a ti' }], a.who, v => { m.who = v; changed(); })));
+      }
+      if (a.type === 'grantKeyword') {
+        row.append(label('Habilidad', select(KEYWORDS.map(k => ({ value: k, label: KEYWORD_TEXT[k] })), a.keyword, v => { m.keyword = v; changed(); })));
+        const chk = el('input');
+        chk.type = 'checkbox';
+        chk.checked = !!a.untilEndOfTurn;
+        chk.addEventListener('change', () => { if (chk.checked) m.untilEndOfTurn = true; else delete m.untilEndOfTurn; changed(); });
+        row.append(label('Solo este turno', chk));
+      }
+      if (a.type === 'destroySupport') {
+        row.append(label('De quién', select([{ value: 'opponent', label: 'del rival' }, { value: 'all', label: 'de todos' }], a.who, v => { m.who = v; changed(); })));
+      }
+      if (a.type === 'summonFromDeck') {
+        row.append(label('ATK máximo', numberInput(a.maxAtk, v => { m.maxAtk = Math.max(0, v); changed(); })));
+        const same = el('input');
+        same.type = 'checkbox';
+        same.checked = !!a.sameTag;
+        same.addEventListener('change', () => { if (same.checked) { m.sameTag = true; delete m.tag; } else delete m.sameTag; changed(); });
+        row.append(label('Del mismo tipo', same));
+        if (!a.sameTag) row.append(label('Etiqueta', tagSelect(a.tag, v => { if (v) m.tag = v; else delete m.tag; changed(); }, true)));
       }
       if (a.type === 'revive') {
         row.append(label('Etiqueta', tagSelect(a.tag, v => { if (v) m.tag = v; else delete m.tag; changed(); }, true)));

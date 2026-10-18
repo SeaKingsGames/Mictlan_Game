@@ -46,7 +46,7 @@ export class FusionDatabase implements FusionResolver {
         if (!CARD_TAGS.includes(t)) problems.push(`regla ${r.a}+${r.b}: etiqueta desconocida "${t}"`);
       }
       const candidates = db.all()
-        .filter(c => c.type === 'monster' && !recipeOnly.has(c.id) && !c.nahual && r.result.every(t => c.tags.includes(t)))
+        .filter(c => c.type === 'monster' && !recipeOnly.has(c.id) && !c.nahual && !c.noFusion && r.result.every(t => c.tags.includes(t)))
         .sort((x, y) => x.atk - y.atk);
       if (candidates.length === 0) problems.push(`regla ${r.a}+${r.b}: ninguna carta tiene [${r.result.join(', ')}]`);
       this.rules.push({ a: r.a, b: r.b, candidates });

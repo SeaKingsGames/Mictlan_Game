@@ -1,4 +1,4 @@
-import type { CardTag, EffectAction, EffectCondition, EffectDef, EffectTarget, EffectTrigger } from './types.ts';
+import type { CardTag, EffectAction, EffectCondition, EffectDef, EffectTarget, EffectTrigger, Keyword } from './types.ts';
 
 /** Textos en español para mostrar los efectos (inspector, editor). */
 
@@ -11,6 +11,12 @@ export const TRIGGER_TEXT: Record<EffectTrigger, string> = {
   continuous: 'Mientras esté en el campo',
   onActivate: 'Al activarse',
   onOpponentAttack: 'Cuando el rival ataca',
+  onOpponentSummon: 'Cuando el rival invoca un monstruo',
+  onOpponentFusion: 'Cuando el rival invoca por fusión',
+  onBattleDestroy: 'Al destruir a un monstruo en batalla',
+  onDirectDamage: 'Al hacer daño directo',
+  onAttacked: 'Al ser atacado',
+  onFusionMaterial: 'Al usarse como material de fusión',
 };
 
 export const TARGET_TEXT: Record<EffectTarget, string> = {
@@ -24,6 +30,17 @@ export const TARGET_TEXT: Record<EffectTarget, string> = {
   highestAtkEnemy: 'el monstruo rival más fuerte',
   lowestAtkEnemy: 'el monstruo rival más débil',
   attacker: 'el monstruo atacante',
+  randomEnemy: 'un monstruo rival al azar',
+  randomMonster: 'un monstruo del campo al azar',
+  allMonsters: 'todos los monstruos del campo',
+  summoned: 'el monstruo invocado',
+};
+
+export const KEYWORD_TEXT: Record<Keyword, string> = {
+  piercing: 'daño perforante (atraviesa la defensa)',
+  doubleAttack: 'ataca dos veces por turno',
+  directAttack: 'puede atacar directo aunque el rival tenga monstruos',
+  battleImmune: 'no puede ser destruido en batalla (una vez)',
 };
 
 export const CONDITION_TEXT: Record<EffectCondition['type'], string> = {
@@ -44,6 +61,13 @@ export const ACTION_TEXT: Record<EffectAction['type'], string> = {
   destroy: 'Destruir',
   revive: 'Revivir del Mictlán',
   negateAttack: 'Detener el ataque',
+  returnToHand: 'Regresar a la mano',
+  forceDefense: 'Poner en defensa',
+  takeControl: 'Tomar el control (este turno)',
+  preventAttack: 'El rival no puede atacar',
+  grantKeyword: 'Dar habilidad de combate',
+  destroySupport: 'Destruir trampas colocadas',
+  summonFromDeck: 'Invocar desde tu mazo',
 };
 
 function targetText(target: EffectTarget, tag?: CardTag): string {
@@ -74,12 +98,22 @@ function actionText(a: EffectAction): string {
     case 'destroy': return `destruye a ${targetText(a.target, a.tag)}`.replace(' a el ', ' al ');
     case 'revive': return `revive a tu monstruo${a.tag ? ` de ${a.tag}` : ''} más fuerte del Mictlán`;
     case 'negateAttack': return 'detiene el ataque';
+    case 'returnToHand': return `regresa a ${targetText(a.target, a.tag)} a la mano de su dueño`.replace(' a el ', ' al ');
+    case 'forceDefense': return `pone en defensa a ${targetText(a.target, a.tag)}`.replace(' a el ', ' al ');
+    case 'takeControl': return `tomas el control de ${targetText(a.target, a.tag)} hasta el final del turno`.replace(' de el ', ' del ');
+    case 'preventAttack': return 'el rival no puede atacar en su siguiente turno';
+    case 'grantKeyword': return `${targetText(a.target, a.tag)} obtiene${plural(a.target)} ${KEYWORD_TEXT[a.keyword]}${a.untilEndOfTurn ? ' este turno' : ''}`;
+    case 'destroySupport': return a.who === 'all' ? 'destruye todas las trampas colocadas' : 'destruye las trampas colocadas del rival';
+    case 'summonFromDeck': {
+      const which = a.sameTag ? ' del mismo tipo' : a.tag ? ` de ${a.tag}` : '';
+      return `invoca de tu mazo otro monstruo${which} con ${a.maxAtk} ATK o menos`;
+    }
   }
 }
 
 /** "tus monstruos ganan" vs "este monstruo gana" */
 function plural(target: EffectTarget): string {
-  return ['allAllies', 'otherAllies', 'alliesWithTag', 'otherAlliesWithTag', 'allEnemies'].includes(target) ? 'n' : '';
+  return ['allAllies', 'otherAllies', 'alliesWithTag', 'otherAlliesWithTag', 'allEnemies', 'allMonsters'].includes(target) ? 'n' : '';
 }
 
 /** Ej.: "Al ser invocado, si es de noche: destruye al monstruo rival más débil." */

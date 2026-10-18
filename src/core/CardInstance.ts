@@ -1,4 +1,4 @@
-import type { CardDef } from '../data/types.ts';
+import type { CardDef, Keyword } from '../data/types.ts';
 import { clampLevel, levelBonus } from './progression.ts';
 
 export type Zone = 'deck' | 'hand' | 'field' | 'mictlan'; // mictlan = cementerio
@@ -33,6 +33,14 @@ export class CardInstance {
   nightForm = false;
   /** Nivel de la carta en la colección de su dueño (1-5). Las fusiones nacen en nivel 1. */
   level = 1;
+  /** Ataques hechos este turno (con "ataca dos veces" puede ser 2). */
+  attacksThisTurn = 0;
+  /** "No puede ser destruido en batalla (una vez)": ya se usó. */
+  battleImmuneUsed = false;
+  /** Robado con "tomar el control": regresa a su dueño al final del turno. */
+  borrowed = false;
+
+  private keywords: { keyword: Keyword; untilEndOfTurn: boolean; aura: boolean }[] = [];
 
   private modifiers: StatModifier[] = [];
 
@@ -68,15 +76,34 @@ export class CardInstance {
 
   clearAuraModifiers(): void {
     this.modifiers = this.modifiers.filter(m => !m.aura);
+    this.keywords = this.keywords.filter(k => !k.aura);
   }
 
   clearEndOfTurnModifiers(): void {
     this.modifiers = this.modifiers.filter(m => !m.untilEndOfTurn);
+    this.keywords = this.keywords.filter(k => !k.untilEndOfTurn);
   }
+
+  addKeyword(keyword: Keyword, untilEndOfTurn = false, aura = false): void {
+    this.keywords.push({ keyword, untilEndOfTurn, aura });
+  }
+
+  hasKeyword(keyword: Keyword): boolean {
+    return this.keywords.some(k => k.keyword === keyword);
+  }
+
+  get activeKeywords(): Keyword[] { return [...new Set(this.keywords.map(k => k.keyword))]; }
+
+  /** Cuántas veces puede atacar por turno. */
+  get maxAttacks(): number { return this.hasKeyword('doubleAttack') ? 2 : 1; }
 
   /** Al salir del campo pierde buffs y estado de batalla. */
   resetForZoneChange(): void {
     this.modifiers = [];
+    this.keywords = [];
+    this.attacksThisTurn = 0;
+    this.battleImmuneUsed = false;
+    this.borrowed = false;
     this.fieldSlot = -1;
     this.faceDown = false;
     this.hasAttackedThisTurn = false;

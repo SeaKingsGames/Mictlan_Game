@@ -27,6 +27,8 @@ export interface DuelState {
   winner: PlayerIndex | null;
   /** Signo del día (Tonalpohualli) de este duelo. null = sin signo. */
   daySign: DaySign | null;
+  /** Hasta qué turno (inclusive) cada jugador no puede atacar (efecto "el rival no puede atacar"). */
+  attackLockUntil: [number, number];
 }
 
 /** Lo que un jugador QUIERE hacer. El motor decide si se puede. */
@@ -61,6 +63,11 @@ export type DuelEvent =
   | { type: 'revived'; instanceId: number; slot: number }
   | { type: 'timeChanged'; phase: TimePhase; night: boolean }
   | { type: 'nahualShift'; instanceIds: number[]; night: boolean }   // nahuales que cambiaron de forma
+  | { type: 'returnedToHand'; instanceId: number; player: PlayerIndex }
+  | { type: 'controlChanged'; instanceId: number; player: PlayerIndex; slot: number }   // player = quien lo controla ahora
+  | { type: 'specialSummoned'; instanceId: number; player: PlayerIndex; slot: number; from: 'deck' }
+  | { type: 'attackLocked'; player: PlayerIndex; untilTurn: number }
+  | { type: 'battleSaved'; instanceId: number }                         // "no puede ser destruido en batalla" se usó
   | { type: 'trapSet'; player: PlayerIndex; slot: number; instanceId: number }   // la UI la oculta al rival
   | { type: 'trapActivated'; player: PlayerIndex; instanceId: number; attackerId: number }
   | { type: 'attackNegated'; attackerId: number }

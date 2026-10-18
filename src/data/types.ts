@@ -33,6 +33,8 @@ export interface CardDef {
   readonly nahual?: NahualForm;
   /** Ascensión: con 3 copias de esta carta se hace un ritual y se convierten en 1 de esta otra (id). */
   readonly ascendsTo?: number;
+  /** true = nunca sale como resultado de una fusión GENÉRICA (solo por receta, sobres o premios). */
+  readonly noFusion?: boolean;
 }
 
 export interface NahualForm {
@@ -54,6 +56,12 @@ export const EFFECT_TRIGGERS = [
   'continuous',      // mientras esté boca arriba en el campo (auras)
   'onActivate',      // mágicas y equipos: al jugarlas
   'onOpponentAttack', // trampas: cuando el rival declara un ataque contra ti
+  'onOpponentSummon', // trampas: cuando el rival invoca un monstruo boca arriba
+  'onOpponentFusion', // trampas: cuando el rival invoca por fusión
+  'onBattleDestroy',  // al destruir a un monstruo rival en batalla
+  'onDirectDamage',   // al hacer daño con un ataque directo
+  'onAttacked',       // al ser atacado (antes del combate)
+  'onFusionMaterial', // al usarse como material de fusión
 ] as const;
 export type EffectTrigger = (typeof EFFECT_TRIGGERS)[number];
 
@@ -61,6 +69,10 @@ export type EffectTrigger = (typeof EFFECT_TRIGGERS)[number];
 export const EFFECT_TARGETS = [
   'self', 'equipTarget', 'allAllies', 'otherAllies', 'alliesWithTag', 'otherAlliesWithTag',
   'allEnemies', 'highestAtkEnemy', 'lowestAtkEnemy', 'attacker',
+  'randomEnemy',   // un monstruo rival al azar
+  'randomMonster', // cualquier monstruo del campo al azar (¡puede ser tuyo!)
+  'allMonsters',   // TODOS los monstruos del campo (Agujero Negro)
+  'summoned',      // trampas de invocación: el monstruo que el rival acaba de invocar
 ] as const;
 export type EffectTarget = (typeof EFFECT_TARGETS)[number];
 
@@ -80,7 +92,21 @@ export type EffectAction =
   | { type: 'draw'; amount: number }
   | { type: 'destroy'; target: EffectTarget; tag?: CardTag }
   | { type: 'revive'; tag?: CardTag }                   // el más fuerte de tu Mictlán (con esa etiqueta) vuelve al campo
-  | { type: 'negateAttack' };                           // trampas: el ataque no sucede
+  | { type: 'negateAttack' }                            // trampas: el ataque no sucede
+  // --- control del campo
+  | { type: 'returnToHand'; target: EffectTarget; tag?: CardTag }        // regresa a la mano de su dueño
+  | { type: 'forceDefense'; target: EffectTarget; tag?: CardTag }        // lo pone en defensa
+  | { type: 'takeControl'; target: EffectTarget; tag?: CardTag }         // lo controlas hasta el final del turno
+  | { type: 'preventAttack' }                                            // el rival no puede atacar en su siguiente turno
+  // --- combate especial
+  | { type: 'grantKeyword'; keyword: Keyword; target: EffectTarget; tag?: CardTag; untilEndOfTurn?: boolean }
+  // --- campo, mazo y Mictlán
+  | { type: 'destroySupport'; who: 'opponent' | 'all' }                  // destruye mágicas/trampas colocadas (Plumero)
+  | { type: 'summonFromDeck'; maxAtk: number; tag?: CardTag; sameTag?: boolean };   // invoca de tu mazo un monstruo con ATK ≤ maxAtk
+
+/** Habilidades de combate que un efecto puede dar. */
+export const KEYWORDS = ['piercing', 'doubleAttack', 'directAttack', 'battleImmune'] as const;
+export type Keyword = (typeof KEYWORDS)[number];
 
 export interface EffectDef {
   readonly trigger: EffectTrigger;

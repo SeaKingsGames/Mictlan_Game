@@ -6,7 +6,7 @@ import { cardDb, fusionDb } from '../data/index.ts';
 import type { Duelist } from '../game/duelists.ts';
 import { aiStep, createDuel } from '../game/replay.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
-import { describeEffects } from '../data/effectText.ts';
+import { describeEffects, KEYWORD_TEXT } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
 
 const AI_STEP_MS = 750;
@@ -498,7 +498,8 @@ export class DuelView {
     const myTurn = this.isMyTurn();
     const attackerSel = me.field.find(c => c?.instanceId === this.selectedAttacker);
     const canAttackNow = s.turn > 1 || FIRST_TURN_CAN_ATTACK;
-    const canDirect = myTurn && canAttackNow && attackerSel?.position === 'attack' && !attackerSel.hasAttackedThisTurn && foe.field.every(c => c === null);
+    const canDirect = myTurn && canAttackNow && attackerSel?.position === 'attack' && !attackerSel.hasAttackedThisTurn
+      && (foe.field.every(c => c === null) || attackerSel.hasKeyword('directAttack'));
 
     // Barra central
     this.el.me.replaceChildren(...this.playerBar('Tú', this.me, `Mano ${me.hand.length}`));
@@ -650,7 +651,7 @@ export class DuelView {
   }
 
   private canChangePosition(card: CardInstance): boolean {
-    return this.isMyTurn() && !card.hasAttackedThisTurn;
+    return this.isMyTurn() && card.attacksThisTurn === 0;
   }
 
   private inspect(card: CardInstance): void {
@@ -687,7 +688,9 @@ export class DuelView {
         : `🌙 Nahual. De noche se vuelve ${nahual.name} (${nahual.atk}/${nahual.def}).`)
       : '';
     this.el.inspectorInfo.querySelector('.inspector__effect')!.textContent = [nahualText, fx ? `Efecto: ${fx}` : ''].filter(Boolean).join(' ');
-    this.el.inspectorInfo.querySelector('.inspector__where')!.textContent = where + pos;
+    const kw = card.zone === 'field' ? card.activeKeywords.map(k => KEYWORD_TEXT[k]) : [];
+    const extra = [card.borrowed ? 'controlado por el rival este turno' : '', ...kw].filter(Boolean);
+    this.el.inspectorInfo.querySelector('.inspector__where')!.textContent = where + pos + (extra.length ? ` · ${extra.join(' · ')}` : '');
   }
 
   private renderOverlay(): void {
@@ -1013,6 +1016,11 @@ export class DuelView {
       if (e.type === 'nahualShift') this.toast(e.night ? '🐆 Los nahuales toman su forma animal' : 'Los nahuales vuelven a su forma humana');
       if (e.type === 'trapActivated') this.toast(`¡Trampa! ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
       if (e.type === 'attackNegated') this.toast('Ataque detenido');
+      if (e.type === 'returnedToHand') this.toast(`${this.engine.getCard(e.instanceId)?.name ?? ''} regresa a la mano`);
+      if (e.type === 'controlChanged' && e.player !== this.engine.getCard(e.instanceId)?.owner) this.toast(`¡${this.engine.getCard(e.instanceId)?.name ?? ''} cambia de bando!`);
+      if (e.type === 'specialSummoned') this.toast(`¡${this.engine.getCard(e.instanceId)?.name ?? ''} sale del mazo!`);
+      if (e.type === 'attackLocked') this.toast(e.player === this.me ? 'No podrás atacar en tu siguiente turno' : 'El rival no podrá atacar');
+      if (e.type === 'battleSaved') this.toast(`${this.engine.getCard(e.instanceId)?.name ?? ''} resiste el golpe`);
       const line = this.describe(e);
       if (line) this.log.push(line);
     }
@@ -1046,6 +1054,11 @@ export class DuelView {
       case 'trapActivated': return `¡Trampa! ${name(e.instanceId)} responde al ataque de ${name(e.attackerId)}`;
       case 'attackNegated': return `El ataque de ${name(e.attackerId)} se detiene`;
       case 'positionChanged': return `${name(e.instanceId)} pasa a ${e.position === 'attack' ? 'ataque' : 'defensa'}${e.flipped ? ' (se voltea)' : ''}`;
+      case 'returnedToHand': return `${name(e.instanceId)} regresa a la mano`;
+      case 'controlChanged': return `${e.player === this.me ? 'Tú controlas' : 'El rival controla'} a ${name(e.instanceId)}`;
+      case 'specialSummoned': return `${who(e.player)} invoca ${name(e.instanceId)} desde el mazo`;
+      case 'attackLocked': return `${e.player === this.me ? 'No puedes' : 'El rival no puede'} atacar hasta el turno ${e.untilTurn}`;
+      case 'battleSaved': return `${name(e.instanceId)} resiste el combate`;
       case 'gameOver': return `${who(e.winner)} gana${e.reason === 'deckOut' ? ' (mazo vacío)' : e.reason === 'surrender' ? ' (rendición)' : ''}`;
     }
   }

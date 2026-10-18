@@ -85,6 +85,10 @@
       {
         "card": 78,
         "weight": 3
+      },
+      {
+        "card": 94,
+        "weight": 2
       }
     ]
   },
@@ -165,6 +169,14 @@
       },
       {
         "card": 77,
+        "weight": 2
+      },
+      {
+        "card": 87,
+        "weight": 2
+      },
+      {
+        "card": 89,
         "weight": 2
       }
     ]
@@ -251,6 +263,14 @@
       {
         "card": 76,
         "weight": 2
+      },
+      {
+        "card": 90,
+        "weight": 2
+      },
+      {
+        "card": 95,
+        "weight": 2
       }
     ]
   },
@@ -323,6 +343,18 @@
       },
       {
         "card": 5,
+        "weight": 1
+      },
+      {
+        "card": 91,
+        "weight": 2
+      },
+      {
+        "card": 84,
+        "weight": 1
+      },
+      {
+        "card": 92,
         "weight": 1
       }
     ]
@@ -409,6 +441,26 @@
       {
         "card": 77,
         "weight": 3
+      },
+      {
+        "card": 93,
+        "weight": 2
+      },
+      {
+        "card": 85,
+        "weight": 1
+      },
+      {
+        "card": 86,
+        "weight": 1
+      },
+      {
+        "card": 88,
+        "weight": 1
+      },
+      {
+        "card": 83,
+        "weight": 1
       }
     ]
   }

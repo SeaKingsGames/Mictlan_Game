@@ -131,6 +131,7 @@ function formatCards(list: MutableCard[]): string {
     if (c.effects && c.effects.length) o.effects = c.effects;
     if (c.type === 'monster' && c.nahual) o.nahual = c.nahual;
     if (c.ascendsTo) o.ascendsTo = c.ascendsTo;
+    if (c.type === 'monster' && c.noFusion) o.noFusion = true;
     return '  ' + JSON.stringify(o);
   });
   return '[\n' + ordered.join(',\n') + '\n]\n';
@@ -261,11 +262,20 @@ function renderForm(): void {
         h('p', { class: 'hint', style: 'margin:0 0 6px' }, 'Etiquetas (sirven para las fusiones)'),
         tagChips),
     ),
+    c.type === 'monster' ? noFusionToggle(c) : '',
     c.type === 'monster' ? nahualSection(c) : '',
     ascendSection(c),
     h('div', { class: 'actions-row' },
       h('button', { class: 'ebtn ebtn--danger', onclick: deleteCard }, 'Borrar carta')),
   );
+}
+
+/** "No sale por fusión": para que una carta nueva no le quite su lugar a otra en las fusiones genéricas. */
+function noFusionToggle(c: MutableCard): HTMLElement {
+  const chk = h('input', { type: 'checkbox', checked: !!c.noFusion });
+  chk.addEventListener('change', () => { if (chk.checked) c.noFusion = true; else delete c.noFusion; changed(); });
+  return h('label', { class: 'nofusion-toggle' }, chk,
+    ' No sale como resultado de fusiones genéricas (solo por receta, premios o sobres)');
 }
 
 /** Ascensión: con 3 copias, esta carta se transforma en otra. */
@@ -544,6 +554,7 @@ function importCards(status: HTMLElement): void {
           if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; rarities++; }
           if (raw.nahual && !existing.nahual) existing.nahual = raw.nahual;
           if (raw.ascendsTo && !existing.ascendsTo) { existing.ascendsTo = raw.ascendsTo; rarities++; }
+          if (raw.noFusion && !existing.noFusion) existing.noFusion = true;
         }
       }
       cards.sort((a, b) => a.id - b.id);
