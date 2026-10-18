@@ -4,7 +4,7 @@
   "description": "Duelos de fusión de cartas con mitología mexica. Un juego de SeaKingsStudios.",
   "lang": "es-MX",
   "id": "/",
-  "start_url": "/?app=1",
+  "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
