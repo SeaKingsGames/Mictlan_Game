@@ -3,6 +3,7 @@ import { CURRENCY, GAME_SUBTITLE, GAME_TITLE } from '../game/config.ts';
 import { duelists } from '../game/duelists.ts';
 import { resetProfile, saveProfile, type Profile } from '../game/profile.ts';
 import { h } from './dom.ts';
+import { canPromptInstall, installHelpText, isInstalled, onInstallChange, promptInstall } from './install.ts';
 
 /** Pantalla de inicio. */
 export interface MenuActions {
@@ -40,9 +41,11 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
       h('button', { class: 'big-btn', onclick: () => go('#/libre') }, 'Duelo libre'),
       h('button', { class: 'big-btn', onclick: () => go('#/pvp') }, '⚔ Contra otro jugador'),
     ),
+    installButton(),
     h('p', { class: 'menu__stats' },
       `Victorias ${profile.wins} · Derrotas ${profile.losses} · Cartas ${distinct}/${total} · Duelistas vencidos ${beaten}/${duelists.length}`),
-    h('details', { class: 'menu__tools' },
+    // Editores: solo en tu compu (npm run dev), no en la página pública
+    !import.meta.env.DEV ? '' : h('details', { class: 'menu__tools' },
       h('summary', {}, 'Herramientas'),
       h('div', { class: 'menu__tool-links' },
         h('a', { href: '/editor-cartas.html' }, 'Editor de cartas'),
@@ -56,4 +59,18 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
         } }, 'Reiniciar progreso'),
       )),
   ));
+}
+
+/** "Instalar juego": solo si no lo estás jugando ya como app. */
+function installButton(): HTMLElement | string {
+  if (isInstalled()) return '';
+  const help = h('p', { class: 'install-help', role: 'status' });
+  const btn = h('button', { class: 'link-btn' }, '📲 Instalar juego');
+  btn.addEventListener('click', async () => {
+    if (canPromptInstall()) { if (await promptInstall()) wrap.remove(); }
+    else help.textContent = installHelpText();
+  });
+  const wrap = h('div', { class: 'menu__install' }, btn, help);
+  const off = onInstallChange(() => { if (isInstalled()) { wrap.remove(); off(); } });
+  return wrap;
 }

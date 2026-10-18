@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><radialGradient id="bg" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#3a2a14"/><stop offset="1" stop-color="#14110f"/></radialGradient>
+<radialGradient id="sun" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#fff3c4"/><stop offset=".55" stop-color="#f2c12e"/><stop offset="1" stop-color="#c98a1a"/></radialGradient></defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<g transform="rotate(11.25 256 256)"><path d="M247.6 116.3 L256.0 60.0 L264.4 116.3 Z M301.7 123.7 L331.0 74.9 L317.2 130.1 Z M348.9 151.2 L394.6 117.4 L360.8 163.1 Z M381.9 194.8 L437.1 181.0 L388.3 210.3 Z M395.7 247.6 L452.0 256.0 L395.7 264.4 Z M388.3 301.7 L437.1 331.0 L381.9 317.2 Z M360.8 348.9 L394.6 394.6 L348.9 360.8 Z M317.2 381.9 L331.0 437.1 L301.7 388.3 Z M264.4 395.7 L256.0 452.0 L247.6 395.7 Z M210.3 388.3 L181.0 437.1 L194.8 381.9 Z M163.1 360.8 L117.4 394.6 L151.2 348.9 Z M130.1 317.2 L74.9 331.0 L123.7 301.7 Z M116.3 264.4 L60.0 256.0 L116.3 247.6 Z M123.7 210.3 L74.9 181.0 L130.1 194.8 Z M151.2 163.1 L117.4 117.4 L163.1 151.2 Z M194.8 130.1 L181.0 74.9 L210.3 123.7 Z" fill="#c98a1a"/></g>
+<path d="M239.5 106.9 L256.0 20.0 L272.5 106.9 Z M297.8 112.0 L346.3 38.0 L328.3 124.6 Z M349.8 138.9 L422.9 89.1 L373.1 162.2 Z M387.4 183.7 L474.0 165.7 L400.0 214.2 Z M405.1 239.5 L492.0 256.0 L405.1 272.5 Z M400.0 297.8 L474.0 346.3 L387.4 328.3 Z M373.1 349.8 L422.9 422.9 L349.8 373.1 Z M328.3 387.4 L346.3 474.0 L297.8 400.0 Z M272.5 405.1 L256.0 492.0 L239.5 405.1 Z M214.2 400.0 L165.7 474.0 L183.7 387.4 Z M162.2 373.1 L89.1 422.9 L138.9 349.8 Z M124.6 328.3 L38.0 346.3 L112.0 297.8 Z M106.9 272.5 L20.0 256.0 L106.9 239.5 Z M112.0 214.2 L38.0 165.7 L124.6 183.7 Z M138.9 162.2 L89.1 89.1 L162.2 138.9 Z M183.7 124.6 L165.7 38.0 L214.2 112.0 Z" fill="url(#sun)"/>
+<circle cx="256" cy="256" r="150.0" fill="url(#sun)" stroke="#5a3a10" stroke-width="8.0"/>
+<circle cx="256" cy="256" r="112.0" fill="none" stroke="#5a3a10" stroke-width="6.0" stroke-dasharray="14.0 10.0"/>
+<g fill="#5a3a10">
+<rect x="210.0" y="192.0" width="56.0" height="84.0" rx="8.0" transform="rotate(-12 256 256)" fill="#fff3c4" stroke="#5a3a10" stroke-width="7.0"/>
+<rect x="250.0" y="204.0" width="56.0" height="84.0" rx="8.0" transform="rotate(12 256 256)" fill="#fff3c4" stroke="#5a3a10" stroke-width="7.0"/>
+<circle cx="282.0" cy="248.0" r="13.0" transform="rotate(12 256 256)" fill="#d94f30"/>
+</g>
+</svg>

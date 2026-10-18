@@ -9,6 +9,7 @@ export default defineConfig({
         cartas: 'cartas.html',
         fusiones: 'fusiones.html',
         editorCartas: 'editor-cartas.html',
+        descargar: 'descargar.html',
       },
     },
   },

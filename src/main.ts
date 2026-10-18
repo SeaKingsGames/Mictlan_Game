@@ -14,6 +14,7 @@ import { DuelView, type DuelResult } from './html/DuelView.ts';
 import { renderLogin } from './html/LoginView.ts';
 import { renderMenu } from './html/MenuView.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
+import { setupInstall } from './html/install.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
@@ -37,6 +38,7 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  *   - LOCAL (sin esas variables): todo en el navegador, como antes. Útil para probar.
  */
 const app = document.querySelector<HTMLDivElement>('#app')!;
+setupInstall();
 document.title = GAME_TITLE;
 let profile: Profile | null = cloudEnabled ? null : loadProfile();
 let leaveScreen: (() => void) | null = null;   // limpia escuchas de la pantalla anterior (salas)

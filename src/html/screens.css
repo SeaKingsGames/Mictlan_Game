@@ -158,3 +158,13 @@
 .pvp__code { font: 800 64px/1 system-ui, sans-serif !important; letter-spacing: .25em; color: #f2c12e !important; text-shadow: 0 0 24px rgb(242 193 46 / .4); }
 .pvp__dots::after { content: ''; animation: dots 1.5s steps(4) infinite; }
 @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+/* ---------- Instalar ---------- */
+.descargar { gap: 14px; padding-bottom: 40px; }
+.descargar__icon { width: 128px; height: 128px; border-radius: 28px; box-shadow: 0 10px 40px rgb(242 193 46 / .3); }
+.descargar__help { min-height: 1.4em; max-width: 30rem; color: #f2c12e; margin: 0; }
+.descargar__list { max-width: 32rem; text-align: left; color: var(--ink-soft); line-height: 1.6; padding-left: 1.2em; margin: 6px 0 0; }
+.descargar__brand { color: var(--ink-soft); font-size: 14px; }
+.descargar__brand a { color: #e8a33d; }
+.menu__buttons a.big-btn { text-align: center; text-decoration: none; }
+.install-help { max-width: 26rem; color: #f2c12e; font-size: 14px; margin: 0; }
