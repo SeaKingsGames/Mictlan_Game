@@ -38,6 +38,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
       h('button', { class: 'big-btn big-btn--main', onclick: () => go('#/campana') }, 'Campaña'),
       h('button', { class: 'big-btn', onclick: () => go('#/mazo') }, 'Mi mazo y colección'),
       h('button', { class: 'big-btn', onclick: () => go('#/libre') }, 'Duelo libre'),
+      h('button', { class: 'big-btn', onclick: () => go('#/pvp') }, '⚔ Contra otro jugador'),
     ),
     h('p', { class: 'menu__stats' },
       `Victorias ${profile.wins} · Derrotas ${profile.losses} · Cartas ${distinct}/${total} · Duelistas vencidos ${beaten}/${duelists.length}`),

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DuelEngine } from '../src/core/DuelEngine.ts';
 import { isNightTurn, type DuelEvent, type PlayerIndex } from '../src/core/DuelState.ts';
 import { CardDatabase } from '../src/data/cardDatabase.ts';
-import { cardDb } from '../src/data/index.ts';
+import { testCards as cardDb } from './fixtures/index.ts';
 import { START_LIFE, type CardDef } from '../src/data/types.ts';
 
 // 3 Guerrero Jaguar · 5 Xiuhcóatl · 6 Tláloc · 7 Mictlantecuhtli · 8 Quetzalcóatl · 9 Colibrí

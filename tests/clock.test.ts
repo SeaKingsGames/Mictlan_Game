@@ -3,7 +3,8 @@ import type { DaySign } from '../src/core/daySign.ts';
 import { DuelEngine, pickDaySign } from '../src/core/DuelEngine.ts';
 import type { DuelEvent, PlayerIndex } from '../src/core/DuelState.ts';
 import { phaseOf, turnsLeftInPhase } from '../src/core/time.ts';
-import { cardDb, daySigns, fusionDb } from '../src/data/index.ts';
+import { daySigns } from '../src/data/index.ts';
+import { testCards as cardDb, testFusion as fusionDb } from './fixtures/index.ts';
 import { START_LIFE } from '../src/data/types.ts';
 
 // 1 Ocelote joven (tierra 800) · 2 Macehual (tierra 900) · 13 Cipactli (agua 1500)

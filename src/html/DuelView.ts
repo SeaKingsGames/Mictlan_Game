@@ -9,8 +9,6 @@ import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../da
 import { describeEffects } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
 
-const HUMAN: PlayerIndex = 0;
-const AI: PlayerIndex = 1;
 const AI_STEP_MS = 750;
 const FUSION_SHOW_MS = 2200;
 
@@ -26,9 +24,30 @@ export interface DuelResult {
   error?: string;         // si no se pudo guardar el resultado
 }
 
+/** Multijugador: el rival juega desde otro navegador y el servidor revisa cada jugada. */
+export interface RemoteDuel {
+  me: PlayerIndex;
+  /** Crea el mismo duelo que el servidor (semilla, mazos y niveles de la sala). */
+  createEngine(): DuelEngine;
+  /** Manda tu jugada. `index` = cuántas jugadas había antes. Lanza error si el servidor la rechaza. */
+  send(intent: Intent, index: number): Promise<void>;
+  /** Lista completa de jugadas guardadas en el servidor (para sincronizar). */
+  fetch(): Promise<{ intents: Intent[]; lastMoveAt: number }>;
+  /** Avisa cada vez que cambian las jugadas. Devuelve la función para dejar de escuchar. */
+  watch(cb: (intents: Intent[], lastMoveAt: number) => void): () => void;
+  /** Reclamar la victoria si el rival no juega a tiempo. */
+  claim(): Promise<void>;
+  timeoutMs: number;
+}
+
+/** Datos del rival que se muestran (un duelista de la campaña u otro jugador). */
+export type Opponent = Duelist | { id: string; name: string; glyph: string };
+
 export interface DuelSetup {
   playerDeck: number[];
-  opponent: Duelist;
+  opponent: Opponent;
+  /** Multijugador (si falta, el rival es la IA). */
+  remote?: RemoteDuel;
   /** Nivel de tus cartas (id → nivel). */
   levels?: Record<number, number>;
   /** Semilla de cada duelo (en la nube la da el servidor, junto con tus niveles). Si falla, se muestra el error. */
@@ -65,15 +84,26 @@ export class DuelView {
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
     'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast' | 'timeBox' | 'signBox', HTMLElement>;
-  private readonly btn: Record<'log' | 'album' | 'end' | 'surrender' | 'exit', HTMLButtonElement>;
+  private readonly btn: Record<'log' | 'album' | 'end' | 'surrender' | 'exit' | 'claim', HTMLButtonElement>;
   private readonly setup: DuelSetup;
   private finished: DuelResult | null = null;
   private finishing = false;
   private intents: Intent[] = [];   // tus jugadas aceptadas (el servidor las vuelve a jugar)
   private duelNo = 0;
+  private readonly me: PlayerIndex;
+  private readonly foe: PlayerIndex;
+  // multijugador
+  private applied = 0;              // jugadas del servidor ya aplicadas aquí
+  private remoteQueue: Intent[] = [];
+  private remoteBusy = false;
+  private lastMoveAt = Date.now();
+  private unwatch: (() => void) | null = null;
+  private clock = 0;
 
   constructor(root: HTMLElement, setup: DuelSetup) {
     this.setup = setup;
+    this.me = setup.remote?.me ?? 0;
+    this.foe = this.me === 0 ? 1 : 0;
     root.innerHTML = `
       <div class="stage-wrap">
         <div class="stage">
@@ -97,6 +127,7 @@ export class DuelView {
             <button class="tag-btn" data-btn="log">Registro</button>
             <button class="tag-btn" data-btn="album">Fusiones</button>
             <button class="tag-btn" data-btn="exit">Salir</button>
+            <button class="tag-btn tag-btn--claim" data-btn="claim" hidden>Reclamar victoria</button>
             <span class="turn-tag" data-ref="turn"></span>
             <div class="time-box" data-ref="timeBox"></div>
             <div class="sign-box" data-ref="signBox"></div>
@@ -145,23 +176,28 @@ export class DuelView {
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
       albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'), timeBox: ref('timeBox'), signBox: ref('signBox'),
     };
-    this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit') };
+    this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit'), claim: btn('claim') };
+    this.btn.claim.addEventListener('click', () => {
+      this.btn.claim.disabled = true;
+      this.setup.remote?.claim().catch(e => { this.message = e instanceof Error ? e.message : String(e); this.render(); })
+        .finally(() => { this.btn.claim.disabled = false; });
+    });
     this.btn.exit.addEventListener('click', () => {
       if (!this.engine || this.engine.state.winner !== null) { this.setup.onExit(); return; }
       if (!confirm('¿Salir del duelo? Cuenta como derrota.')) return;
-      this.submit({ type: 'surrender', player: HUMAN });
-      this.setup.onExit();
+      this.submit({ type: 'surrender', player: this.me });
+      if (!this.setup.remote) this.setup.onExit();   // en multijugador se sale al ver el resultado
     });
 
 
     this.btn.log.addEventListener('click', () => { this.showLog = !this.showLog; this.showAlbum = false; this.render(); });
     this.btn.album.addEventListener('click', () => { this.showAlbum = !this.showAlbum; this.showLog = false; this.render(); });
-    this.btn.end.addEventListener('click', () => this.submit({ type: 'endTurn', player: HUMAN }));
+    this.btn.end.addEventListener('click', () => this.submit({ type: 'endTurn', player: this.me }));
     this.btn.surrender.addEventListener('click', () => this.onSurrender());
     this.el.foe.addEventListener('click', () => this.onDirectAttack());
     this.el.mictlan.addEventListener('click', () => {
       if (!this.engine) return;
-      const top = this.engine.state.players[HUMAN].mictlan.at(-1);
+      const top = this.engine.state.players[this.me].mictlan.at(-1);
       if (top) { this.inspected = top; this.render(); }
     });
 
@@ -170,15 +206,23 @@ export class DuelView {
     if (import.meta.env.DEV) (window as unknown as { __duel: DuelView }).__duel = this;
   }
 
+  /** Deja de escuchar la sala (al salir de la pantalla). */
+  destroy(): void {
+    this.unwatch?.();
+    this.unwatch = null;
+    clearInterval(this.clock);
+  }
+
   /** Para pruebas en desarrollo: el rival se rinde. */
   debugWin(): void {
-    const r = this.engine.apply({ type: 'surrender', player: AI });
+    const r = this.engine.apply({ type: 'surrender', player: this.foe });
     if (r.ok) { this.record(r.events); this.render(); }
   }
 
   // ---------------------------------------------------------------- flujo
 
   private async newDuel(): Promise<void> {
+    if (this.setup.remote) { await this.startRemote(); return; }
     const no = ++this.duelNo;
     let seed: number;
     let levels = this.setup.levels;
@@ -201,7 +245,7 @@ export class DuelView {
     this.finished = null;
     this.finishing = false;
     this.intents = [];
-    this.engine = createDuel(seed, this.setup.playerDeck, this.setup.opponent, cardDb, fusionDb, levels);   // igual que el servidor
+    this.engine = createDuel(seed, this.setup.playerDeck, this.setup.opponent as Duelist, cardDb, fusionDb, levels);   // igual que el servidor
     this.log = [];
     this.selectedHand = [];
     this.selectedAttacker = null;
@@ -215,20 +259,116 @@ export class DuelView {
   }
 
   private submit(intent: Intent): void {
-    if (this.aiThinking && intent.type !== 'surrender') return;
+    if ((this.aiThinking || this.remoteBusy) && intent.type !== 'surrender') return;
     const result = this.engine.apply(intent);
     if (!result.ok) {
       this.message = result.error;
       this.render();
       return;
     }
-    if (intent.player === HUMAN) this.intents.push(intent);
+    if (intent.player === this.me) this.intents.push(intent);
+    if (this.setup.remote) {
+      const index = this.applied++;
+      this.lastMoveAt = Date.now();
+      this.setup.remote.send(intent, index).catch(e => void this.resync(e, intent));
+    }
     this.message = '';
     this.selectedHand = [];
     if (intent.type !== 'changePosition') this.selectedAttacker = null;   // tras cambiar posición sigue elegido
     this.record(result.events);
     this.render();
-    if (this.engine.state.turnPlayer === AI && this.engine.state.winner === null && !this.aiThinking) this.runAiTurn();
+    if (!this.setup.remote && this.engine.state.turnPlayer === this.foe && this.engine.state.winner === null && !this.aiThinking) this.runAiTurn();
+  }
+
+  // ---------------------------------------------------------------- multijugador
+
+  private async startRemote(): Promise<void> {
+    const remote = this.setup.remote!;
+    this.showOverlayMessage('Conectando con la sala…');
+    let saved: { intents: Intent[]; lastMoveAt: number };
+    try { saved = await remote.fetch(); } catch (e) { this.showOverlayMessage(e instanceof Error ? e.message : String(e), true); return; }
+    this.el.overlay.replaceChildren();
+    this.el.overlay.hidden = true;
+    this.album.clear();
+    this.finished = null;
+    this.finishing = false;
+    this.log = [];
+    this.lastLife = [START_LIFE, START_LIFE];
+    this.engine = remote.createEngine();
+    this.record(this.engine.start());
+    // Si ya había jugadas (por ejemplo, recargaste la página), se aplican sin animación
+    this.applied = 0;
+    for (const it of saved.intents) { const r = this.engine.apply(it); if (r.ok) this.record(r.events); this.applied++; }
+    this.lastMoveAt = saved.lastMoveAt;
+    const sign = this.engine.state.daySign;
+    if (sign) this.toast(`Signo del día: ${sign.glyph} ${sign.name} — ${sign.text}`);
+    this.unwatch?.();
+    this.unwatch = remote.watch((intents, lastMoveAt) => { this.lastMoveAt = lastMoveAt; this.onRemoteIntents(intents); });
+    clearInterval(this.clock);
+    this.clock = window.setInterval(() => this.renderTimer(), 1000);
+    this.render();
+  }
+
+  /** Llegaron jugadas del servidor: aplica las que faltan, una por una (como el turno de la IA). */
+  private onRemoteIntents(intents: Intent[]): void {
+    const pending = intents.length - this.applied - this.remoteQueue.length;
+    if (pending <= 0) return;
+    this.remoteQueue.push(...intents.slice(intents.length - pending));
+    if (!this.remoteBusy) this.playRemoteQueue();
+  }
+
+  private playRemoteQueue(): void {
+    const next = this.remoteQueue.shift();
+    if (!next || !this.engine) { this.remoteBusy = false; this.render(); return; }
+    this.remoteBusy = true;
+    const result = this.engine.apply(next);
+    if (!result.ok) { this.remoteQueue = []; this.remoteBusy = false; void this.resync(new Error(result.error)); return; }
+    this.applied++;
+    this.record(result.events);
+    this.render();
+    const fusions = result.events.filter(e => e.type === 'fusion').length;
+    setTimeout(() => this.playRemoteQueue(), this.remoteQueue.length ? AI_STEP_MS + fusions * FUSION_SHOW_MS : 0);
+  }
+
+  /** Algo no cuadró con el servidor: se vuelve a armar el duelo con lo que tiene el servidor. */
+  private async resync(err: unknown, retry?: Intent): Promise<void> {
+    const remote = this.setup.remote;
+    if (!remote) return;
+    const code = (err as { code?: string })?.code;
+    if (code === 'finished') { this.render(); return; }
+    try {
+      const saved = await remote.fetch();
+      this.remoteQueue = [];
+      this.remoteBusy = false;
+      this.engine = remote.createEngine();
+      this.engine.start();
+      this.applied = 0;
+      for (const it of saved.intents) { if (this.engine.apply(it).ok) this.applied++; }
+      this.lastMoveAt = saved.lastMoveAt;
+      this.selectedHand = [];
+      this.selectedAttacker = null;
+      this.message = code === 'conflict' ? '' : (err instanceof Error ? err.message : '');
+      this.log.push('— sincronizado con el servidor —');
+      this.render();
+      if (retry?.type === 'surrender' && this.engine.state.winner === null) this.submit(retry);
+    } catch (e) {
+      this.message = 'Sin conexión con la sala. Reintentando…';
+      this.render();
+      setTimeout(() => void this.resync(err, retry), 3000);
+    }
+  }
+
+  /** Reloj del turno (multijugador): cuánto lleva el turno y botón para reclamar si el rival no juega. */
+  private renderTimer(): void {
+    const remote = this.setup.remote;
+    if (!remote || !this.engine) return;
+    const s = this.engine.state;
+    if (s.winner !== null) { this.btn.claim.hidden = true; clearInterval(this.clock); return; }
+    const left = Math.max(0, remote.timeoutMs - (Date.now() - this.lastMoveAt));
+    const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000);
+    this.el.turn.textContent = `Turno ${s.turn} · ${mm}:${String(ss).padStart(2, '0')}`;
+    this.el.turn.classList.toggle('turn-tag--hurry', left < 20000);
+    this.btn.claim.hidden = !(s.turnPlayer === this.foe && left === 0 && !this.remoteBusy);
   }
 
   private runAiTurn(): void {
@@ -236,12 +376,12 @@ export class DuelView {
     this.render();
     const step = () => {
       const s = this.engine.state;
-      if (s.winner !== null || s.turnPlayer !== AI) {
+      if (s.winner !== null || s.turnPlayer !== this.foe) {
         this.aiThinking = false;
         this.render();
         return;
       }
-      const result = aiStep(this.engine, this.setup.opponent, fusionDb);   // la misma IA que repite el servidor
+      const result = aiStep(this.engine, this.setup.opponent as Duelist, fusionDb);   // la misma IA que repite el servidor
       if (result.ok) this.record(result.events);
       this.render();
       // Si el rival fusionó, espera a que se vea la fusión antes de seguir.
@@ -268,7 +408,7 @@ export class DuelView {
   }
 
   private handCard(id: number): CardInstance | undefined {
-    return this.engine.state.players[HUMAN].hand.find(c => c.instanceId === id);
+    return this.engine.state.players[this.me].hand.find(c => c.instanceId === id);
   }
 
   /** La carta elegida si es mágica o equipo. */
@@ -278,12 +418,12 @@ export class DuelView {
   }
 
   private onSupportSlot(slot: number): void {
-    const own = this.engine.state.players[HUMAN].support[slot];
+    const own = this.engine.state.players[this.me].support[slot];
     if (own) { this.inspected = own; this.render(); }
     const spell = this.selectedSpell();
     if (!this.isMyTurn() || !spell) return;
     if (spell.def.type === 'trap') {
-      this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId, slot });
+      this.submit({ type: 'activate', player: this.me, handId: spell.instanceId, slot });
       return;
     }
     if (needsEquipTarget(spell.def)) {
@@ -291,17 +431,17 @@ export class DuelView {
       this.render();
       return;
     }
-    this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId });
+    this.submit({ type: 'activate', player: this.me, handId: spell.instanceId });
   }
 
   private onMySlot(slot: number): void {
-    const card = this.engine.state.players[HUMAN].field[slot];
+    const card = this.engine.state.players[this.me].field[slot];
     if (card) this.inspected = card;
     if (!this.isMyTurn()) { this.render(); return; }
     const spell = this.selectedSpell();
     if (spell) {
       if (needsEquipTarget(spell.def) && card) {
-        this.submit({ type: 'activate', player: HUMAN, handId: spell.instanceId, targetId: card.instanceId });
+        this.submit({ type: 'activate', player: this.me, handId: spell.instanceId, targetId: card.instanceId });
       } else if (!needsEquipTarget(spell.def)) {
         this.message = 'Las mágicas y trampas van en tus zonas de abajo (◈).';
         this.render();
@@ -320,15 +460,15 @@ export class DuelView {
   }
 
   private onFoeSlot(slot: number): void {
-    const target = this.engine.state.players[AI].field[slot];
+    const target = this.engine.state.players[this.foe].field[slot];
     if (target && !target.faceDown) this.inspected = target;
     if (!this.isMyTurn() || this.selectedAttacker === null || !target) { this.render(); return; }
-    this.submit({ type: 'attack', player: HUMAN, attackerId: this.selectedAttacker, targetId: target.instanceId });
+    this.submit({ type: 'attack', player: this.me, attackerId: this.selectedAttacker, targetId: target.instanceId });
   }
 
   private onDirectAttack(): void {
     if (!this.isMyTurn() || this.selectedAttacker === null) return;
-    this.submit({ type: 'attack', player: HUMAN, attackerId: this.selectedAttacker, targetId: null });
+    this.submit({ type: 'attack', player: this.me, attackerId: this.selectedAttacker, targetId: null });
   }
 
   private onSurrender(): void {
@@ -341,32 +481,32 @@ export class DuelView {
       return;
     }
     this.surrenderArmed = false;
-    this.submit({ type: 'surrender', player: HUMAN });
+    this.submit({ type: 'surrender', player: this.me });
   }
 
   private isMyTurn(): boolean {
     const s = this.engine.state;
-    return !this.aiThinking && s.winner === null && s.turnPlayer === HUMAN;
+    return !this.aiThinking && !this.remoteBusy && s.winner === null && s.turnPlayer === this.me;
   }
 
   // ---------------------------------------------------------------- dibujo
 
   private render(): void {
     const s = this.engine.state;
-    const me = s.players[HUMAN];
-    const foe = s.players[AI];
+    const me = s.players[this.me];
+    const foe = s.players[this.foe];
     const myTurn = this.isMyTurn();
     const attackerSel = me.field.find(c => c?.instanceId === this.selectedAttacker);
     const canAttackNow = s.turn > 1 || FIRST_TURN_CAN_ATTACK;
     const canDirect = myTurn && canAttackNow && attackerSel?.position === 'attack' && !attackerSel.hasAttackedThisTurn && foe.field.every(c => c === null);
 
     // Barra central
-    this.el.me.replaceChildren(...this.playerBar('Tú', HUMAN, `Mano ${me.hand.length}`));
-    this.el.foe.replaceChildren(...this.playerBar(this.setup.opponent.name, AI, `Mazo ${foe.deck.length} · Mictlán ${foe.mictlan.length}`));
+    this.el.me.replaceChildren(...this.playerBar('Tú', this.me, `Mano ${me.hand.length}`));
+    this.el.foe.replaceChildren(...this.playerBar(this.setup.opponent.name, this.foe, `Mazo ${foe.deck.length} · Mictlán ${foe.mictlan.length}`));
     this.el.foe.classList.toggle('pl--target', canDirect);
     this.el.foe.title = canDirect ? 'Ataque directo' : '';
-    this.el.me.classList.toggle('pl--active', s.turnPlayer === HUMAN && s.winner === null);
-    this.el.foe.classList.toggle('pl--active', s.turnPlayer === AI && s.winner === null);
+    this.el.me.classList.toggle('pl--active', s.turnPlayer === this.me && s.winner === null);
+    this.el.foe.classList.toggle('pl--active', s.turnPlayer === this.foe && s.winner === null);
     this.lastLife = [me.life, foe.life];
 
     // Mano del rival
@@ -407,6 +547,7 @@ export class DuelView {
     this.btn.surrender.classList.toggle('surrender-btn--armed', this.surrenderArmed);
     this.btn.surrender.innerHTML = this.surrenderArmed ? 'Rendirse<small>toca de nuevo</small>' : 'Rendirse';
     this.el.turn.textContent = `Turno ${s.turn}`;
+    this.renderTimer();
 
     this.el.status.textContent = this.message || this.statusMessage();
     this.el.status.classList.toggle('status--error', !!this.message);
@@ -431,7 +572,7 @@ export class DuelView {
     const hit = this.lastLife[player] > p.life;
     const avatar = document.createElement('span');
     avatar.className = 'pl__avatar';
-    avatar.textContent = player === HUMAN ? '☀' : this.setup.opponent.glyph;
+    avatar.textContent = player === this.me ? '☀' : this.setup.opponent.glyph;
     const text = document.createElement('span');
     text.className = 'pl__text';
     text.innerHTML = `<span class="pl__name"></span><span class="pl__life${hit ? ' pl__life--hit' : ''}"></span>
@@ -440,7 +581,7 @@ export class DuelView {
     text.querySelector('.pl__name')!.textContent = name;
     text.querySelector('.pl__life')!.textContent = String(p.life);
     text.querySelector('.pl__detail')!.textContent = detail;
-    return player === HUMAN ? [text, avatar] : [avatar, text];
+    return player === this.me ? [text, avatar] : [avatar, text];
   }
 
   private pile(label: string, count: number, card: HTMLElement | null): HTMLElement[] {
@@ -501,7 +642,7 @@ export class DuelView {
       bubble.textContent = card.position === 'attack' ? '⛨' : '⚔';
       bubble.addEventListener('click', ev => {
         ev.stopPropagation();
-        this.submit({ type: 'changePosition', player: HUMAN, instanceId: card.instanceId });
+        this.submit({ type: 'changePosition', player: this.me, instanceId: card.instanceId });
       });
       zone.append(bubble);
     }
@@ -553,7 +694,7 @@ export class DuelView {
     const winner = this.engine.state.winner;
     this.el.overlay.hidden = winner === null;
     if (winner === null) return;
-    const won = winner === HUMAN;
+    const won = winner === this.me;
     if (!this.finishing) {                                          // una sola vez por duelo
       this.finishing = true;
       const engine = this.engine;
@@ -617,7 +758,8 @@ export class DuelView {
     back.className = 'end-btn';
     back.textContent = 'Continuar';
     back.addEventListener('click', () => this.setup.onExit());
-    buttons.append(again, back);
+    if (this.setup.remote) { this.unwatch?.(); this.unwatch = null; clearInterval(this.clock); }
+    buttons.append(...(this.setup.remote ? [back] : [again, back]));
     box.append(buttons);
     this.el.overlay.replaceChildren(box);
   }
@@ -708,7 +850,7 @@ export class DuelView {
 
   /** Texto de la cadena elegida. Solo revela resultados ya descubiertos, como en YGOFM. */
   private chainPreview(): string {
-    const hand = this.engine.state.players[HUMAN].hand;
+    const hand = this.engine.state.players[this.me].hand;
     const defs = this.selectedHand
       .map(id => hand.find(c => c.instanceId === id)?.def)
       .filter((d): d is CardDef => d !== undefined);
@@ -755,7 +897,7 @@ export class DuelView {
 
   /** Juega la cadena en la zona; si algún paso tiene varias opciones, pregunta cuál. */
   private async playSelected(slot: number): Promise<void> {
-    const me = this.engine.state.players[HUMAN];
+    const me = this.engine.state.players[this.me];
     const handIds = [...this.selectedHand];
     const fromHand = handIds.map(id => me.hand.find(c => c.instanceId === id)!.def);
     const occupant = me.field[slot];
@@ -773,13 +915,14 @@ export class DuelView {
       }
       current = result ?? next;
     }
-    this.submit({ type: 'play', player: HUMAN, handIds, slot, position: 'attack', fusionChoices: choices });
+    this.submit({ type: 'play', player: this.me, handIds, slot, position: 'attack', fusionChoices: choices });
   }
 
   private statusMessage(): string {
     const s = this.engine.state;
     if (s.winner !== null) return '';
-    if (this.aiThinking || s.turnPlayer === AI) return 'El rival está pensando...';
+    if (this.setup.remote && s.turnPlayer === this.foe) return `Turno de ${this.setup.opponent.name}…`;
+    if (this.aiThinking || s.turnPlayer === this.foe) return 'El rival está pensando...';
     if (this.selectedHand.length > 1) return this.chainPreview();
     const spell = this.selectedSpell();
     if (spell) {
@@ -792,12 +935,12 @@ export class DuelView {
     }
     if (this.selectedHand.length === 1) return 'Toca una zona para jugarla, o elige más cartas para fusionar.';
     if (this.selectedAttacker !== null) {
-      const sel = s.players[HUMAN].field.find(c => c?.instanceId === this.selectedAttacker);
+      const sel = s.players[this.me].field.find(c => c?.instanceId === this.selectedAttacker);
       const bubble = sel && this.canChangePosition(sel) ? ' El botón redondo cambia su posición.' : '';
       if (sel?.position === 'defense') return `En defensa no puede atacar.${bubble}`;
       if (s.turn === 1 && !FIRST_TURN_CAN_ATTACK) return `En el primer turno no se ataca.${bubble}`;
       if (sel?.hasAttackedThisTurn) return 'Ese monstruo ya atacó este turno.';
-      return (s.players[AI].field.every(c => c === null)
+      return (s.players[this.foe].field.every(c => c === null)
         ? 'Toca la barra del rival para atacar directo.'
         : 'Toca un monstruo rival para atacarlo.') + bubble;
     }
@@ -830,7 +973,7 @@ export class DuelView {
 
     const title = document.createElement('p');
     title.className = 'fusion-show__title';
-    title.textContent = next.player === HUMAN ? '¡Fusión!' : '¡El rival fusiona!';
+    title.textContent = next.player === this.me ? '¡Fusión!' : '¡El rival fusiona!';
     const row = document.createElement('div');
     row.className = 'fusion-show__row';
     const op = (txt: string) => { const s2 = document.createElement('span'); s2.className = 'fusion-show__op'; s2.textContent = txt; return s2; };
@@ -839,7 +982,7 @@ export class DuelView {
     const cr = createCardElement(next.r); cr.classList.add('fs-r');
     row.append(ca, op('+'), cb, op('='), cr);
     box.replaceChildren(title, row);
-    box.classList.toggle('fusion-show--foe', next.player === AI);
+    box.classList.toggle('fusion-show--foe', next.player === this.foe);
     box.hidden = false;
 
     const done = () => {
@@ -876,13 +1019,13 @@ export class DuelView {
   }
 
   private describe(e: DuelEvent): string | null {
-    const who = (p: PlayerIndex) => (p === HUMAN ? 'Tú' : 'Rival');
+    const who = (p: PlayerIndex) => (p === this.me ? 'Tú' : 'Rival');
     const name = (id: number) => this.engine.getCard(id)?.name ?? '?';
     switch (e.type) {
       case 'turnStarted': return `— Turno ${e.turn}: ${who(e.player)} —`;
-      case 'cardsDrawn': return e.player === HUMAN ? `Robas ${e.instanceIds.length}` : `Rival roba ${e.instanceIds.length}`;
+      case 'cardsDrawn': return e.player === this.me ? `Robas ${e.instanceIds.length}` : `Rival roba ${e.instanceIds.length}`;
       case 'cardPlayed': {
-        const shown = e.player === HUMAN || !e.faceDown ? name(e.instanceId) : 'una carta boca abajo';
+        const shown = e.player === this.me || !e.faceDown ? name(e.instanceId) : 'una carta boca abajo';
         return `${who(e.player)} juega ${shown}${e.position === 'defense' ? ' en defensa' : ''}`;
       }
       case 'fusion': return `¡Fusión! ${name(e.materialIds[0])} + ${name(e.materialIds[1])} = ${name(e.resultId)}`;
@@ -899,7 +1042,7 @@ export class DuelView {
       case 'revived': return `${name(e.instanceId)} regresa del Mictlán`;
       case 'timeChanged': return `${PHASE_INFO[e.phase].icon} Empieza ${PHASE_INFO[e.phase].name} (${describePhase(e.phase)})`;
       case 'nahualShift': return e.night ? 'Los nahuales cambian a su forma de noche' : 'Los nahuales vuelven a su forma de día';
-      case 'trapSet': return e.player === HUMAN ? `Colocas ${name(e.instanceId)} boca abajo` : 'Rival coloca una trampa boca abajo';
+      case 'trapSet': return e.player === this.me ? `Colocas ${name(e.instanceId)} boca abajo` : 'Rival coloca una trampa boca abajo';
       case 'trapActivated': return `¡Trampa! ${name(e.instanceId)} responde al ataque de ${name(e.attackerId)}`;
       case 'attackNegated': return `El ataque de ${name(e.attackerId)} se detiene`;
       case 'positionChanged': return `${name(e.instanceId)} pasa a ${e.position === 'attack' ? 'ataque' : 'defensa'}${e.flipped ? ' (se voltea)' : ''}`;

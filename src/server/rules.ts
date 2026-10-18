@@ -6,7 +6,8 @@ import { DUPLICATE_VALUE } from '../game/config.ts';
 import { getDuelist, isUnlocked, type Duelist } from '../game/duelists.ts';
 import { WIN_CACAO } from '../game/economy.ts';
 import { validatePlayerDeck, type Profile } from '../game/profile.ts';
-import { replayDuel } from '../game/replay.ts';
+import { replayDuel, replayPvp, pvpFirstPlayer, type PvpSetup } from '../game/replay.ts';
+import type { PlayerIndex } from '../core/DuelState.ts';
 import { checkAscend, checkLevelUp, clampLevel, type UpgradeCheck } from '../core/progression.ts';
 import { rollRewards } from '../game/rewards.ts';
 
@@ -107,3 +108,56 @@ export function planLevelUp(cardId: number, have: number, level: number, cacao: 
 }
 
 export { trimDeckToCollection } from '../core/progression.ts';
+
+// ---------------------------------------------------------------- multijugador
+
+export const PVP_WIN_CACAO = 30;
+export const PVP_DAILY_REWARDED_WINS = 5;        // victorias con premio por día
+export const PVP_SAME_RIVAL_DAILY = 2;           // contra el mismo rival, por día (para que no se "farmeen")
+export const PVP_TURN_TIMEOUT_MS = 120_000;      // si el rival no juega en 2 minutos, puedes reclamar la victoria
+export { pvpFirstPlayer };
+
+/** ¿Tu mazo activo sirve para una sala? (40 cartas tuyas). */
+export function checkPvpDeck(deck: readonly number[], collection: Record<string, number>): Check<true> {
+  const fake: Profile = { version: 1, collection, deck: [...deck], defeated: [], wins: 0, losses: 0 };
+  const errors = validatePlayerDeck(fake, deck, cardDb);
+  return errors.length ? { ok: false, error: errors[0] } : { ok: true, value: true };
+}
+
+/** Código de sala: 5 letras fáciles de dictar (sin O/0, I/1). */
+export function roomCode(random: () => number = Math.random): string {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return Array.from({ length: 5 }, () => abc[Math.floor(random() * abc.length)]).join('');
+}
+
+export interface PvpMatchData {
+  seed: number;
+  host_deck: number[]; guest_deck: number[];
+  host_levels: Record<string, number> | null; guest_levels: Record<string, number> | null;
+  intents: unknown[];
+}
+
+function setupOf(m: PvpMatchData): PvpSetup {
+  return { seed: Number(m.seed), decks: [m.host_deck, m.guest_deck], levels: [cleanLevels(m.host_levels), cleanLevels(m.guest_levels)] };
+}
+
+/**
+ * Revisa una jugada nueva de `player` (0 = anfitrión, 1 = invitado) repitiendo toda la partida.
+ * Devuelve la lista nueva de jugadas y si alguien ganó.
+ */
+export function pvpMove(m: PvpMatchData, player: PlayerIndex, intent: unknown): Check<{ intents: unknown[]; winner: PlayerIndex | null; turnPlayer: PlayerIndex }> {
+  if (!intent || typeof intent !== 'object') return { ok: false, error: 'Jugada inválida' };
+  const it = intent as Intent;
+  if (it.player !== player) return { ok: false, error: 'Esa jugada no es tuya' };
+  if (m.intents.length >= MAX_INTENTS) return { ok: false, error: 'Demasiadas jugadas' };
+  const all = [...m.intents, it] as Intent[];
+  const r = replayPvp(setupOf(m), all, cardDb, fusionDb);
+  if (!r.ok) return { ok: false, error: r.at === all.length - 1 ? r.error : 'La partida guardada no cuadra' };
+  return { ok: true, value: { intents: all, winner: r.winner, turnPlayer: r.engine.state.turnPlayer } };
+}
+
+/** De quién es el turno ahora (para el tiempo límite). */
+export function pvpTurnOf(m: PvpMatchData): PlayerIndex | null {
+  const r = replayPvp(setupOf(m), m.intents as Intent[], cardDb, fusionDb);
+  return r.ok && r.winner === null ? r.engine.state.turnPlayer : null;
+}

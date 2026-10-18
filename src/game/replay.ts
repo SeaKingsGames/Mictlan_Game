@@ -74,3 +74,40 @@ export function replayDuel(input: ReplayInput, db: CardDatabase, fusion: FusionR
   }
   return { ok: true, winner: engine.state.winner, turns: engine.state.turn };
 }
+
+// ---------------------------------------------------------------- multijugador (jugador contra jugador)
+
+export interface PvpSetup {
+  seed: number;
+  decks: [readonly number[], readonly number[]];          // 0 = quien creó la sala, 1 = quien se unió
+  levels: [Readonly<Record<number, number>>?, Readonly<Record<number, number>>?];
+}
+
+/** Quién empieza: lo decide la semilla (así nadie elige). */
+export const pvpFirstPlayer = (seed: number): PlayerIndex => ((seed >>> 3) & 1) as PlayerIndex;
+
+/** Crea el duelo PvP. Ambos navegadores y el servidor lo crean igual. */
+export function createPvpDuel(setup: PvpSetup, db: CardDatabase, fusion: FusionResolver): DuelEngine {
+  return new DuelEngine({
+    db, decks: setup.decks, seed: setup.seed, firstPlayer: pvpFirstPlayer(setup.seed),
+    fusion, signs: daySigns, levels: setup.levels,
+  });
+}
+
+export type PvpReplay =
+  | { ok: true; engine: DuelEngine; winner: PlayerIndex | null }
+  | { ok: false; error: string; at: number };
+
+/** Repite todas las jugadas de una partida PvP. Si alguna no es válida, dice cuál. */
+export function replayPvp(setup: PvpSetup, intents: readonly Intent[], db: CardDatabase, fusion: FusionResolver): PvpReplay {
+  const engine = createPvpDuel(setup, db, fusion);
+  engine.start();
+  for (let i = 0; i < intents.length; i++) {
+    const intent = intents[i];
+    if (engine.state.winner !== null) return { ok: false, error: 'El duelo ya terminó', at: i };
+    if (!intent || (intent.player !== 0 && intent.player !== 1)) return { ok: false, error: 'Jugada inválida', at: i };
+    const r = engine.apply(intent);
+    if (!r.ok) return { ok: false, error: r.error, at: i };
+  }
+  return { ok: true, engine, winner: engine.state.winner };
+}

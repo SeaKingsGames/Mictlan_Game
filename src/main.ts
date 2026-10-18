@@ -13,6 +13,8 @@ import { h } from './html/dom.ts';
 import { DuelView, type DuelResult } from './html/DuelView.ts';
 import { renderLogin } from './html/LoginView.ts';
 import { renderMenu } from './html/MenuView.ts';
+import { renderPvpLobby } from './html/PvpLobbyView.ts';
+import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
   ascendCloud, finishCloudDuel, flushDeck, hasSession, levelUpCloud, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
@@ -27,6 +29,8 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  *   #/libre       duelo libre (rivales desbloqueados)
  *   #/duelo/<id>  duelo contra ese duelista
  *   #/cuenta      (invitado) guardar cuenta con correo
+ *   #/pvp         multijugador: crear sala o unirse con código
+ *   #/pvp/<id>    duelo contra otro jugador
  *
  * Dos modos:
  *   - NUBE (si hay VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY): cuenta, y los premios los da el servidor.
@@ -35,6 +39,7 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
 const app = document.querySelector<HTMLDivElement>('#app')!;
 document.title = GAME_TITLE;
 let profile: Profile | null = cloudEnabled ? null : loadProfile();
+let leaveScreen: (() => void) | null = null;   // limpia escuchas de la pantalla anterior (salas)
 
 const go = (hash: string) => { location.hash = hash; };
 
@@ -63,7 +68,8 @@ function route(): void {
   if (!profile) { void boot(); return; }
   const p = profile;
   const [, page = '', arg = ''] = location.hash.split('/');
-  document.body.classList.toggle('in-duel', page === 'duelo');
+  leaveScreen?.(); leaveScreen = null;
+  document.body.classList.toggle('in-duel', page === 'duelo' || (page === 'pvp' && !!arg));
   window.scrollTo(0, 0);
 
   switch (page) {
@@ -71,6 +77,10 @@ function route(): void {
     case 'campana': renderCampaign(app, p, go); return;
     case 'libre': renderCampaign(app, p, go, true); return;
     case 'duelo': startDuel(p, arg); return;
+    case 'pvp':
+      if (arg) void startPvp(p, arg);
+      else leaveScreen = renderPvpLobby(app, p, go, cloudEnabled);
+      return;
     case 'cuenta':
       if (p.account?.guest) { renderLogin(app, () => { go('#/'); void boot(); }, 'upgrade', () => go('#/')); return; }
       go('#/'); return;
@@ -140,6 +150,43 @@ function startDuel(p: Profile, id: string): void {
       : won => finishLocally(p, rival, won),
     onExit: () => go('#/campana'),
   });
+}
+
+/** Duelo contra otro jugador (la sala ya existe y está en juego). */
+async function startPvp(p: Profile, matchId: string): Promise<void> {
+  loading('Entrando a la sala…');
+  try {
+    const [m, uid] = await Promise.all([getMatch(matchId), myUserId()]);
+    if (m.status !== 'playing' && m.status !== 'finished') { go('#/pvp'); return; }
+    const me = m.host_id === uid ? 0 : 1;
+    const rivalName = (me === 0 ? m.guest_name : m.host_name) ?? 'Rival';
+    const view = new DuelView(app, {
+      playerDeck: me === 0 ? m.host_deck : (m.guest_deck ?? []),
+      opponent: { id: 'pvp', name: rivalName, glyph: '⚔' },
+      remote: remoteFor(m, me),
+      onFinish: async won => {
+        const done = await waitForResult(matchId);
+        const r = done.rewards;
+        if (won) p.wins += 1; else p.losses += 1;
+        const notes: string[] = [];
+        if (won && r && r.paid_to === uid) {
+          if (r.cacao > 0) {
+            if (p.account) p.account.cacao += r.cacao;
+            notes.push(`+${r.cacao} ${CURRENCY.common.icon} ${CURRENCY.common.name}`);
+          } else {
+            notes.push(r.limit === 'same_rival' ? 'Ya ganaste varias veces hoy contra este rival: esta victoria no da cacao.' : 'Llegaste al límite de victorias con premio de hoy.');
+          }
+        }
+        return { rewards: [], notes };
+      },
+      onExit: () => go('#/pvp'),
+    });
+    leaveScreen = () => view.destroy();
+  } catch (e) {
+    app.replaceChildren(h('main', { class: 'screen menu' },
+      h('p', { class: 'warn-box' }, e instanceof Error ? e.message : String(e)),
+      h('button', { class: 'big-btn', onclick: () => go('#/pvp') }, 'Volver')));
+  }
 }
 
 function unlockNote(rival: Duelist): string {

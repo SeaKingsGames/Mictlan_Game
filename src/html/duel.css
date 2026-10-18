@@ -397,3 +397,8 @@ button.pl { cursor: default; }
 .sign-box small { text-transform: uppercase; letter-spacing: .1em; }
 .sign-box__text { color: #8fd8c6; }
 .sign-box[hidden] { display: none; }
+
+/* Multijugador: reloj del turno y reclamar victoria */
+.turn-tag--hurry { border-color: #d94f30; color: #ffb3a3; animation: pulse-red 1s ease-in-out infinite; }
+.tag-btn--claim { border-color: #d94f30; color: #ffb3a3; }
+.tag-btn--claim[hidden] { display: none; }

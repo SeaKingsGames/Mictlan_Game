@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardDb, fusionDb } from '../src/data/index.ts';
+import { testCards as cardDb, testFusion as fusionDb } from './fixtures/index.ts';
 import { FusionDatabase } from '../src/data/fusionDatabase.ts';
 
 const c = (id: number) => cardDb.get(id);

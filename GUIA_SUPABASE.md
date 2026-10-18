@@ -118,3 +118,24 @@ Esta actualización agrega **una migración nueva** y **una función nueva**.
 | `supabase/migrations/…_progresion.sql` | Columna `level` en la colección, niveles guardados en cada duelo, `level_up_card` y `ascend_card` |
 | `supabase/functions/card-upgrade` | Sube de nivel (cobra cacao) o asciende (gasta 3 copias) |
 | `src/core/progression.ts` | Las reglas: costos por rareza, +100 por nivel, efectos +25% desde nivel 3 |
+
+---
+
+## Multijugador (salas con código)
+
+1. **SQL nuevo**: SQL Editor → pega TODO `supabase/migrations/20261018000000_multijugador.sql` → **Run**. Crea la tabla de salas, su seguridad y activa Realtime para ella.
+2. **Funciones**:
+   ```bash
+   npm run build:server
+   npx supabase functions deploy pvp --use-api
+   npx supabase functions deploy duel-start --use-api
+   npx supabase functions deploy duel-finish --use-api
+   npx supabase functions deploy card-upgrade --use-api
+   ```
+3. `npm test` y sube a GitHub.
+
+**Cómo funciona**: uno crea sala y comparte el código de 5 letras; el otro entra con él. Cada jugada pasa por la función `pvp`, que repite la partida y rechaza lo inválido. Ganar da 30 de cacao (máximo 5 victorias con premio al día y 2 contra el mismo rival). Si alguien no juega en 2 minutos, el otro puede reclamar la victoria.
+
+**Límite conocido**: el duelo se calcula en cada navegador, así que alguien con conocimientos técnicos podría ver la mano del rival. Para jugar entre amigos está bien; antes de emparejamiento con desconocidos o ranking, el servidor deberá mandar a cada uno solo su información.
+
+**Probarlo solo**: abre el juego en dos navegadores distintos (o uno normal y otro en modo incógnito) con dos cuentas diferentes, por ejemplo una con correo y otra de invitado.

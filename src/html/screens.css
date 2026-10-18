@@ -143,3 +143,18 @@
 .ritual__name { margin: 0; color: var(--ink); animation: ritual-born .6s ease 1.8s both; }
 .ritual__ok { animation: ritual-born .6s ease 2s both; }
 @media (prefers-reduced-motion: reduce) { .ritual *, .ritual { animation-duration: .01s !important; animation-delay: 0s !important; } }
+
+/* ---------- Multijugador ---------- */
+.pvp__options { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.pvp__card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 14px; background: #1f1915; border: 1px solid #4a3f36; }
+.pvp__card h2 { margin: 0; font: 700 22px 'Cinzel', Georgia, serif; }
+.pvp__card p { margin: 0; color: var(--ink-soft); }
+.pvp__code-input { font: 800 28px/1 system-ui, sans-serif; letter-spacing: .3em; text-align: center; text-transform: uppercase;
+  padding: 12px; border-radius: 10px; border: 2px solid #4a3f36; background: #14110f; color: var(--ink); }
+.pvp__code-input:focus { outline: none; border-color: #e8a33d; }
+.pvp__status { min-height: 1.4em; color: var(--ink-soft); }
+.pvp__status--error { color: #ff9a7a; }
+.pvp__waiting { align-items: center; text-align: center; max-width: 420px; margin: 20px auto; }
+.pvp__code { font: 800 64px/1 system-ui, sans-serif !important; letter-spacing: .25em; color: #f2c12e !important; text-shadow: 0 0 24px rgb(242 193 46 / .4); }
+.pvp__dots::after { content: ''; animation: dots 1.5s steps(4) infinite; }
+@keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }

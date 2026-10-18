@@ -134,16 +134,17 @@ export async function flushDeck(): Promise<void> {
 
 // ---------------------------------------------------------------- duelos
 
-/** Mensaje legible del error de una Edge Function. */
-async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
+/** Mensaje legible del error de una Edge Function (con su `code`, si lo trae). */
+export async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await db().functions.invoke(name, { body });
   if (error) {
     let message = error.message;
     const ctx = (error as { context?: Response }).context;
+    let code: string | undefined;
     if (ctx && typeof ctx.json === 'function') {
-      try { const j = await ctx.json(); if (j?.error) message = j.error; } catch { /* sin cuerpo */ }
+      try { const j = await ctx.json(); if (j?.error) message = j.error; code = j?.code; } catch { /* sin cuerpo */ }
     }
-    throw new Error(message);
+    throw Object.assign(new Error(message), { code });
   }
   return data as T;
 }

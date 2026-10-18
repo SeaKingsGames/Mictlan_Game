@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { nextAiIntent } from '../src/ai/aiPlayer.ts';
 import type { Intent } from '../src/core/DuelState.ts';
 import { cardDb, fusionDb } from '../src/data/index.ts';
+import { testCards } from './fixtures/index.ts';
 import { duelists } from '../src/game/duelists.ts';
 import { applyCardGains } from '../src/game/economy.ts';
 import { newProfile } from '../src/game/profile.ts';
@@ -64,7 +65,7 @@ describe('repetición del duelo en el servidor', () => {
 describe('repetidas se vuelven recursos', () => {
   it('hasta 3 copias van a la colección; la cuarta se convierte según su rareza', () => {
     const coll = new Map<number, number>([[6, 3], [1, 2]]);   // Tláloc (UR) ya tienes 3; Ocelote (N) tienes 2
-    const gains = applyCardGains(coll, [1, 1, 6], id => cardDb.get(id));
+    const gains = applyCardGains(coll, [1, 1, 6], id => testCards.get(id));
     expect(gains.added).toEqual([1]);
     expect(coll.get(1)).toBe(3);
     expect(gains.cacao).toBe(1 + 5);   // Ocelote N → 1 · Tláloc UR → 5

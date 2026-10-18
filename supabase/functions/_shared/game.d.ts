@@ -14,3 +14,15 @@ export declare function deckLevels(deck: readonly number[], levels: Record<strin
 export declare function planAscend(cardId: number, haveBase: number, haveResult: (id: number) => number): UpgradeCheck;
 export declare function planLevelUp(cardId: number, have: number, level: number, cacao: number): UpgradeCheck;
 export declare function trimDeckToCollection(deck: readonly number[], owned: (id: number) => number): number[];
+export declare const PVP_WIN_CACAO: number;
+export declare const PVP_DAILY_REWARDED_WINS: number;
+export declare const PVP_SAME_RIVAL_DAILY: number;
+export declare const PVP_TURN_TIMEOUT_MS: number;
+export interface PvpMatchData {
+  seed: number; host_deck: number[]; guest_deck: number[];
+  host_levels: Record<string, number> | null; guest_levels: Record<string, number> | null; intents: unknown[];
+}
+export declare function checkPvpDeck(deck: readonly number[], collection: Record<string, number>): Check<true>;
+export declare function roomCode(random?: () => number): string;
+export declare function pvpMove(m: PvpMatchData, player: 0 | 1, intent: unknown): Check<{ intents: unknown[]; winner: 0 | 1 | null; turnPlayer: 0 | 1 }>;
+export declare function pvpTurnOf(m: PvpMatchData): 0 | 1 | null;

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DuelEngine } from '../src/core/DuelEngine.ts';
 import type { DuelEvent, PlayerIndex } from '../src/core/DuelState.ts';
 import { levelUpCost, scaleEffectAmount, trimDeckToCollection } from '../src/core/progression.ts';
-import { cardDb, fusionDb } from '../src/data/index.ts';
+import { testCards as cardDb, testFusion as fusionDb } from './fixtures/index.ts';
+import { cardDb as realCards } from '../src/data/index.ts';
 import { START_LIFE } from '../src/data/types.ts';
 import { ascendLocal, levelUpLocal, levelsForDeck, newProfile, validatePlayerDeck } from '../src/game/profile.ts';
 import { duelists } from '../src/game/duelists.ts';
@@ -80,8 +81,14 @@ describe('Ascensión', () => {
   it('no asciende si la carta no tiene ascensión o ya tienes 3 del resultado', () => {
     const p = newProfile();
     expect(ascendLocal(p, cardDb.get(12), cardDb)).toMatch(/no puede ascender/);
-    expect(planAscend(1, 3, () => 3)).toEqual({ ok: false, error: 'Ya tienes 3 de Ocelote cazador' });
-    expect(planAscend(1, 3, () => 0)).toEqual({ ok: true, cost: 0, result: 79 });
+  });
+
+  it('el servidor usa TUS cartas: toda carta con "asciende a" se puede ascender', () => {
+    for (const card of realCards.all().filter(c => c.ascendsTo)) {
+      expect(planAscend(card.id, 3, () => 0)).toEqual({ ok: true, cost: 0, result: card.ascendsTo });
+      expect(planAscend(card.id, 3, () => 3).ok).toBe(false);
+      expect(planAscend(card.id, 2, () => 0).ok).toBe(false);
+    }
   });
 
   it('las cartas ascendidas no salen en fusiones genéricas', () => {
@@ -96,8 +103,9 @@ describe('Ascensión', () => {
 
 describe('Servidor', () => {
   it('subir de nivel revisa cacao y máximo', () => {
-    expect(planLevelUp(2, 3, 1, 49)).toEqual({ ok: false, error: 'Te faltan 1 de cacao' });
-    expect(planLevelUp(2, 3, 1, 50)).toEqual({ ok: true, cost: 50 });
+    const cost = levelUpCost(realCards.get(2), 1)!;
+    expect(planLevelUp(2, 3, 1, cost - 1)).toEqual({ ok: false, error: 'Te faltan 1 de cacao' });
+    expect(planLevelUp(2, 3, 1, cost)).toEqual({ ok: true, cost });
     expect(planLevelUp(2, 3, 5, 9999).ok).toBe(false);
     expect(planLevelUp(2, 0, 1, 9999).ok).toBe(false);
   });

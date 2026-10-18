@@ -2043,6 +2043,30 @@ function replayDuel(input, db, fusion) {
   }
   return { ok: true, winner: engine.state.winner, turns: engine.state.turn };
 }
+var pvpFirstPlayer = (seed) => seed >>> 3 & 1;
+function createPvpDuel(setup, db, fusion) {
+  return new DuelEngine({
+    db,
+    decks: setup.decks,
+    seed: setup.seed,
+    firstPlayer: pvpFirstPlayer(setup.seed),
+    fusion,
+    signs: daySigns,
+    levels: setup.levels
+  });
+}
+function replayPvp(setup, intents, db, fusion) {
+  const engine = createPvpDuel(setup, db, fusion);
+  engine.start();
+  for (let i = 0; i < intents.length; i++) {
+    const intent = intents[i];
+    if (engine.state.winner !== null) return { ok: false, error: "El duelo ya termin\xF3", at: i };
+    if (!intent || intent.player !== 0 && intent.player !== 1) return { ok: false, error: "Jugada inv\xE1lida", at: i };
+    const r = engine.apply(intent);
+    if (!r.ok) return { ok: false, error: r.error, at: i };
+  }
+  return { ok: true, engine, winner: engine.state.winner };
+}
 
 // src/game/rewards.ts
 function rollRewards(duelist, firstWin, rng) {
@@ -2118,16 +2142,55 @@ function planAscend(cardId, haveBase, haveResult) {
 function planLevelUp(cardId, have, level, cacao) {
   return checkLevelUp(cardDb.tryGet(cardId), have, level, cacao);
 }
+var PVP_WIN_CACAO = 30;
+var PVP_DAILY_REWARDED_WINS = 5;
+var PVP_SAME_RIVAL_DAILY = 2;
+var PVP_TURN_TIMEOUT_MS = 12e4;
+function checkPvpDeck(deck, collection) {
+  const fake = { version: 1, collection, deck: [...deck], defeated: [], wins: 0, losses: 0 };
+  const errors = validatePlayerDeck(fake, deck, cardDb);
+  return errors.length ? { ok: false, error: errors[0] } : { ok: true, value: true };
+}
+function roomCode(random = Math.random) {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  return Array.from({ length: 5 }, () => abc[Math.floor(random() * abc.length)]).join("");
+}
+function setupOf(m) {
+  return { seed: Number(m.seed), decks: [m.host_deck, m.guest_deck], levels: [cleanLevels(m.host_levels), cleanLevels(m.guest_levels)] };
+}
+function pvpMove(m, player, intent) {
+  if (!intent || typeof intent !== "object") return { ok: false, error: "Jugada inv\xE1lida" };
+  const it = intent;
+  if (it.player !== player) return { ok: false, error: "Esa jugada no es tuya" };
+  if (m.intents.length >= MAX_INTENTS) return { ok: false, error: "Demasiadas jugadas" };
+  const all = [...m.intents, it];
+  const r = replayPvp(setupOf(m), all, cardDb, fusionDb);
+  if (!r.ok) return { ok: false, error: r.at === all.length - 1 ? r.error : "La partida guardada no cuadra" };
+  return { ok: true, value: { intents: all, winner: r.winner, turnPlayer: r.engine.state.turnPlayer } };
+}
+function pvpTurnOf(m) {
+  const r = replayPvp(setupOf(m), m.intents, cardDb, fusionDb);
+  return r.ok && r.winner === null ? r.engine.state.turnPlayer : null;
+}
 export {
   DATA_VERSION,
   MAX_INTENTS,
+  PVP_DAILY_REWARDED_WINS,
+  PVP_SAME_RIVAL_DAILY,
+  PVP_TURN_TIMEOUT_MS,
+  PVP_WIN_CACAO,
   checkDuelStart,
+  checkPvpDeck,
   cleanLevels,
   deckLevels,
   newSeed,
   planAscend,
   planLevelUp,
   planRewards,
+  pvpFirstPlayer,
+  pvpMove,
+  pvpTurnOf,
+  roomCode,
   trimDeckToCollection,
   verifyDuel
 };
