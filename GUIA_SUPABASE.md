@@ -96,3 +96,25 @@ y sube el juego a Vercel como siempre. Si se te olvida, el juego avisa *"El jueg
 | `src/server/rules.ts` | Lo que corre el servidor, en TypeScript con pruebas |
 | `src/net/cloud.ts` | Todo lo que el juego le pide a Supabase |
 | `src/html/LoginView.ts` | Pantalla de entrar / crear cuenta / invitado |
+
+---
+
+## Fase B: niveles y ascensión (actualización)
+
+Esta actualización agrega **una migración nueva** y **una función nueva**.
+
+1. **SQL nuevo**: en Supabase → **SQL Editor** → **New query**, pega TODO `supabase/migrations/20261017000000_progresion.sql` y dale **Run**. (No vuelvas a correr el primer archivo `_init.sql`.)
+2. **Funciones** (en la terminal):
+   ```bash
+   npm run build:server
+   npx supabase functions deploy duel-start --use-api
+   npx supabase functions deploy duel-finish --use-api
+   npx supabase functions deploy card-upgrade --use-api
+   ```
+3. `npm test` y sube todo a GitHub.
+
+| Archivo nuevo | Para qué |
+| --- | --- |
+| `supabase/migrations/…_progresion.sql` | Columna `level` en la colección, niveles guardados en cada duelo, `level_up_card` y `ascend_card` |
+| `supabase/functions/card-upgrade` | Sube de nivel (cobra cacao) o asciende (gasta 3 copias) |
+| `src/core/progression.ts` | Las reglas: costos por rareza, +100 por nivel, efectos +25% desde nivel 3 |

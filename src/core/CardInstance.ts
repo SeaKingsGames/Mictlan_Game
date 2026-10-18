@@ -1,4 +1,5 @@
 import type { CardDef } from '../data/types.ts';
+import { clampLevel, levelBonus } from './progression.ts';
 
 export type Zone = 'deck' | 'hand' | 'field' | 'mictlan'; // mictlan = cementerio
 export type BattlePosition = 'attack' | 'defense';
@@ -30,6 +31,8 @@ export class CardInstance {
   summonedThisTurn = false;
   /** Nahual en forma de noche (lo decide el motor según el Reloj Solar). */
   nightForm = false;
+  /** Nivel de la carta en la colección de su dueño (1-5). Las fusiones nacen en nivel 1. */
+  level = 1;
 
   private modifiers: StatModifier[] = [];
 
@@ -40,8 +43,10 @@ export class CardInstance {
   }
 
   /** Stats base de la forma actual (de noche, la del nahual). */
-  get baseAtk(): number { return this.nightForm && this.def.nahual ? this.def.nahual.atk : this.def.atk; }
-  get baseDef(): number { return this.nightForm && this.def.nahual ? this.def.nahual.def : this.def.def; }
+  get baseAtk(): number { return (this.nightForm && this.def.nahual ? this.def.nahual.atk : this.def.atk) + this.levelStats; }
+  get baseDef(): number { return (this.nightForm && this.def.nahual ? this.def.nahual.def : this.def.def) + this.levelStats; }
+  /** +100 ATK/DEF por nivel arriba del 1 (solo monstruos). */
+  get levelStats(): number { return this.def.type === 'monster' ? levelBonus(clampLevel(this.level)) : 0; }
   /** Nombre que se ve (de noche, el del nahual). */
   get name(): string { return this.nightForm && this.def.nahual ? this.def.nahual.name : this.def.name; }
 

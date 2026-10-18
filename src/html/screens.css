@@ -103,3 +103,43 @@
 .login__guest { display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(360px, 100%); margin-top: 12px; }
 .login__guest .big-btn { width: 100%; }
 .login__fine { color: var(--ink-soft); font-size: 13px; margin: 0; }
+
+/* ---------- Subir nivel y ascender (Mi mazo) ---------- */
+.upgrade { margin-top: 12px; padding-top: 12px; border-top: 1px solid #3a3029; display: flex; flex-direction: column; gap: 8px; }
+.upgrade__level { margin: 0; font-weight: 700; }
+.upgrade__level small { color: #7ed37e; font-weight: 600; }
+.upgrade__stars { color: #f2c12e; letter-spacing: .1em; }
+.upgrade__btn { font-size: 14px; padding: 10px 12px; }
+.upgrade__hint { color: var(--ink-soft); }
+.upgrade__ascend { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; margin-top: 6px; padding: 10px; border-radius: 10px; background: rgb(242 193 46 / .06); border: 1px solid rgb(242 193 46 / .3); }
+.upgrade__ascend p { margin: 0; font-size: 14px; }
+.upgrade__ascend .upgrade__btn { grid-column: 1 / -1; }
+.upgrade__mini { --card-w: 70px; grid-row: span 1; }
+.upgrade__msg { margin: 0; min-height: 1.2em; color: #ffb3a3; font-size: 14px; }
+.coll-card__count--ready { background: #f2c12e !important; color: #2a1a05 !important; }
+
+/* Ritual de ascensión */
+.ritual { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: radial-gradient(circle at 50% 45%, rgb(242 193 46 / .18), rgb(0 0 0 / .9) 60%); animation: ritual-in .3s ease both; }
+@keyframes ritual-in { from { opacity: 0; } }
+.ritual__stage { position: relative; width: 360px; height: 300px; --card-w: 150px; }
+.ritual__stage .card { position: absolute; left: 50%; top: 50%; margin: -105px 0 0 -75px; cursor: default; }
+.ritual__copy { animation: ritual-merge 1.3s cubic-bezier(.6, 0, .4, 1) both; }
+.ritual__copy--0 { --x: -130px; --r: -14deg; }
+.ritual__copy--1 { --x: 0px; --r: 0deg; animation-delay: .08s; }
+.ritual__copy--2 { --x: 130px; --r: 14deg; animation-delay: .16s; }
+@keyframes ritual-merge {
+  0% { transform: translateX(var(--x)) rotate(var(--r)) scale(.8); opacity: 0; }
+  25% { transform: translateX(var(--x)) rotate(var(--r)) scale(.8); opacity: 1; }
+  85% { transform: translateX(0) rotate(0) scale(.6); opacity: 1; filter: brightness(2.5); }
+  100% { transform: scale(.4); opacity: 0; }
+}
+.ritual__flash { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%;
+  background: radial-gradient(circle, #fff, #f2c12e 40%, transparent 70%); opacity: 0; animation: ritual-flash .7s ease-out 1.2s both; }
+@keyframes ritual-flash { 0% { opacity: 1; transform: scale(.5); } 100% { opacity: 0; transform: scale(12); } }
+.ritual__result { animation: ritual-born .7s cubic-bezier(.2, 1.6, .4, 1) 1.45s both; box-shadow: 0 0 40px rgb(242 193 46 / .7) !important; }
+@keyframes ritual-born { from { transform: scale(.2) rotate(-8deg); opacity: 0; } }
+.ritual__title { margin: 0; font: 700 44px 'Cinzel', Georgia, serif; color: #f2c12e; text-shadow: 0 0 20px rgb(242 193 46 / .6); animation: ritual-born .6s ease 1.7s both; }
+.ritual__name { margin: 0; color: var(--ink); animation: ritual-born .6s ease 1.8s both; }
+.ritual__ok { animation: ritual-born .6s ease 2s both; }
+@media (prefers-reduced-motion: reduce) { .ritual *, .ritual { animation-duration: .01s !important; animation-delay: 0s !important; } }

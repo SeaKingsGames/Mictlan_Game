@@ -29,6 +29,8 @@ export class FusionDatabase implements FusionResolver {
   constructor(data: FusionData, db: CardDatabase, strict = true) {
     const problems = this.problems;
     const recipeOnly = new Set(data.recipeOnly ?? []);
+    // Las cartas ascendidas solo se consiguen ascendiendo (o por receta), no por reglas genéricas
+    for (const c of db.all()) if (c.ascendsTo) recipeOnly.add(c.ascendsTo);
 
     for (const r of data.recipes) {
       const [a, b, res] = [db.tryGet(r.a), db.tryGet(r.b), db.tryGet(r.result)];

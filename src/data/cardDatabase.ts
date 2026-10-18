@@ -17,6 +17,11 @@ export class CardDatabase {
       // freeze = nadie puede modificar la definición en runtime por accidente
       this.byId.set(raw.id, Object.freeze({ ...raw, tags: Object.freeze([...raw.tags]), effects: raw.effects ? Object.freeze([...raw.effects]) : undefined }));
     }
+    for (const c of this.byId.values()) {
+      if (c.ascendsTo !== undefined && !this.byId.has(c.ascendsTo)) {
+        throw new Error(`Carta inválida "${c.name}" (id ${c.id}): asciende a la carta ${c.ascendsTo}, que no existe`);
+      }
+    }
   }
 
   get size(): number { return this.byId.size; }
@@ -74,6 +79,7 @@ function validateCard(c: CardDef): string[] {
   if ((c.type === 'spell' || c.type === 'equip') && !(c.effects ?? []).some(e => e.trigger === 'onActivate')) {
     p.push('las mágicas y equipos necesitan un efecto onActivate');
   }
+  if (c.ascendsTo !== undefined && (!Number.isInteger(c.ascendsTo) || c.ascendsTo === c.id)) p.push('"asciende a" debe ser el id de OTRA carta');
   if (c.nahual) {
     if (c.type !== 'monster') p.push('solo los monstruos pueden ser nahuales');
     if (!c.nahual.name?.trim()) p.push('al nahual le falta el nombre de su forma de noche');

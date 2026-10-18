@@ -11,6 +11,7 @@ import {
 } from './DuelState.ts';
 import { signRules, signTotal, type DaySign } from './daySign.ts';
 import { noFusions, planChain, type FusionResolver } from './fusion.ts';
+import { scaleEffectAmount } from './progression.ts';
 import { createRng } from './rng.ts';
 import { matchesFilter, phaseAtkBonus, phaseOf, PHASE_INFO } from './time.ts';
 
@@ -29,6 +30,8 @@ export interface DuelOptions {
   fusion?: FusionResolver;
   /** Signos del día posibles. Si se pasan, el duelo elige uno con la semilla. */
   signs?: readonly DaySign[];
+  /** Nivel de cada carta (id → nivel) para cada jugador. Si falta, todas son nivel 1. */
+  levels?: [Readonly<Record<number, number>>?, Readonly<Record<number, number>>?];
 }
 
 /** Elige el signo del día con la semilla (sin tocar el orden de las barajas). */
@@ -61,7 +64,8 @@ export class DuelEngine {
     const startLife = signRules(daySign, 'startLife').at(-1)?.amount ?? START_LIFE;
     const makePlayer = (p: PlayerIndex): PlayerState => {
       const deck = buildShuffledDeck(opts.decks[p], p, this.db, this.ids, rng);
-      deck.forEach(c => this.cards.set(c.instanceId, c));
+      const levels = opts.levels?.[p];
+      deck.forEach(c => { this.cards.set(c.instanceId, c); c.level = levels?.[c.def.id] ?? 1; });
       return { life: startLife, deck, hand: [], field: Array(FIELD_SLOTS).fill(null), support: Array(FIELD_SLOTS).fill(null), mictlan: [] };
     };
     this.state = {
@@ -495,10 +499,11 @@ export class DuelEngine {
     switch (a.type) {
       case 'modifyAtk':
       case 'modifyDef': {
+        const amount = scaleEffectAmount(a.amount, card.level);
         for (const t of this.resolveTargets(card, a.target, a.tag, ctx)) {
           t.addModifier({
-            atk: a.type === 'modifyAtk' ? a.amount : 0,
-            def: a.type === 'modifyDef' ? a.amount : 0,
+            atk: a.type === 'modifyAtk' ? amount : 0,
+            def: a.type === 'modifyDef' ? amount : 0,
             sourceId: card.instanceId,
             untilEndOfTurn: a.untilEndOfTurn ?? false,
           });
@@ -507,10 +512,10 @@ export class DuelEngine {
         return;
       }
       case 'damage':
-        this.damage(a.who === 'self' ? owner : opponentOf(owner), a.amount, events);
+        this.damage(a.who === 'self' ? owner : opponentOf(owner), scaleEffectAmount(a.amount, card.level), events);
         return;
       case 'heal':
-        this.heal(owner, a.amount, events);
+        this.heal(owner, scaleEffectAmount(a.amount, card.level), events);
         return;
       case 'draw':
         this.drawCards(owner, a.amount, events);
@@ -564,10 +569,11 @@ export class DuelEngine {
         if (effect.trigger !== 'continuous' || !this.conditionsMet(source, effect.conditions ?? [])) continue;
         for (const a of effect.actions) {
           if (a.type !== 'modifyAtk' && a.type !== 'modifyDef') continue;
+          const amount = scaleEffectAmount(a.amount, source.level);
           for (const t of this.resolveTargets(source, a.target, a.tag)) {
             t.addModifier({
-              atk: a.type === 'modifyAtk' ? a.amount : 0,
-              def: a.type === 'modifyDef' ? a.amount : 0,
+              atk: a.type === 'modifyAtk' ? amount : 0,
+              def: a.type === 'modifyDef' ? amount : 0,
               sourceId: source.instanceId, untilEndOfTurn: false, aura: true,
             });
           }

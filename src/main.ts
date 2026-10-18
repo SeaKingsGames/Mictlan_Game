@@ -5,17 +5,17 @@ import { createRng } from './core/rng.ts';
 import { cardDb } from './data/index.ts';
 import { CURRENCY, GAME_TITLE } from './game/config.ts';
 import { duelists, getDuelist, isUnlocked, type Duelist } from './game/duelists.ts';
-import { addCards, loadProfile, saveProfile, validatePlayerDeck, type Profile } from './game/profile.ts';
+import { addCards, ascendLocal, levelUpLocal, levelsForDeck, loadProfile, saveProfile, validatePlayerDeck, type Profile } from './game/profile.ts';
 import { rollRewards } from './game/rewards.ts';
 import { renderCampaign } from './html/CampaignView.ts';
-import { renderDeckBuilder } from './html/DeckBuilderView.ts';
+import { renderDeckBuilder, type CardUpgrades } from './html/DeckBuilderView.ts';
 import { h } from './html/dom.ts';
 import { DuelView, type DuelResult } from './html/DuelView.ts';
 import { renderLogin } from './html/LoginView.ts';
 import { renderMenu } from './html/MenuView.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
-  finishCloudDuel, flushDeck, hasSession, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
+  ascendCloud, finishCloudDuel, flushDeck, hasSession, levelUpCloud, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
 } from './net/cloud.ts';
 import { cloudEnabled, supabase } from './net/supabase.ts';
 
@@ -67,7 +67,7 @@ function route(): void {
   window.scrollTo(0, 0);
 
   switch (page) {
-    case 'mazo': renderDeckBuilder(app, p, go, cloudEnabled ? pr => queueDeckSave(pr.deck) : saveProfile); return;
+    case 'mazo': renderDeckBuilder(app, p, go, cloudEnabled ? pr => queueDeckSave(pr.deck) : saveProfile, upgradesFor(p)); return;
     case 'campana': renderCampaign(app, p, go); return;
     case 'libre': renderCampaign(app, p, go, true); return;
     case 'duelo': startDuel(p, arg); return;
@@ -83,6 +83,37 @@ function route(): void {
   }
 }
 
+/** Subir de nivel y ascender: en la nube lo decide el servidor; en modo local, el navegador. */
+function upgradesFor(p: Profile): CardUpgrades {
+  if (!cloudEnabled) {
+    return {
+      cacao: () => null,
+      levelUp: async card => { const err = levelUpLocal(p, card); if (err) throw new Error(err); saveProfile(p); },
+      ascend: async card => {
+        const err = ascendLocal(p, card, cardDb);
+        if (err) throw new Error(err);
+        saveProfile(p);
+        return cardDb.get(card.ascendsTo!);
+      },
+    };
+  }
+  return {
+    cacao: () => p.account?.cacao ?? 0,
+    levelUp: async card => {
+      const r = await levelUpCloud(card.id);
+      p.levels = { ...p.levels, [card.id]: r.level };
+      if (p.account) p.account.cacao = r.cacao;
+    },
+    ascend: async card => {
+      const r = await ascendCloud(card.id);
+      if (r.base > 0) p.collection[r.cardId] = r.base; else delete p.collection[r.cardId];
+      p.collection[r.resultId] = r.result;
+      p.deck = r.deck;
+      return cardDb.get(r.resultId);
+    },
+  };
+}
+
 function startDuel(p: Profile, id: string): void {
   const rival = getDuelist(id);
   if (!rival || !isUnlocked(rival.id, p.defeated) || validatePlayerDeck(p, p.deck, cardDb).length) {
@@ -94,6 +125,7 @@ function startDuel(p: Profile, id: string): void {
   new DuelView(app, {
     playerDeck: deck,
     opponent: rival,
+    levels: levelsForDeck(p, deck),
     newSeed: cloudEnabled ? async () => {
       await flushDeck();
       const d = await startCloudDuel(rival.id);
@@ -101,7 +133,7 @@ function startDuel(p: Profile, id: string): void {
         throw new Error('Tu mazo en la nube no coincide. Vuelve a abrir "Mi mazo" y reintenta.');
       }
       duelId = d.duelId;
-      return d.seed;
+      return { seed: d.seed, levels: d.levels };
     } : undefined,
     onFinish: cloudEnabled
       ? (_won, intents) => finishInCloud(p, rival, duelId, intents)

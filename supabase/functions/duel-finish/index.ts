@@ -18,7 +18,7 @@ Deno.serve(handler(async (req, body) => {
   }
 
   const seed = Number(duel.seed);
-  const verified = verifyDuel({ seed, deck: duel.deck, duelistId: duel.duelist_id, intents: body.intents });
+  const verified = verifyDuel({ seed, deck: duel.deck, duelistId: duel.duelist_id, intents: body.intents, levels: duel.levels });
   if (!verified.ok) {
     console.warn('duelo rechazado', duel.id, verified.error);
     await db.from('duels').update({ status: 'rejected', rewards: { error: verified.error } }).eq('id', duel.id).eq('status', 'active');

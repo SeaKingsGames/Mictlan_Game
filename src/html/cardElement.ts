@@ -1,4 +1,5 @@
 import { CardInstance } from '../core/CardInstance.ts';
+import { clampLevel, levelBonus, MAX_LEVEL } from '../core/progression.ts';
 import { rarityOf, type CardAttribute, type CardDef } from '../data/types.ts';
 
 const ATTRIBUTE_LABEL: Record<CardAttribute, string> = {
@@ -16,6 +17,7 @@ export interface CardElementOptions {
   faceDownOwn?: boolean;       // propia boca abajo (se ve atenuada)
   attacked?: boolean;          // ya atacó este turno
   selected?: boolean;          // resaltada
+  level?: number;              // nivel en tu colección (para cartas sin instancia)
 }
 
 /**
@@ -26,12 +28,14 @@ export interface CardElementOptions {
 export function createCardElement(source: CardDef | CardInstance, opts: CardElementOptions = {}): HTMLElement {
   const def = source instanceof CardInstance ? source.def : source;
   const inst = source instanceof CardInstance ? source : null;
-  const atk = inst ? inst.atk : def.atk;
-  const defense = inst ? inst.defense : def.def;
+  const level = clampLevel(inst ? inst.level : opts.level);
+  const bonus = def.type === 'monster' && !inst ? levelBonus(level) : 0;
+  const atk = inst ? inst.atk : def.atk + bonus;
+  const defense = inst ? inst.defense : def.def + bonus;
   const night = !!inst?.nightForm;
   const name = inst ? inst.name : def.name;
-  const baseAtk = inst ? inst.baseAtk : def.atk;
-  const baseDef = inst ? inst.baseDef : def.def;
+  const baseAtk = inst ? inst.baseAtk - inst.levelStats : def.atk;   // verde = mejorada por nivel o efectos
+  const baseDef = inst ? inst.baseDef - inst.levelStats : def.def;
 
   const el = document.createElement('article');
   el.className = 'card';
@@ -54,6 +58,7 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
   el.dataset.type = def.type;
   el.dataset.rarity = rarityOf(def);
   if (def.nahual) el.classList.add('card--nahual');
+  if (level >= MAX_LEVEL) el.classList.add('card--lv5');
   el.classList.toggle('card--night', night);
   el.setAttribute('aria-label', def.type === 'monster' ? `${name}, ATK ${atk}, DEF ${defense}` : `${name}, ${TYPE_LABEL[def.type]}`);
   el.innerHTML = `
@@ -64,7 +69,7 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
     <h3 class="card__name"></h3>
     <span class="card__rarity card__rarity--${rarityOf(def)}">${rarityOf(def)}</span>
     ${def.nahual ? `<span class="card__nahual" title="Nahual: cambia de forma de noche">${night ? '🐾' : '🌙'}</span>` : ''}
-    <div class="card__art"><span class="card__glyph"></span></div>
+    <div class="card__art"><span class="card__glyph"></span>${level > 1 ? `<span class="card__level" title="Nivel ${level}">Nv ${level}</span>` : ''}</div>
     <p class="card__tags"></p>
     <p class="card__desc"></p>
     <footer class="card__stats">${def.type === 'monster'

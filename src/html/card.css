@@ -187,3 +187,18 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: s
 }
 .card--night .card__glyph { color: #c9bdff; }
 @container (max-width: 80px) { .card__nahual { top: 27%; left: .3em; font-size: 1.5em; } }
+
+/* ---------- Niveles ---------- */
+.card__level {
+  position: absolute; left: .35em; bottom: .35em; z-index: 1;
+  padding: .1em .4em; border-radius: .3em;
+  font: 800 .7em/1.2 system-ui, sans-serif; color: #2a1a05;
+  background: linear-gradient(135deg, #f2c12e, #e8a33d); border: .1em solid #5a3a10;
+}
+@container (max-width: 80px) { .card__level { font-size: 1.5em; } }
+.card--lv5 { border-color: #f2c12e; animation: lv5-glow 2.4s ease-in-out infinite; }
+.card--lv5 .card__level { background: linear-gradient(135deg, #fff3c4, #f2c12e 50%, #c98a1a); box-shadow: 0 0 .5em #f2c12e; }
+@keyframes lv5-glow {
+  50% { box-shadow: 0 .4em 1em rgb(0 0 0 / .5), 0 0 1.2em rgb(242 193 46 / .75); }
+}
+@media (prefers-reduced-motion: reduce) { .card--lv5 { animation: none; } }

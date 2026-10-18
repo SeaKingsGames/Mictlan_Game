@@ -130,6 +130,7 @@ function formatCards(list: MutableCard[]): string {
     if (c.art) o.art = c.art;
     if (c.effects && c.effects.length) o.effects = c.effects;
     if (c.type === 'monster' && c.nahual) o.nahual = c.nahual;
+    if (c.ascendsTo) o.ascendsTo = c.ascendsTo;
     return '  ' + JSON.stringify(o);
   });
   return '[\n' + ordered.join(',\n') + '\n]\n';
@@ -261,9 +262,28 @@ function renderForm(): void {
         tagChips),
     ),
     c.type === 'monster' ? nahualSection(c) : '',
+    ascendSection(c),
     h('div', { class: 'actions-row' },
       h('button', { class: 'ebtn ebtn--danger', onclick: deleteCard }, 'Borrar carta')),
   );
+}
+
+/** Ascensión: con 3 copias, esta carta se transforma en otra. */
+function ascendSection(c: MutableCard): HTMLElement {
+  const sel = h('select', {});
+  sel.append(h('option', { value: '' }, '— no asciende —'));
+  for (const o of cards) if (o.id !== c.id) sel.append(h('option', { value: o.id, selected: o.id === c.ascendsTo }, `#${o.id} · ${o.name}${o.type === 'monster' ? ` (${o.atk})` : ''}`));
+  sel.addEventListener('change', () => {
+    if (sel.value) c.ascendsTo = Number(sel.value); else delete c.ascendsTo;
+    changed();
+  });
+  const from = cards.filter(o => o.ascendsTo === c.id);
+  return h('fieldset', { class: 'nahual-box ascend-box' },
+    h('legend', {}, '✺ Ascensión (3 copias → 1 de otra carta)'),
+    h('label', { class: 'full' }, 'Asciende a', sel),
+    h('p', { class: 'hint', style: 'margin:6px 0 0' }, from.length
+      ? `Esta carta se obtiene ascendiendo: ${from.map(o => o.name).join(', ')}. No saldrá en fusiones genéricas.`
+      : 'Crea primero la carta ascendida (con más ATK o un efecto) y luego elígela aquí.'));
 }
 
 /** Nahual: forma de noche (Ocaso y Medianoche). */
@@ -523,12 +543,13 @@ function importCards(status: HTMLElement): void {
         else {
           if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; rarities++; }
           if (raw.nahual && !existing.nahual) existing.nahual = raw.nahual;
+          if (raw.ascendsTo && !existing.ascendsTo) { existing.ascendsTo = raw.ascendsTo; rarities++; }
         }
       }
       cards.sort((a, b) => a.id - b.id);
       saveDraft();
       renderAll();
-      alert(`Listo: ${added} cartas nuevas y ${rarities} rarezas actualizadas. Tus cambios en las demás cartas se respetaron.`);
+      alert(`Listo: ${added} cartas nuevas y ${rarities} cartas actualizadas (rareza o ascensión). Tus cambios en las demás cartas se respetaron.`);
     } catch (e) {
       status.textContent = `No se pudo importar: ${(e as Error).message}`;
     }

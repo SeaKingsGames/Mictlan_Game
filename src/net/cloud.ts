@@ -70,7 +70,7 @@ export async function loadCloudProfile(): Promise<Profile> {
   if (!user) throw new Error('Sin sesión');
   const [p, coll, deck, prog] = await Promise.all([
     sb.from('profiles').select('username, cacao, jade, wins, losses').eq('id', user.id).single(),
-    sb.from('collection').select('card_id, count').eq('user_id', user.id),
+    sb.from('collection').select('card_id, count, level').eq('user_id', user.id),
     sb.from('decks').select('cards').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
     sb.from('campaign_progress').select('duelist_id, wins').eq('user_id', user.id),
   ]);
@@ -80,12 +80,17 @@ export async function loadCloudProfile(): Promise<Profile> {
   const me = p.data;
 
   const collection: Record<string, number> = {};
-  for (const r of coll.data ?? []) if (r.count > 0) collection[r.card_id] = r.count;
+  const levels: Record<string, number> = {};
+  for (const r of coll.data ?? []) {
+    if (r.count > 0) collection[r.card_id] = r.count;
+    if (r.level > 1) levels[r.card_id] = r.level;   // el nivel se queda aunque no tengas copias
+  }
   return {
     version: 1,
     collection,
     deck: deck.data?.cards ?? [],
     defeated: (prog.data ?? []).filter(r => r.wins > 0).map(r => r.duelist_id),
+    levels,
     wins: me.wins,
     losses: me.losses,
     account: {
@@ -143,7 +148,7 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T
   return data as T;
 }
 
-export interface CloudDuel { duelId: string; seed: number; deck: number[] }
+export interface CloudDuel { duelId: string; seed: number; deck: number[]; levels: Record<number, number> }
 
 export function startCloudDuel(duelistId: string): Promise<CloudDuel> {
   return invoke<CloudDuel>('duel-start', { duelistId, dataVersion: DATA_VERSION });
@@ -160,4 +165,19 @@ export interface CloudDuelResult {
 
 export function finishCloudDuel(duelId: string, intents: readonly Intent[]): Promise<CloudDuelResult> {
   return invoke<CloudDuelResult>('duel-finish', { duelId, intents });
+}
+
+// ---------------------------------------------------------------- crecer cartas (Fase B)
+
+export interface LevelUpResult { ok: true; cardId: number; level: number; cacao: number }
+export interface AscendResult { ok: true; cardId: number; resultId: number; base: number; result: number; deck: number[] }
+
+export async function levelUpCloud(cardId: number): Promise<LevelUpResult> {
+  await flushDeck();
+  return invoke<LevelUpResult>('card-upgrade', { action: 'levelUp', cardId, dataVersion: DATA_VERSION });
+}
+
+export async function ascendCloud(cardId: number): Promise<AscendResult> {
+  await flushDeck();   // que el servidor vea tu mazo actual antes de recortarlo
+  return invoke<AscendResult>('card-upgrade', { action: 'ascend', cardId, dataVersion: DATA_VERSION });
 }

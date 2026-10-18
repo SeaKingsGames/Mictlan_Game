@@ -1,6 +1,7 @@
 import starterJson from '../data/starter.json';
 import type { CardDatabase } from '../data/cardDatabase.ts';
-import { DECK_SIZE, MAX_COPIES } from '../data/types.ts';
+import { DECK_SIZE, MAX_COPIES, type CardDef } from '../data/types.ts';
+import { ASCEND_COPIES, checkAscend, checkLevelUp, clampLevel, trimDeckToCollection } from '../core/progression.ts';
 
 /**
  * Progreso del jugador: colección, mazo y campaña. Se guarda en el navegador
@@ -15,6 +16,8 @@ export interface Profile {
   losses: number;
   /** Solo con cuenta en la nube (Supabase). En modo local no existe. */
   account?: Account;
+  /** Nivel de cada carta (id → 1-5). Si no aparece, es nivel 1. */
+  levels?: Record<string, number>;
 }
 
 export interface Account {
@@ -59,6 +62,35 @@ function safeStorage(): Storage | null {
 }
 
 export const owned = (p: Profile, cardId: number): number => p.collection[cardId] ?? 0;
+
+export const levelOf = (p: Profile, cardId: number): number => clampLevel(p.levels?.[cardId]);
+
+/** Niveles de las cartas de un mazo (lo que necesita el motor del duelo). */
+export function levelsForDeck(p: Profile, deck: readonly number[]): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const id of new Set(deck)) { const lv = levelOf(p, id); if (lv > 1) out[id] = lv; }
+  return out;
+}
+
+/** Modo local: ascender (3 copias → 1 de la carta resultado). Devuelve el error o null. */
+export function ascendLocal(p: Profile, card: CardDef, db: CardDatabase): string | null {
+  const result = card.ascendsTo ? db.tryGet(card.ascendsTo) : undefined;
+  const check = checkAscend(card, result, owned(p, card.id), result ? owned(p, result.id) : 0);
+  if (!check.ok) return check.error;
+  p.collection[card.id] = owned(p, card.id) - ASCEND_COPIES;
+  if (p.collection[card.id] <= 0) delete p.collection[card.id];
+  p.collection[result!.id] = owned(p, result!.id) + 1;
+  p.deck = trimDeckToCollection(p.deck, id => owned(p, id));
+  return null;
+}
+
+/** Modo local: subir de nivel (sin cacao en modo local, es gratis para probar). */
+export function levelUpLocal(p: Profile, card: CardDef): string | null {
+  const check = checkLevelUp(card, owned(p, card.id), levelOf(p, card.id), Number.MAX_SAFE_INTEGER);
+  if (!check.ok) return check.error;
+  p.levels = { ...p.levels, [card.id]: levelOf(p, card.id) + 1 };
+  return null;
+}
 
 export const countIn = (list: readonly number[], cardId: number): number => list.filter(x => x === cardId).length;
 

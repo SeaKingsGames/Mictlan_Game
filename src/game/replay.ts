@@ -19,6 +19,8 @@ export interface ReplayInput {
   playerDeck: readonly number[];
   opponent: Duelist;
   intents: readonly Intent[];
+  /** Nivel de tus cartas al empezar el duelo (id → nivel). */
+  levels?: Readonly<Record<number, number>>;
 }
 
 export type ReplayResult =
@@ -40,14 +42,17 @@ export function aiStep(engine: DuelEngine, opponent: Duelist, fusion: FusionReso
   return result;
 }
 
-export function createDuel(seed: number, playerDeck: readonly number[], opponent: Duelist, db: CardDatabase, fusion: FusionResolver): DuelEngine {
-  return new DuelEngine({ db, decks: [playerDeck, opponent.deck], seed, firstPlayer: HUMAN, fusion, signs: daySigns });
+export function createDuel(
+  seed: number, playerDeck: readonly number[], opponent: Duelist, db: CardDatabase, fusion: FusionResolver,
+  levels?: Readonly<Record<number, number>>,
+): DuelEngine {
+  return new DuelEngine({ db, decks: [playerDeck, opponent.deck], seed, firstPlayer: HUMAN, fusion, signs: daySigns, levels: [levels] });
 }
 
 export function replayDuel(input: ReplayInput, db: CardDatabase, fusion: FusionResolver): ReplayResult {
   // Rendirse siempre es derrota (y puede pasar en el turno del rival): no hace falta repetir nada.
   if (input.intents.some(i => i?.type === 'surrender')) return { ok: true, winner: AI, turns: 0 };
-  const engine = createDuel(input.seed, input.playerDeck, input.opponent, db, fusion);
+  const engine = createDuel(input.seed, input.playerDeck, input.opponent, db, fusion, input.levels);
   engine.start();
   let next = 0;
   let guard = 0;

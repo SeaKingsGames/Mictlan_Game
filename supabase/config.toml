@@ -6,3 +6,6 @@ verify_jwt = true
 
 [functions.duel-finish]
 verify_jwt = true
+
+[functions.card-upgrade]
+verify_jwt = true

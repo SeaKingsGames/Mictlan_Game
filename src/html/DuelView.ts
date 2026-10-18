@@ -29,8 +29,10 @@ export interface DuelResult {
 export interface DuelSetup {
   playerDeck: number[];
   opponent: Duelist;
-  /** Semilla de cada duelo (en la nube la da el servidor). Si falla, se muestra el error. */
-  newSeed?: () => Promise<number>;
+  /** Nivel de tus cartas (id → nivel). */
+  levels?: Record<number, number>;
+  /** Semilla de cada duelo (en la nube la da el servidor, junto con tus niveles). Si falla, se muestra el error. */
+  newSeed?: () => Promise<{ seed: number; levels?: Record<number, number> }>;
   /** Se llama una vez al terminar con tus jugadas aceptadas. Regresa lo que ganaste. */
   onFinish: (won: boolean, intents: readonly Intent[]) => DuelResult | Promise<DuelResult>;
   /** Volver al menú / campaña. */
@@ -179,9 +181,16 @@ export class DuelView {
   private async newDuel(): Promise<void> {
     const no = ++this.duelNo;
     let seed: number;
+    let levels = this.setup.levels;
     try {
-      if (this.setup.newSeed) this.showOverlayMessage('Preparando el duelo…');
-      seed = this.setup.newSeed ? await this.setup.newSeed() : Math.floor(Math.random() * 2 ** 31);
+      if (this.setup.newSeed) {
+        this.showOverlayMessage('Preparando el duelo…');
+        const got = await this.setup.newSeed();
+        seed = got.seed;
+        levels = got.levels ?? levels;
+      } else {
+        seed = Math.floor(Math.random() * 2 ** 31);
+      }
     } catch (e) {
       this.showOverlayMessage(e instanceof Error ? e.message : String(e), true);
       return;
@@ -192,7 +201,7 @@ export class DuelView {
     this.finished = null;
     this.finishing = false;
     this.intents = [];
-    this.engine = createDuel(seed, this.setup.playerDeck, this.setup.opponent, cardDb, fusionDb);   // igual que el servidor
+    this.engine = createDuel(seed, this.setup.playerDeck, this.setup.opponent, cardDb, fusionDb, levels);   // igual que el servidor
     this.log = [];
     this.selectedHand = [];
     this.selectedAttacker = null;

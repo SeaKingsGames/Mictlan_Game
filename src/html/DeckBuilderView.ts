@@ -2,7 +2,9 @@ import starterJson from '../data/starter.json';
 import { cardDb } from '../data/index.ts';
 import { describeEffects } from '../data/effectText.ts';
 import { CARD_TAGS, DECK_SIZE, MAX_COPIES, type CardDef, type CardType } from '../data/types.ts';
-import { countIn, owned, saveProfile, validatePlayerDeck, type Profile } from '../game/profile.ts';
+import { countIn, levelOf, owned, saveProfile, validatePlayerDeck, type Profile } from '../game/profile.ts';
+import { ASCEND_COPIES, EFFECT_BOOST_LEVEL, MAX_LEVEL, levelUpCost } from '../core/progression.ts';
+import { CURRENCY } from '../game/config.ts';
 import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
 
@@ -13,9 +15,19 @@ const TYPE_ORDER: CardType[] = ['monster', 'spell', 'equip', 'trap', 'ritual'];
  * Armar mazo: a la izquierda tu colección, a la derecha tu mazo.
  * Clic en una carta de la colección = agregarla; clic en el mazo = quitarla. Se guarda solo.
  */
+/** Subir de nivel y ascender (en la nube lo hace el servidor; en modo local, el navegador). */
+export interface CardUpgrades {
+  /** Cacao disponible; null = modo local (gratis para probar). */
+  cacao(): number | null;
+  levelUp(card: CardDef): Promise<void>;
+  /** Devuelve la carta en la que ascendió. */
+  ascend(card: CardDef): Promise<CardDef>;
+}
+
 export function renderDeckBuilder(
   root: HTMLElement, profile: Profile, go: (hash: string) => void,
   save: (p: Profile) => void = saveProfile,   // en la nube: guarda el mazo en Supabase
+  upgrades?: CardUpgrades,
 ): void {
   const filters = { text: '', type: '' as '' | CardType, tag: '', sort: 'atk' as 'atk' | 'name' | 'id' };
   let inspected: CardDef | null = null;
@@ -82,12 +94,12 @@ export function renderDeckBuilder(
         const have = owned(profile, c.id);
         const used = countIn(profile.deck, c.id);
         const canAdd = !full && used < Math.min(MAX_COPIES, have);
-        const el = createCardElement(c);
+        const el = createCardElement(c, { level: levelOf(profile, c.id) });
         const wrap = h('button', {
           class: `coll-card${canAdd ? '' : ' coll-card--off'}`,
           title: canAdd ? `Agregar ${c.name}` : used >= MAX_COPIES ? 'Ya tienes 3 en el mazo' : full ? 'El mazo ya tiene 40' : 'Ya usas todas tus copias',
-          onclick: () => add(c),
-        }, el, h('span', { class: 'coll-card__count' }, `${used}/${have}`));
+          onclick: () => { inspected = c; add(c); renderInspector(); },
+        }, el, h('span', { class: `coll-card__count${c.ascendsTo && have >= ASCEND_COPIES ? ' coll-card__count--ready' : ''}` }, `${used}/${have}`));
         wrap.addEventListener('mouseenter', () => { inspected = c; renderInspector(); });
         return wrap;
       }),
@@ -99,14 +111,96 @@ export function renderDeckBuilder(
   function renderInspector(): void {
     if (!inspector) return;
     if (!inspected) { inspector.replaceChildren(h('p', { class: 'screen__hint' }, 'Pasa el mouse sobre una carta para verla.')); return; }
-    const fx = describeEffects(inspected.effects);
+    const card = inspected;
+    const level = levelOf(profile, card.id);
+    const fx = describeEffects(card.effects);
     inspector.replaceChildren(
-      createCardElement(inspected),
+      createCardElement(card, { level }),
       h('div', { class: 'deck-inspector__text' },
-        h('b', {}, inspected.name),
-        h('p', {}, inspected.description),
-        fx ? h('p', { class: 'deck-inspector__fx' }, `Efecto: ${fx}`) : ''),
+        h('b', {}, card.name),
+        h('p', {}, card.description),
+        fx ? h('p', { class: 'deck-inspector__fx' }, `Efecto: ${fx}${level >= EFFECT_BOOST_LEVEL ? ' (nivel 3+: 25% más fuerte)' : ''}`) : '',
+        card.nahual ? h('p', { class: 'deck-inspector__fx' }, `🌙 Nahual: de noche es ${card.nahual.name} (${card.nahual.atk}/${card.nahual.def})`) : '',
+        upgrades && owned(profile, card.id) > 0 ? upgradePanel(card, level) : ''),
     );
+  }
+
+  /** Nivel con cacao y ascensión de la carta que estás viendo. */
+  function upgradePanel(card: CardDef, level: number): HTMLElement {
+    const box = h('div', { class: 'upgrade' });
+    const msg = h('p', { class: 'upgrade__msg', role: 'status' });
+    const busy = (on: boolean) => box.querySelectorAll('button').forEach(b => { (b as HTMLButtonElement).disabled = on || b.dataset.off === '1'; });
+    const run = async (fn: () => Promise<void>) => {
+      busy(true); msg.textContent = 'Un momento…';
+      try { await fn(); } catch (e) { msg.textContent = e instanceof Error ? e.message : String(e); busy(false); }
+    };
+
+    // Nivel
+    const stars = '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level);
+    const cost = levelUpCost(card, level);
+    const cacao = upgrades!.cacao();
+    const short = cost !== null && cacao !== null && cacao < cost;
+    const lvBtn = h('button', { class: 'big-btn upgrade__btn', 'data-off': cost === null || short ? '1' : '0' },
+      cost === null ? 'Nivel máximo' : `Subir a nivel ${level + 1} · ${cacao === null ? 'gratis (modo local)' : `${CURRENCY.common.icon} ${cost}`}`);
+    lvBtn.disabled = cost === null || short;
+    lvBtn.addEventListener('click', () => run(async () => {
+      await upgrades!.levelUp(card);
+      changed();
+      inspected = card;
+      renderInspector();
+    }));
+    box.append(
+      h('p', { class: 'upgrade__level' }, h('span', { class: 'upgrade__stars' }, stars), ` Nivel ${level}`,
+        card.type === 'monster' && level > 1 ? h('small', {}, ` (+${(level - 1) * 100} ATK/DEF)`) : ''),
+      lvBtn,
+      short ? h('small', { class: 'upgrade__hint' }, `Te faltan ${cost! - cacao!} de cacao. Gana duelos para conseguir más.`) : '',
+    );
+
+    // Ascensión
+    const result = card.ascendsTo ? cardDb.tryGet(card.ascendsTo) : undefined;
+    if (result) {
+      const have = owned(profile, card.id);
+      const ready = have >= ASCEND_COPIES;
+      const asBtn = h('button', { class: `big-btn upgrade__btn${ready ? ' big-btn--main' : ''}`, 'data-off': ready ? '0' : '1' },
+        ready ? '✺ Ascender' : `Ascender (${have}/${ASCEND_COPIES} copias)`);
+      asBtn.disabled = !ready;
+      asBtn.addEventListener('click', () => {
+        const totalAfter = Object.values(profile.collection).reduce((n, x) => n + x, 0) - ASCEND_COPIES + 1;
+        const warn = totalAfter < DECK_SIZE ? `\n\nOjo: te quedarán ${totalAfter} cartas en total y el mazo necesita ${DECK_SIZE}. Tendrás que ganar más cartas para volver a jugar.` : '';
+        if (!confirm(`Se gastarán tus ${ASCEND_COPIES} copias de ${card.name} para obtener 1 ${result.name}. ¿Continuar?${warn}`)) return;
+        void run(async () => {
+          const got = await upgrades!.ascend(card);
+          changed();
+          inspected = got;
+          renderInspector();
+          showAscension(card, got);
+        });
+      });
+      box.append(
+        h('div', { class: 'upgrade__ascend' },
+          h('p', {}, `Asciende a: `, h('b', {}, result.name), ` (${result.atk}/${result.def})`),
+          h('div', { class: 'upgrade__mini' }, createCardElement(result)),
+          asBtn));
+    }
+    box.append(msg);
+    return box;
+  }
+
+  /** Animación del ritual: 3 copias se juntan y aparece la carta ascendida. */
+  function showAscension(from: CardDef, to: CardDef): void {
+    const copies = [0, 1, 2].map(i => { const el = createCardElement(from); el.classList.add('ritual__copy', `ritual__copy--${i}`); return el; });
+    const result = createCardElement(to);
+    result.classList.add('ritual__result');
+    const overlay = h('div', { class: 'ritual', role: 'dialog', 'aria-label': 'Ascensión' },
+      h('div', { class: 'ritual__stage' }, ...copies, h('div', { class: 'ritual__flash' }), result),
+      h('p', { class: 'ritual__title' }, '¡Ascensión!'),
+      h('p', { class: 'ritual__name' }, `${from.name} → ${to.name}`),
+      h('button', { class: 'big-btn big-btn--main ritual__ok' }, 'Continuar'));
+    const close = () => overlay.remove();
+    overlay.querySelector('.ritual__ok')!.addEventListener('click', close);
+    overlay.addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Escape') close(); });
+    document.body.append(overlay);
+    (overlay.querySelector('.ritual__ok') as HTMLButtonElement).focus();
   }
 
   function renderDeck(): void {

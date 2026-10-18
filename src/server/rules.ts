@@ -7,6 +7,7 @@ import { getDuelist, isUnlocked, type Duelist } from '../game/duelists.ts';
 import { WIN_CACAO } from '../game/economy.ts';
 import { validatePlayerDeck, type Profile } from '../game/profile.ts';
 import { replayDuel } from '../game/replay.ts';
+import { checkAscend, checkLevelUp, clampLevel, type UpgradeCheck } from '../core/progression.ts';
 import { rollRewards } from '../game/rewards.ts';
 
 /**
@@ -42,12 +43,13 @@ export function newSeed(random: () => number = Math.random): number {
 }
 
 /** Vuelve a jugar el duelo. Devuelve si el jugador ganó de verdad. */
-export function verifyDuel(input: { seed: number; deck: readonly number[]; duelistId: string; intents: unknown }): Check<{ won: boolean; turns: number }> {
+export function verifyDuel(input: { seed: number; deck: readonly number[]; duelistId: string; intents: unknown; levels?: Record<string, number> | null }): Check<{ won: boolean; turns: number }> {
   const duelist = getDuelist(input.duelistId);
   if (!duelist) return { ok: false, error: 'Ese duelista no existe' };
   if (!Array.isArray(input.intents)) return { ok: false, error: 'Faltan las jugadas' };
   if (input.intents.length > MAX_INTENTS) return { ok: false, error: 'Demasiadas jugadas' };
-  const result = replayDuel({ seed: input.seed, playerDeck: input.deck, opponent: duelist, intents: input.intents as Intent[] }, cardDb, fusionDb);
+  const levels = cleanLevels(input.levels);
+  const result = replayDuel({ seed: input.seed, playerDeck: input.deck, opponent: duelist, intents: input.intents as Intent[], levels }, cardDb, fusionDb);
   if (!result.ok) return result;
   if (result.winner === null) return { ok: false, error: 'El duelo no terminó' };
   return { ok: true, value: { won: result.winner === 0, turns: result.turns } };
@@ -71,3 +73,37 @@ export function planRewards(duelistId: string, seed: number, firstWin: boolean):
     cards: cards.map(id => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id) as CardDef)] })),
   };
 }
+
+/** Niveles válidos (1-5) de las cartas de un mazo, como los guarda la base de datos. */
+export function cleanLevels(raw: Record<string, number> | null | undefined): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const [id, lv] of Object.entries(raw ?? {})) {
+    const n = Number(id);
+    if (Number.isInteger(n) && cardDb.tryGet(n)) out[n] = clampLevel(Number(lv));
+  }
+  return out;
+}
+
+/** Niveles de las cartas del mazo (para guardarlos con el duelo). */
+export function deckLevels(deck: readonly number[], levels: Record<string, number>): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const id of new Set(deck)) {
+    const lv = clampLevel(levels[id]);
+    if (lv > 1) out[id] = lv;
+  }
+  return out;
+}
+
+/** Ascender: devuelve el id de la carta resultado. */
+export function planAscend(cardId: number, haveBase: number, haveResult: (id: number) => number): UpgradeCheck {
+  const card = cardDb.tryGet(cardId);
+  const result = card?.ascendsTo ? cardDb.tryGet(card.ascendsTo) : undefined;
+  return checkAscend(card, result, haveBase, result ? haveResult(result.id) : 0);
+}
+
+/** Subir de nivel: devuelve el costo en cacao. */
+export function planLevelUp(cardId: number, have: number, level: number, cacao: number): UpgradeCheck {
+  return checkLevelUp(cardDb.tryGet(cardId), have, level, cacao);
+}
+
+export { trimDeckToCollection } from '../core/progression.ts';

@@ -31,6 +31,8 @@ export interface CardDef {
   readonly effects?: readonly EffectDef[];
   /** Nahual: de NOCHE (Ocaso y Medianoche) esta carta toma su forma animal en el campo. */
   readonly nahual?: NahualForm;
+  /** Ascensión: con 3 copias de esta carta se hace un ritual y se convierten en 1 de esta otra (id). */
+  readonly ascendsTo?: number;
 }
 
 export interface NahualForm {
