@@ -21,7 +21,33 @@ export function setupInstall(): void {
   // El service worker solo en producción (en `npm run dev` estorba al recargar)
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => { /* sin SW igual se juega */ }); });
+    // El juego abre con la versión guardada; si el service worker bajó una nueva, se ofrece actualizar
+    navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'update-ready') showUpdateBanner(); });
   }
+  // Si falta un archivo de una versión vieja, recargar trae la nueva
+  window.addEventListener('vite:preloadError', () => location.reload());
+}
+
+/** Aviso abajo: "Hay una versión nueva · Actualizar". (En la app instalada no hay botón de recargar.) */
+export function showUpdateBanner(required = false): void {
+  if (document.querySelector('.update-banner')) return;
+  const bar = document.createElement('div');
+  bar.className = 'update-banner';
+  bar.setAttribute('role', 'status');
+  const text = document.createElement('span');
+  text.textContent = required ? 'El juego se actualizó. Toca para cargar la versión nueva.' : 'Hay una versión nueva del juego.';
+  const btn = document.createElement('button');
+  btn.textContent = 'Actualizar';
+  btn.addEventListener('click', () => location.reload());
+  bar.append(text, btn);
+  if (!required) {
+    const later = document.createElement('button');
+    later.className = 'update-banner__later';
+    later.textContent = 'Luego';
+    later.addEventListener('click', () => bar.remove());
+    bar.append(later);
+  }
+  document.body.append(bar);
 }
 
 /** Ya se está jugando como app instalada. */

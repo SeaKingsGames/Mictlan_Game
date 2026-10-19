@@ -1,3 +1,5 @@
+import '@fontsource/cinzel/500.css';
+import '@fontsource/cinzel/700.css';
 import './html/card.css';
 import './html/duel.css';
 import './html/screens.css';

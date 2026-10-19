@@ -283,3 +283,10 @@ html, body { -webkit-tap-highlight-color: transparent; }
 .rarity-dot--R { background: #2f6fd6; }
 .rarity-dot--SR { background: #f5d36b; }
 .rarity-dot--UR { background: #c26bf5; box-shadow: 0 0 6px #c26bf5; }
+
+/* Aviso de versión nueva */
+.update-banner { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 10px;
+  max-width: calc(100% - 24px); padding: 8px 10px 8px 14px; border-radius: 10px; background: #241a13; border: 1px solid #e8b04a;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .6); color: #f3e7d3; font: 14px system-ui, sans-serif; }
+.update-banner button { border: 0; border-radius: 8px; padding: 7px 12px; font: 800 13px system-ui; cursor: pointer; background: #f2c12e; color: #2a1a05; }
+.update-banner .update-banner__later { background: transparent; color: #c9b79c; }

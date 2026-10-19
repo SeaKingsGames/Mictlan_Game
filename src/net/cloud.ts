@@ -147,6 +147,7 @@ export async function invoke<T>(name: string, body: Record<string, unknown>): Pr
     if (ctx && typeof ctx.json === 'function') {
       try { const j = await ctx.json(); if (j?.error) message = j.error; code = j?.code; } catch { /* sin cuerpo */ }
     }
+    if (code === 'stale_data') void import('../html/install.ts').then(m => m.showUpdateBanner(true));
     throw Object.assign(new Error(message), { code });
   }
   return data as T;

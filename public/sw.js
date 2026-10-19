@@ -1,13 +1,13 @@
-// Service worker de Cartas del Quinto Sol: permite instalar el juego y que abra rápido.
-// - Páginas: primero internet (para tener siempre la versión nueva); sin internet o si tarda, la guardada.
-// - Archivos de /assets/ (tienen huella en el nombre): se guardan y se reusan.
+// Service worker de Cartas del Quinto Sol: permite instalar el juego y que abra AL INSTANTE.
+// - La página abre con la versión guardada (sin esperar a internet) y en segundo plano se baja la nueva;
+//   si hay versión nueva, se avisa al juego para que ofrezca "Actualizar".
+// - Archivos de /assets/ (tienen huella en el nombre) y /cards/: se guardan y se reusan.
 // - Supabase y todo lo de otros dominios: nunca se guarda (cuentas, duelos y premios siempre en vivo).
 // OJO: Vercel redirige /index.html → / ; por eso la página se guarda SIEMPRE como "/" y sin redirección,
 // porque Android no abre una app si el service worker le entrega una respuesta redirigida.
-const CACHE = 'quinto-sol-v2';
+const CACHE = 'quinto-sol-v3';
 const HOME = '/';
 const SHELL = [HOME, '/manifest.webmanifest', '/icono.svg', '/icon-192.png', '/icon-512.png'];
-const NAV_TIMEOUT_MS = 4000;
 
 /** Copia "limpia" de una respuesta (sin la marca de redirección). */
 async function clean(res) {
@@ -36,30 +36,39 @@ self.addEventListener('activate', event => {
   );
 });
 
+/** Baja la página nueva y la guarda. Si cambió, avisa a las pestañas abiertas. */
+async function refreshHome(cache) {
+  const old = await cache.match(HOME);
+  const oldText = old ? await old.clone().text() : null;
+  const res = await clean(await fetch(HOME, { cache: 'no-store' }));
+  if (!res.ok) return res;
+  const text = await res.clone().text();
+  await cache.put(HOME, res.clone());
+  if (oldText !== null && oldText !== text) {
+    const tabs = await self.clients.matchAll({ type: 'window' });
+    tabs.forEach(t => t.postMessage({ type: 'update-ready' }));
+  }
+  return res;
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;          // Supabase, fuentes, etc.
+  if (url.origin !== self.location.origin) return;          // Supabase, etc.
 
   if (req.mode === 'navigate') {
+    const isHome = url.pathname === '/' || url.pathname === '/index.html';
+    if (!isHome) return;                                     // /descargar y demás: normal
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
-      const isHome = url.pathname === '/' || url.pathname === '/index.html';
-      const network = fetch(req).then(async res => {
-        const ok = await clean(res);
-        if (ok.ok && isHome) cache.put(HOME, ok.clone());
-        return ok;
-      });
-      // Si internet tarda mucho (señal débil), abre con la versión guardada
-      const timeout = new Promise(resolve => setTimeout(resolve, NAV_TIMEOUT_MS, null));
-      try {
-        const fast = await Promise.race([network, timeout]);
-        if (fast) return fast;
-      } catch { /* sin internet */ }
-      const saved = isHome ? await cache.match(HOME) : null;
-      if (saved) return saved;
-      return network.catch(() => cache.match(HOME).then(r => r || Response.error()));
+      const saved = await cache.match(HOME);
+      const update = refreshHome(cache);
+      if (saved) {
+        event.waitUntil(update.catch(() => { /* sin internet: queda la guardada */ }));
+        return saved;                                        // abre ya, sin esperar a internet
+      }
+      try { return await update; } catch { return Response.error(); }
     })());
     return;
   }
