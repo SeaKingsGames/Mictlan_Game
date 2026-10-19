@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.seakingsstudios.cartas.twa",
+        "sha256_cert_fingerprints": ["D6:17:12:08:B4:48:E2:05:B9:B8:54:F7:13:86:FB:46:6A:6C:31:CD:F7:59:98:97:C3:70:0F:78:63:85:B8:5A"]
+      }
+    }]
