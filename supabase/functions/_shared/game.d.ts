@@ -26,3 +26,8 @@ export declare function checkPvpDeck(deck: readonly number[], collection: Record
 export declare function roomCode(random?: () => number): string;
 export declare function pvpMove(m: PvpMatchData, player: 0 | 1, intent: unknown): Check<{ intents: unknown[]; winner: 0 | 1 | null; turnPlayer: 0 | 1 }>;
 export declare function pvpTurnOf(m: PvpMatchData): 0 | 1 | null;
+export declare const PACK_PITY: number;
+export declare const PACK_SIZE: number;
+export declare const START_JADE: number;
+export interface PackPlan { price: number; sinceUr: number; packs: { cards: { id: number; cacao: number; jade: number }[]; pity: boolean }[] }
+export declare function planPacks(packId: string, count: number, seed: number, sinceUr: number): Check<PackPlan>;

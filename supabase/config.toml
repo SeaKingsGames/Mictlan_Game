@@ -12,3 +12,6 @@ verify_jwt = true
 
 [functions.pvp]
 verify_jwt = true
+
+[functions.pack-open]
+verify_jwt = true

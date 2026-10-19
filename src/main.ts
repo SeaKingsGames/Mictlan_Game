@@ -1,6 +1,7 @@
 import './html/card.css';
 import './html/duel.css';
 import './html/screens.css';
+import './html/app.css';
 import { createRng } from './core/rng.ts';
 import { cardDb } from './data/index.ts';
 import { CURRENCY, GAME_TITLE } from './game/config.ts';
@@ -14,12 +15,17 @@ import { DuelView, type DuelResult } from './html/DuelView.ts';
 import { renderLogin } from './html/LoginView.ts';
 import { renderMenu } from './html/MenuView.ts';
 import { renderFreeDuel } from './html/FreeDuelView.ts';
+import { renderLibrary } from './html/LibraryView.ts';
+import { renderShop, type PackShop } from './html/ShopView.ts';
+import { openPacks } from './game/packs.ts';
+import { MAX_COPIES, rarityOf } from './data/types.ts';
+import { DUPLICATE_VALUE } from './game/config.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
 import { setupInstall } from './html/install.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
-  ascendCloud, finishCloudDuel, flushDeck, hasSession, levelUpCloud, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
+  ascendCloud, finishCloudDuel, openPacksCloud, flushDeck, hasSession, levelUpCloud, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
 } from './net/cloud.ts';
 import { cloudEnabled, supabase } from './net/supabase.ts';
 
@@ -29,6 +35,8 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  *   #/mazo        mi mazo y colección
  *   #/campana     campaña
  *   #/libre       duelo libre (rivales desbloqueados)
+ *   #/tienda      tienda de sobres
+ *   #/biblioteca  todas las cartas del juego
  *   #/duelo/<id>  duelo contra ese duelista
  *   #/cuenta      (invitado) guardar cuenta con correo
  *   #/pvp         multijugador: crear sala o unirse con código
@@ -79,6 +87,8 @@ function route(): void {
     case 'mazo': renderDeckBuilder(app, p, go, cloudEnabled ? pr => queueDeckSave(pr.deck) : saveProfile, upgradesFor(p)); return;
     case 'campana': renderCampaign(app, p, go); return;
     case 'libre': renderFreeDuel(app, p, go); return;
+    case 'tienda': renderShop(app, p, go, shopFor(p)); return;
+    case 'biblioteca': renderLibrary(app, p, go); return;
     case 'duelo': startDuel(p, arg); return;
     case 'pvp':
       if (arg) void startPvp(p, arg);
@@ -123,6 +133,38 @@ function upgradesFor(p: Profile): CardUpgrades {
       p.collection[r.resultId] = r.result;
       p.deck = r.deck;
       return cardDb.get(r.resultId);
+    },
+  };
+}
+
+/** Sobres: en la nube los abre el servidor (cobra jade); en modo local, gratis en el navegador. */
+function shopFor(p: Profile): PackShop {
+  if (!cloudEnabled) {
+    return {
+      jade: () => null,
+      open: async (pack, count) => {
+        const r = openPacks(pack, cardDb, createRng((Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0), p.packsSinceUr ?? 0, count);
+        p.packsSinceUr = r.sinceUr;
+        const result = r.packs.map(o => ({
+          pity: o.pity,
+          cards: o.cards.map(id => {
+            if ((p.collection[id] ?? 0) < MAX_COPIES) { p.collection[id] = (p.collection[id] ?? 0) + 1; return { id, converted: false }; }
+            return { id, converted: true, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] };
+          }),
+        }));
+        saveProfile(p);
+        return { packs: result };
+      },
+    };
+  }
+  return {
+    jade: () => p.account?.jade ?? 0,
+    open: async (pack, count) => {
+      const r = await openPacksCloud(pack.id, count);
+      if (p.account) { p.account.jade = r.jade; p.account.cacao = r.cacao; }
+      p.packsSinceUr = r.sinceUr;
+      for (const c of r.packs.flatMap(x => x.cards)) if (!c.converted) p.collection[c.id] = (p.collection[c.id] ?? 0) + 1;
+      return r;
     },
   };
 }

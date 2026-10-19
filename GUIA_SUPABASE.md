@@ -139,3 +139,33 @@ Esta actualización agrega **una migración nueva** y **una función nueva**.
 **Límite conocido**: el duelo se calcula en cada navegador, así que alguien con conocimientos técnicos podría ver la mano del rival. Para jugar entre amigos está bien; antes de emparejamiento con desconocidos o ranking, el servidor deberá mandar a cada uno solo su información.
 
 **Probarlo solo**: abre el juego en dos navegadores distintos (o uno normal y otro en modo incógnito) con dos cuentas diferentes, por ejemplo una con correo y otra de invitado.
+
+## Tienda de sobres (jade)
+
+1. **SQL nuevo**: SQL Editor → pega TODO `supabase/migrations/20261019000000_sobres.sql` → **Run**. Córrelo **una sola vez**: además de crear la tabla y la función, regala 300 de jade a las cuentas que ya existen (las nuevas empiezan con 300).
+2. **Funciones** (todas, porque cambió la huella de datos):
+   ```bash
+   npm run build:server
+   npx supabase functions deploy pack-open --use-api
+   npx supabase functions deploy duel-start --use-api
+   npx supabase functions deploy duel-finish --use-api
+   npx supabase functions deploy card-upgrade --use-api
+   npx supabase functions deploy pvp --use-api
+   ```
+3. `npm test` y sube a GitHub.
+
+**Cómo funciona**: 3 sobres temáticos de 100 de jade con 5 cartas cada uno. Cada carta sale N 60% · R 28% · SR 10% · UR 2%. Si abres 10 sobres seguidos sin UR, el décimo trae una UR segura (el contador es por cuenta, para todos los sobres). Las repetidas (ya tenías 3) se vuelven cacao y jade como en los duelos. Qué sale lo decide el servidor (`pack-open`) y el cobro se hace en una sola transacción (`open_packs`).
+
+**Editar los sobres**: `src/data/packs.json`. Cada sobre usa filtros en vez de una lista fija, así tus cartas nuevas entran solas:
+- `monsters.tags` / `monsters.attributes`: monstruos con alguna de esas etiquetas o atributos.
+- `support`: mágicas, equipos y trampas de esos atributos.
+- `include` / `exclude`: ids que quieres meter o sacar a mano.
+- Las cartas que solo salen por ascensión nunca vienen en sobres.
+
+Si cambias `packs.json` o los precios, vuelve a correr `npm run build:server` y desplegar las funciones (como con las cartas).
+
+| Archivo | Para qué |
+|---|---|
+| `supabase/migrations/…_sobres.sql` | Contador de garantía, jade inicial, historial `pack_opens` y `open_packs` |
+| `supabase/functions/pack-open/` | Abre 1 o 10 sobres: tira las cartas y cobra |
+| `src/game/packs.ts` | Reglas de los sobres (probabilidades, garantía, qué cartas entran) |

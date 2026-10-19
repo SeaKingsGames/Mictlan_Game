@@ -10,6 +10,7 @@ import { replayDuel, replayPvp, pvpFirstPlayer, type PvpSetup } from '../game/re
 import type { PlayerIndex } from '../core/DuelState.ts';
 import { checkAscend, checkLevelUp, clampLevel, type UpgradeCheck } from '../core/progression.ts';
 import { rollRewards } from '../game/rewards.ts';
+import { getPack, openPacks, PACK_COUNTS } from '../game/packs.ts';
 
 /**
  * Reglas que corre el SERVIDOR (Edge Functions de Supabase).
@@ -160,4 +161,31 @@ export function pvpMove(m: PvpMatchData, player: PlayerIndex, intent: unknown): 
 export function pvpTurnOf(m: PvpMatchData): PlayerIndex | null {
   const r = replayPvp(setupOf(m), m.intents as Intent[], cardDb, fusionDb);
   return r.ok && r.winner === null ? r.engine.state.turnPlayer : null;
+}
+
+// ---------------------------------------------------------------- sobres (tienda)
+
+export { PACK_PITY, PACK_SIZE, START_JADE } from '../game/packs.ts';
+
+export interface PackPlan {
+  price: number;
+  sinceUr: number;
+  /** Cada sobre: sus cartas (con lo que valen si ya tienes 3) y si la UR vino por la garantía. */
+  packs: { cards: { id: number; cacao: number; jade: number }[]; pity: boolean }[];
+}
+
+/** Qué sale al abrir `count` sobres. El servidor pone la semilla; el cobro lo hace la base de datos. */
+export function planPacks(packId: string, count: number, seed: number, sinceUr: number): Check<PackPlan> {
+  const pack = getPack(packId);
+  if (!pack) return { ok: false, error: 'Ese sobre no existe' };
+  if (!(PACK_COUNTS as readonly number[]).includes(count)) return { ok: false, error: 'Cantidad de sobres inválida' };
+  const r = openPacks(pack, cardDb, createRng((seed ^ 0x5eb4ac) >>> 0), Math.max(0, Math.floor(sinceUr) || 0), count);
+  return {
+    ok: true,
+    value: {
+      price: pack.price * count,
+      sinceUr: r.sinceUr,
+      packs: r.packs.map(o => ({ pity: o.pity, cards: o.cards.map(id => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] })) })),
+    },
+  };
 }

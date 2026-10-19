@@ -1,12 +1,12 @@
 import { cardDb } from '../data/index.ts';
-import { RARITIES, RARITY_LABEL, rarityOf, type CardDef, type CardRarity } from '../data/types.ts';
+import { RARITIES, rarityOf, type CardDef, type CardRarity } from '../data/types.ts';
 import { WIN_CACAO } from '../game/economy.ts';
 import { CURRENCY } from '../game/config.ts';
 import { duelists, isUnlocked, type Duelist } from '../game/duelists.ts';
 import { levelOf, owned, validatePlayerDeck, type Profile } from '../game/profile.ts';
-import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
 import { sfx } from './sound.ts';
+import { appScreen, pct, rarityChip, tabs, thumb, TYPE_TABS, type TypeTab } from './shell.ts';
 
 export interface DropEntry { card: CardDef; chance: number }
 
@@ -30,88 +30,83 @@ export function dropTable(d: Duelist): { rarity: CardRarity; total: number; entr
     });
 }
 
-const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : `${(x * 100).toFixed(1).replace('.0', '')}%`);
-
 /**
- * Duelo libre: eliges un duelista desbloqueado y ves qué puede darte al ganarle,
- * agrupado por rareza (N, R, SR, UR) con la probabilidad de cada carta.
+ * Duelo libre: a la izquierda el rival (retrato, dificultad, premio y la lista para cambiar de rival);
+ * a la derecha su botín agrupado por rareza (UR, SR, R, N) con la probabilidad de cada carta.
  */
 export function renderFreeDuel(root: HTMLElement, profile: Profile, go: (hash: string) => void): void {
   const deckErrors = validatePlayerDeck(profile, profile.deck, cardDb);
   const unlocked = duelists.filter(d => isUnlocked(d.id, profile.defeated));
   let selected: Duelist = unlocked[unlocked.length - 1] ?? duelists[0];
-  const detail = h('section', { class: 'free__detail' });
-  const list = h('nav', { class: 'free__list', 'aria-label': 'Duelistas' });
+  let typeTab: TypeTab = '';
+  const side = h('aside', { class: 'free__side panel' });
+  const drops = h('section', { class: 'free__drops panel' });
   const stars = (d: Duelist) => '★'.repeat(d.level) + '☆'.repeat(3 - d.level);
 
-  function renderList(): void {
-    list.replaceChildren(...duelists.map(d => {
-      const open = isUnlocked(d.id, profile.defeated);
-      const btn = h('button', {
-        class: `free__pick${d === selected ? ' free__pick--on' : ''}${open ? '' : ' free__pick--locked'}`,
-        disabled: !open,
-        'aria-pressed': d === selected,
+  root.replaceChildren(appScreen({ cls: 'free', title: 'Duelo libre', back: () => go('#/'), profile,
+    right: h('button', { class: 'app-bar__link', onclick: () => go('#/mazo') }, 'Mi mazo') }, side, drops));
+
+  function renderSide(): void {
+    const d = selected;
+    const beaten = profile.defeated.includes(d.id);
+    const picker = h('div', { class: 'free__list', role: 'list' }, ...duelists.map(x => {
+      const open = isUnlocked(x.id, profile.defeated);
+      const b = h('button', {
+        class: `free__pick${x === d ? ' free__pick--on' : ''}`, disabled: !open, 'aria-pressed': x === d, role: 'listitem',
       },
-        h('span', { class: 'free__glyph' }, open ? d.glyph : '🔒'),
-        h('span', { class: 'free__pick-text' },
-          h('b', {}, open ? d.name : '???'),
-          h('small', {}, open ? stars(d) : 'Bloqueado')));
-      btn.addEventListener('click', () => { sfx('click'); selected = d; renderList(); renderDetail(); });
-      return btn;
+        h('span', { class: 'free__glyph' }, open ? x.glyph : '🔒'),
+        h('span', { class: 'free__pick-text' }, h('b', {}, open ? x.name : '???'), h('small', {}, open ? stars(x) : 'Bloqueado')),
+        profile.defeated.includes(x.id) ? h('span', { class: 'free__check', title: 'Vencido' }, '✓') : '');
+      b.addEventListener('click', () => { sfx('click'); selected = x; renderSide(); renderDrops(); });
+      return b;
     }));
+    side.replaceChildren(
+      h('div', { class: 'free__portrait' }, h('span', {}, d.glyph)),
+      h('div', { class: 'free__who' },
+        h('p', { class: 'free__title' }, d.title),
+        h('h2', { class: 'free__name' }, d.name),
+        h('p', { class: 'free__stars' }, `Dificultad ${stars(d)}`),
+        h('p', { class: 'free__record' }, beaten ? '✓ Ya lo venciste' : 'Aún no lo vences'),
+        h('p', { class: 'free__prize' }, `Premio: ${CURRENCY.common.icon} ${WIN_CACAO[d.level]} ${CURRENCY.common.name} + 1 carta`)),
+      h('p', { class: 'free__intro' }, d.intro),
+      deckErrors.length
+        ? h('p', { class: 'warn-box' }, deckErrors[0], ' ', h('button', { class: 'link-btn', onclick: () => go('#/mazo') }, 'Arreglar mazo →'))
+        : '',
+      h('button', {
+        class: 'big-btn big-btn--main free__go', disabled: deckErrors.length > 0,
+        onclick: () => { sfx('click'); go(`#/duelo/${d.id}`); },
+      }, '⚔ Duelar'),
+      h('h3', { class: 'panel__title free__list-title' }, 'Rivales'),
+      picker);
   }
 
-  function renderDetail(): void {
+  function renderDrops(): void {
     const d = selected;
     const firstWin = !profile.defeated.includes(d.id);
     const signature = cardDb.tryGet(d.signature);
-    const groups = dropTable(d);
-    detail.replaceChildren(
-      h('header', { class: 'free__head' },
-        h('div', { class: 'duelist__portrait free__portrait' }, d.glyph),
-        h('div', { class: 'free__who' },
-          h('p', { class: 'duelist__step' }, d.title),
-          h('h2', { class: 'duelist__name' }, d.name),
-          h('p', { class: 'duelist__level' }, `Dificultad ${stars(d)} · Ganar: ${CURRENCY.common.icon} ${WIN_CACAO[d.level]} ${CURRENCY.common.name}`)),
-        h('button', {
-          class: 'big-btn big-btn--main free__go',
-          disabled: deckErrors.length > 0,
-          onclick: () => { sfx('click'); go(`#/duelo/${d.id}`); },
-        }, 'Retar')),
-      h('p', { class: 'free__intro' }, d.intro),
+    const groups = dropTable(d)
+      .map(g => ({ ...g, entries: g.entries.filter(e => !typeTab || e.card.type === typeTab) }))
+      .filter(g => g.entries.length);
+    const total = dropTable(d).reduce((n, g) => n + g.entries.length, 0);
+    drops.replaceChildren(
+      h('header', { class: 'panel__head' },
+        h('h2', { class: 'panel__title' }, `Botín de ${d.name}`),
+        h('span', { class: 'panel__count' }, `${total} cartas · sale 1 al ganar`)),
+      tabs(TYPE_TABS, typeTab, t => { typeTab = t; renderDrops(); }),
       signature ? h('div', { class: `free__sig${firstWin ? '' : ' free__sig--done'}` },
-        h('span', {}, firstWin ? '★ Primera victoria: te regala su carta firma' : '✓ Ya tienes su carta firma'),
-        miniCard(signature, 1, true)) : '',
-      h('h3', { class: 'free__drops-title' }, 'Botín al ganar (1 carta al azar)'),
-      ...groups.map(g => h('div', { class: `drops drops--${g.rarity}` },
-        h('div', { class: 'drops__head' },
-          h('span', { class: `rarity-chip rarity-chip--${g.rarity}` }, g.rarity),
-          h('b', {}, RARITY_LABEL[g.rarity]),
-          h('span', { class: 'drops__total' }, pct(g.total))),
-        h('div', { class: 'drops__cards' }, ...g.entries.map(e => miniCard(e.card, e.chance))))),
-    );
+        thumb(signature, { level: levelOf(profile, signature.id), missing: owned(profile, signature.id) === 0, caption: 'Firma' }),
+        h('p', {}, firstWin ? h('b', {}, '★ Primera victoria: te regala su carta firma') : '✓ Ya te dio su carta firma', h('br', {}), h('small', {}, signature.name))) : '',
+      ...groups.map(g => h('section', { class: 'rar-section' },
+        h('h3', { class: 'rar-section__head' }, rarityChip(g.rarity), h('span', {}, `${g.entries.length} carta${g.entries.length === 1 ? '' : 's'}`), h('span', { class: 'rar-section__pct' }, pct(g.total))),
+        h('div', { class: 'thumbs' }, ...g.entries.map(e => thumb(e.card, {
+          level: levelOf(profile, e.card.id),
+          missing: owned(profile, e.card.id) === 0,
+          caption: h('span', {}, h('b', {}, pct(e.chance)), ` · ${owned(profile, e.card.id)}/3`),
+          badge: owned(profile, e.card.id) ? undefined : 'NUEVA',
+        }))))),
+      groups.length ? '' : h('p', { class: 'empty' }, 'Este rival no suelta cartas de ese tipo.'));
   }
 
-  function miniCard(card: CardDef, chance: number, isSignature = false): HTMLElement {
-    const have = owned(profile, card.id);
-    const el = createCardElement(card, { level: levelOf(profile, card.id) });
-    return h('figure', { class: `drop${have ? '' : ' drop--new'}`, title: `${card.name} · ${have}/3 en tu colección` },
-      el,
-      h('figcaption', {},
-        h('b', {}, isSignature ? 'Firma' : pct(chance)),
-        h('small', {}, have ? `Tienes ${have}/3` : 'Nueva')));
-  }
-
-  root.replaceChildren(h('main', { class: 'screen screen--wide free' },
-    h('header', { class: 'screen__head' },
-      h('button', { class: 'link-btn', onclick: () => go('#/') }, '← Menú'),
-      h('h1', {}, 'Duelo libre'),
-      h('button', { class: 'link-btn', onclick: () => go('#/mazo') }, 'Mi mazo →')),
-    deckErrors.length
-      ? h('div', { class: 'warn-box' }, h('b', {}, 'Tu mazo no está listo: '), deckErrors[0] + '. ',
-          h('button', { class: 'link-btn', onclick: () => go('#/mazo') }, 'Arreglar mazo →'))
-      : '',
-    h('div', { class: 'free__layout' }, list, detail)));
-  renderList();
-  renderDetail();
+  renderSide();
+  renderDrops();
 }

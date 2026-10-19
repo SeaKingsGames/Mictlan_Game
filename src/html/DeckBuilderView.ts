@@ -1,21 +1,23 @@
 import starterJson from '../data/starter.json';
 import { cardDb } from '../data/index.ts';
 import { describeEffects } from '../data/effectText.ts';
-import { CARD_TAGS, DECK_SIZE, MAX_COPIES, RARITIES, RARITY_LABEL, rarityOf, type CardDef, type CardRarity, type CardType } from '../data/types.ts';
+import { DECK_SIZE, MAX_COPIES, RARITY_LABEL, rarityOf, type CardAttribute, type CardDef, type CardRarity, type CardType } from '../data/types.ts';
 import { countIn, levelOf, owned, saveProfile, validatePlayerDeck, type Profile } from '../game/profile.ts';
 import { ASCEND_COPIES, EFFECT_BOOST_LEVEL, MAX_LEVEL, levelUpCost } from '../core/progression.ts';
 import { CURRENCY } from '../game/config.ts';
 import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
 import { sfx } from './sound.ts';
+import { appScreen, markThumb, rarityChip, tabs, thumb, TYPE_TABS } from './shell.ts';
 
-const TYPE_LABEL: Record<CardType, string> = { monster: 'Monstruos', spell: 'Mágicas', equip: 'Equipos', trap: 'Trampas', ritual: 'Rituales' };
+const TYPE_SHORT: Record<CardType, string> = { monster: 'Monstruo', spell: 'Mágica', equip: 'Equipo', trap: 'Trampa', ritual: 'Ritual' };
+const ATTR_ICON: Record<CardAttribute, string> = { sol: '☀', viento: '🌀', agua: '💧', tierra: '⛰' };
+type SortKey = 'atk' | 'def' | 'name' | 'rarity';
 const TYPE_ORDER: CardType[] = ['monster', 'spell', 'equip', 'trap', 'ritual'];
 
 /**
- * Armar mazo en tres paneles: el MOSTRADOR (la carta que estás viendo, siempre a la vista),
- * tu COLECCIÓN y tu MAZO. Tocar una carta la muestra; los botones + / − la meten o la sacan.
- * Doble clic en la colección también la agrega. Se guarda solo.
+ * Editor de mazo en tres paneles: a la izquierda TUS CARTAS (lista con filtros), en medio el ALTAR
+ * (la carta que estás viendo) y a la derecha TU MAZO como cartas. + mete, − saca. Se guarda solo.
  */
 /** Subir de nivel y ascender (en la nube lo hace el servidor; en modo local, el navegador). */
 export interface CardUpgrades {
@@ -31,15 +33,15 @@ export function renderDeckBuilder(
   save: (p: Profile) => void = saveProfile,   // en la nube: guarda el mazo en Supabase
   upgrades?: CardUpgrades,
 ): void {
-  const filters = { text: '', type: '' as '' | CardType, tag: '', rarity: '' as '' | CardRarity, sort: 'atk' as 'atk' | 'name' | 'id' | 'rarity' };
+  const filters = { text: '', type: '' as '' | CardType, attr: '' as '' | CardAttribute, sort: 'atk' as SortKey };
   let inspected: CardDef | null = null;
 
-  const showcase = h('aside', { class: 'showcase', 'aria-label': 'Carta seleccionada', 'aria-live': 'polite' });
-  const progress = h('p', { class: 'coll-progress' });
-  const grid = h('div', { class: 'collection' });
-  const deckPanel = h('aside', { class: 'deck-panel' });
+  const showcase = h('section', { class: 'deck__altar panel', 'aria-label': 'Carta seleccionada', 'aria-live': 'polite' });
+  const list = h('div', { class: 'catalog', role: 'list' });
+  const progress = h('p', { class: 'catalog__progress' });
+  const vault = h('section', { class: 'deck__vault panel' });
 
-  const changed = () => { save(profile); renderGrid(); renderDeck(); renderShowcase(); };
+  const changed = () => { save(profile); renderList(); renderDeck(); renderShowcase(); };
   const select = (c: CardDef) => { inspected = c; renderShowcase(); markSelected(); };
 
   const canAdd = (c: CardDef) => profile.deck.length < DECK_SIZE && countIn(profile.deck, c.id) < Math.min(MAX_COPIES, owned(profile, c.id));
@@ -48,7 +50,7 @@ export function renderDeckBuilder(
   const add = (c: CardDef) => {
     if (!canAdd(c)) { sfx('error'); return; }
     profile.deck.push(c.id);
-    sfx('click');
+    sfx('play');
     inspected = c;
     changed();
   };
@@ -61,39 +63,24 @@ export function renderDeckBuilder(
     changed();
   };
 
-  // ---------------- filtros
-  const search = h('input', { type: 'search', placeholder: 'Buscar carta…', 'aria-label': 'Buscar' });
-  search.addEventListener('input', () => { filters.text = search.value; renderGrid(); });
-  const typeSel = h('select', { 'aria-label': 'Tipo' },
-    h('option', { value: '' }, 'Tipo: todos'),
-    ...TYPE_ORDER.filter(t => t !== 'ritual').map(t => h('option', { value: t }, TYPE_LABEL[t])));
-  typeSel.addEventListener('change', () => { filters.type = typeSel.value as '' | CardType; renderGrid(); });
-  const raritySel = h('select', { 'aria-label': 'Rareza' },
-    h('option', { value: '' }, 'Rareza: todas'), ...[...RARITIES].reverse().map(r => h('option', { value: r }, `${r} · ${RARITY_LABEL[r]}`)));
-  raritySel.addEventListener('change', () => { filters.rarity = raritySel.value as '' | CardRarity; renderGrid(); });
-  const tagSel = h('select', { 'aria-label': 'Etiqueta' },
-    h('option', { value: '' }, 'Etiqueta: todas'), ...CARD_TAGS.map(t => h('option', { value: t }, t)));
-  tagSel.addEventListener('change', () => { filters.tag = tagSel.value; renderGrid(); });
-  const sortSel = h('select', { 'aria-label': 'Ordenar' },
-    h('option', { value: 'atk' }, 'Orden: ATK'), h('option', { value: 'rarity' }, 'Orden: rareza'),
-    h('option', { value: 'name' }, 'Orden: nombre'), h('option', { value: 'id' }, 'Orden: número'));
-  sortSel.addEventListener('change', () => { filters.sort = sortSel.value as typeof filters.sort; renderGrid(); });
+  // ---------------- catálogo (izquierda)
+  const search = h('input', { type: 'search', class: 'field', placeholder: 'Buscar nombre o efecto…', 'aria-label': 'Buscar' });
+  search.addEventListener('input', () => { filters.text = search.value; renderList(); });
+  const sortTabs = tabs<SortKey>([['atk', 'ATK'], ['def', 'DEF'], ['name', 'Nombre'], ['rarity', 'Rareza']], filters.sort,
+    v => { filters.sort = v; renderList(); }, 'tabs--small');
+  const typeTabs = tabs<'' | CardType>(TYPE_TABS.map(([v, t]) => [v, t === 'Todas' ? 'Todo' : t] as ['' | CardType, string]), filters.type,
+    v => { filters.type = v; renderList(); }, 'tabs--small');
+  const attrTabs = tabs<'' | CardAttribute>([['', 'Todos'], ...(Object.keys(ATTR_ICON) as CardAttribute[]).map(a => [a, `${ATTR_ICON[a]}`] as ['' | CardAttribute, string])],
+    filters.attr, v => { filters.attr = v; renderList(); }, 'tabs--small tabs--icons');
 
-  root.replaceChildren(h('main', { class: 'screen screen--wide deck-screen' },
-    h('header', { class: 'screen__head' },
-      h('button', { class: 'link-btn', onclick: () => go('#/') }, '← Menú'),
-      h('h1', {}, 'Mi mazo y colección'),
-      h('button', { class: 'link-btn', onclick: () => go('#/libre') }, 'Duelo libre →'),
-    ),
-    h('p', { class: 'screen__hint' }, `Toca una carta para verla. Con + la metes al mazo y con − la sacas. Necesitas ${DECK_SIZE} cartas, máximo ${MAX_COPIES} copias de cada una.`),
-    h('div', { class: 'builder3' },
-      showcase,
-      h('section', { class: 'coll-pane' },
-        h('div', { class: 'filters' }, search, typeSel, raritySel, tagSel, sortSel),
-        progress,
-        grid),
-      deckPanel),
-  ));
+  root.replaceChildren(appScreen({ cls: 'deck', title: 'Editor de mazo', back: () => go('#/'), profile,
+    right: h('button', { class: 'app-bar__link', onclick: () => go('#/libre') }, 'Duelo libre') },
+    h('section', { class: 'deck__catalog panel' },
+      h('header', { class: 'panel__head' }, h('h2', { class: 'panel__title' }, 'Tus cartas'), progress),
+      search, sortTabs, typeTabs, attrTabs,
+      list),
+    showcase,
+    vault));
 
   const RANK: Record<CardRarity, number> = { N: 0, R: 1, SR: 2, UR: 3 };
   function visibleCards(): CardDef[] {
@@ -101,88 +88,82 @@ export function renderDeckBuilder(
     return cardDb.all()
       .filter(c => owned(profile, c.id) > 0)
       .filter(c => !filters.type || c.type === filters.type)
-      .filter(c => !filters.rarity || rarityOf(c) === filters.rarity)
-      .filter(c => !filters.tag || c.tags.includes(filters.tag as CardDef['tags'][number]))
-      .filter(c => !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q))
+      .filter(c => !filters.attr || c.attribute === filters.attr)
+      .filter(c => !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || describeEffects(c.effects).toLowerCase().includes(q))
       .sort((a, b) => filters.sort === 'name' ? a.name.localeCompare(b.name)
-        : filters.sort === 'id' ? a.id - b.id
+        : filters.sort === 'def' ? b.def - a.def || a.id - b.id
         : filters.sort === 'rarity' ? RANK[rarityOf(b)] - RANK[rarityOf(a)] || b.atk - a.atk
-        : b.atk - a.atk || a.id - b.id);
+        : (a.type === 'monster' ? 0 : 1) - (b.type === 'monster' ? 0 : 1) || b.atk - a.atk || a.id - b.id);
   }
 
-  function renderProgress(): void {
-    const all = cardDb.all().filter(c => c.type !== 'ritual');
-    const have = all.filter(c => owned(profile, c.id) > 0);
-    progress.replaceChildren(
-      h('b', {}, `Colección ${have.length}/${all.length}`),
-      ...[...RARITIES].reverse().map(r => h('span', { class: `rarity-chip rarity-chip--${r}`, title: RARITY_LABEL[r] },
-        `${r} ${have.filter(c => rarityOf(c) === r).length}/${all.filter(c => rarityOf(c) === r).length}`)));
-  }
-
-  function renderGrid(): void {
+  function renderList(): void {
+    const all = cardDb.all();
+    progress.textContent = `Colección ${all.filter(c => owned(profile, c.id) > 0).length}/${all.length}`;
     const cards = visibleCards();
-    renderProgress();
-    grid.replaceChildren(
+    list.replaceChildren(
       ...cards.map(c => {
         const have = owned(profile, c.id);
         const used = countIn(profile.deck, c.id);
         const ok = canAdd(c);
-        const el = createCardElement(c, { level: levelOf(profile, c.id) });
-        const plus = h('button', { class: 'coll-card__add', title: ok ? `Agregar ${c.name} al mazo` : whyNot(c), 'aria-label': `Agregar ${c.name}`, disabled: !ok }, '+');
+        const plus = h('button', { class: 'cat-row__add', title: ok ? `Agregar ${c.name} al mazo` : whyNot(c), 'aria-label': `Agregar ${c.name}`, disabled: !ok }, '+');
         plus.addEventListener('click', e => { e.stopPropagation(); add(c); });
-        const wrap = h('div', {
-          class: `coll-card${used >= Math.min(MAX_COPIES, have) ? ' coll-card--used' : ''}${inspected?.id === c.id ? ' coll-card--sel' : ''}`,
-          role: 'button', tabindex: '0', 'data-card': String(c.id), title: c.name,
-        }, el,
-          h('span', { class: `coll-card__count${c.ascendsTo && have >= ASCEND_COPIES ? ' coll-card__count--ready' : ''}`, title: 'En el mazo / tienes' }, `${used}/${have}`),
+        const row = h('div', {
+          class: `cat-row cat-row--${rarityOf(c)}${used >= Math.min(MAX_COPIES, have) ? ' cat-row--used' : ''}${inspected?.id === c.id ? ' cat-row--sel' : ''}`,
+          role: 'listitem', tabindex: '0', 'data-card': String(c.id),
+        },
+          h('span', { class: `rarity-dot rarity-dot--${rarityOf(c)}`, title: RARITY_LABEL[rarityOf(c)] }),
+          h('span', { class: 'cat-row__name' }, c.name, levelOf(profile, c.id) > 1 ? h('small', { class: 'cat-row__lv' }, ` Nv${levelOf(profile, c.id)}`) : ''),
+          h('span', { class: 'cat-row__attr', title: c.attribute }, ATTR_ICON[c.attribute]),
+          h('span', { class: 'cat-row__stat' }, c.type === 'monster' ? String(filters.sort === 'def' ? c.def : c.atk) : TYPE_SHORT[c.type]),
+          h('span', { class: `cat-row__count${c.ascendsTo && have >= ASCEND_COPIES ? ' cat-row__count--ready' : ''}`, title: 'En el mazo / tienes' }, `${used}/${have}`),
           plus);
-        wrap.addEventListener('click', () => { sfx('click'); select(c); });
-        wrap.addEventListener('dblclick', () => add(c));
-        wrap.addEventListener('keydown', e => {
+        row.addEventListener('click', () => { sfx('click'); select(c); });
+        row.addEventListener('dblclick', () => add(c));
+        row.addEventListener('keydown', e => {
           const k = (e as KeyboardEvent).key;
           if (k === 'Enter' || k === ' ') { e.preventDefault(); select(c); }
           if (k === '+') add(c);
+          if (k === '-') remove(c);
         });
-        return wrap;
+        return row;
       }),
-      cards.length ? '' : h('p', { class: 'screen__hint coll-empty' }, 'Ninguna carta coincide con el filtro.'),
+      cards.length ? '' : h('p', { class: 'empty' }, 'Ninguna carta coincide con el filtro.'),
     );
     if (!inspected && cards[0]) { inspected = cards[0]; renderShowcase(); }
   }
 
   function markSelected(): void {
-    grid.querySelectorAll('.coll-card--sel').forEach(el => el.classList.remove('coll-card--sel'));
-    if (inspected) grid.querySelector(`[data-card="${inspected.id}"]`)?.classList.add('coll-card--sel');
-    deckPanel.querySelectorAll('.deck-row--sel').forEach(el => el.classList.remove('deck-row--sel'));
-    if (inspected) deckPanel.querySelector(`[data-card="${inspected.id}"]`)?.classList.add('deck-row--sel');
+    list.querySelectorAll('.cat-row--sel').forEach(el => el.classList.remove('cat-row--sel'));
+    if (inspected) list.querySelector(`[data-card="${inspected.id}"]`)?.classList.add('cat-row--sel');
+    markThumb(vault, inspected?.id);
   }
 
-  /** El mostrador: siempre visible, no se pierde al bajar por la colección. */
+  /** El altar: la carta que estás viendo, siempre en el centro. */
   function renderShowcase(): void {
-    if (!inspected) { showcase.replaceChildren(h('p', { class: 'screen__hint' }, 'Toca una carta para verla aquí.')); return; }
+    if (!inspected) { showcase.replaceChildren(h('p', { class: 'empty' }, 'Toca una carta para verla aquí.')); return; }
     const card = inspected;
     const level = levelOf(profile, card.id);
     const have = owned(profile, card.id);
     const used = countIn(profile.deck, card.id);
     const fx = describeEffects(card.effects);
-    const addBtn = h('button', { class: 'big-btn big-btn--main showcase__btn', disabled: !canAdd(card), title: canAdd(card) ? '' : whyNot(card) }, '+ Al mazo');
+    const addBtn = h('button', { class: 'big-btn big-btn--main altar__btn', disabled: !canAdd(card), title: canAdd(card) ? '' : whyNot(card) }, '+ Al mazo');
     addBtn.addEventListener('click', () => add(card));
-    const rmBtn = h('button', { class: 'big-btn showcase__btn', disabled: used === 0 }, '− Sacar');
+    const rmBtn = h('button', { class: 'big-btn altar__btn', disabled: used === 0 }, '− Sacar');
     rmBtn.addEventListener('click', () => remove(card));
     showcase.replaceChildren(
-      h('div', { class: 'showcase__card' }, createCardElement(card, { level })),
-      h('div', { class: 'showcase__info' },
-        h('h2', { class: 'showcase__name' }, card.name),
-        h('p', { class: 'showcase__meta' },
-          h('span', { class: `rarity-chip rarity-chip--${rarityOf(card)}` }, rarityOf(card)),
-          ` ${RARITY_LABEL[rarityOf(card)]} · ${TYPE_LABEL[card.type].replace(/s$/, '').replace(/ee$/, 'e')}`,
-          card.type === 'monster' ? ` · ${card.tags.join(' · ')}` : ''),
-        h('p', { class: 'showcase__count' }, `En el mazo ${used}/${Math.min(MAX_COPIES, have)} · Tienes ${have}`),
-        h('div', { class: 'showcase__actions' }, addBtn, rmBtn),
-        h('p', { class: 'showcase__desc' }, card.description),
-        fx ? h('p', { class: 'deck-inspector__fx' }, `Efecto: ${fx}${level >= EFFECT_BOOST_LEVEL ? ' (nivel 3+: 25% más fuerte)' : ''}`) : '',
-        card.nahual ? h('p', { class: 'deck-inspector__fx' }, `🌙 Nahual: de noche es ${card.nahual.name} (${card.nahual.atk}/${card.nahual.def})`) : '',
-        upgrades && have > 0 ? upgradePanel(card, level) : ''),
+      h('p', { class: 'altar__label' }, '✦ Altar de la carta ✦'),
+      h('div', { class: `altar altar--${rarityOf(card)}` }, createCardElement(card, { level })),
+      h('h2', { class: 'detail__name' }, card.name),
+      h('p', { class: 'detail__meta' }, rarityChip(rarityOf(card)), ` ${TYPE_SHORT[card.type]} · ${ATTR_ICON[card.attribute]} ${card.attribute}`),
+      card.type === 'monster' ? h('div', { class: 'detail__stats' }, h('span', {}, `ATK ${card.atk}`), h('span', {}, `DEF ${card.def}`)) : '',
+      h('div', { class: 'altar__actions' }, addBtn, rmBtn),
+      h('p', { class: 'altar__count' }, `En el mazo ${used}/${Math.min(MAX_COPIES, have)} · Tienes ${have}`),
+      h('div', { class: 'detail__box' },
+        fx ? h('p', { class: 'detail__fx' }, h('b', {}, 'Efecto: '), fx, level >= EFFECT_BOOST_LEVEL ? ' (nivel 3+: 25% más fuerte)' : '') : '',
+        card.nahual ? h('p', { class: 'detail__fx' }, `🌙 Nahual: de noche es ${card.nahual.name} (${card.nahual.atk}/${card.nahual.def})`) : '',
+        h('p', { class: 'detail__desc' }, card.description),
+        card.type === 'monster' && card.tags.length ? h('p', { class: 'detail__tags' }, card.tags.join(' · ')) : ''),
+      upgrades && have > 0 ? upgradePanel(card, level) : '',
     );
   }
 
@@ -263,49 +244,41 @@ export function renderDeckBuilder(
     (overlay.querySelector('.ritual__ok') as HTMLButtonElement).focus();
   }
 
+  /** La bóveda: tu mazo como cartas (derecha). */
   function renderDeck(): void {
     const errors = validatePlayerDeck(profile, profile.deck, cardDb);
-    const counts = new Map<number, number>();
-    for (const id of profile.deck) counts.set(id, (counts.get(id) ?? 0) + 1);
-    const defs = [...counts.keys()].map(id => cardDb.get(id));
-    const monsters = profile.deck.map(id => cardDb.get(id)).filter(c => c.type === 'monster');
+    const defs = profile.deck.map(id => cardDb.get(id))
+      .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type) || b.atk - a.atk || a.id - b.id);
+    const byType = (t: CardType) => defs.filter(c => c.type === t).length;
+    const monsters = defs.filter(c => c.type === 'monster');
     const avg = monsters.length ? Math.round(monsters.reduce((n, c) => n + c.atk, 0) / monsters.length) : 0;
+    const full = profile.deck.length === DECK_SIZE;
 
-    deckPanel.replaceChildren(
-      h('h2', { class: `deck-panel__count${profile.deck.length === DECK_SIZE ? ' ok' : ''}` }, `Mazo ${profile.deck.length}/${DECK_SIZE}`),
-      h('div', { class: 'deck-meter', 'aria-hidden': 'true' }, h('span', { style: `width:${Math.min(100, profile.deck.length / DECK_SIZE * 100)}%` })),
-      h('p', { class: 'deck-panel__stats' },
-        `${monsters.length} monstruos · ${profile.deck.length - monsters.length} mágicas/trampas · ATK promedio ${avg}`),
-      errors.length
-        ? h('p', { class: 'deck-panel__error' }, errors[0])
-        : h('p', { class: 'deck-panel__ok' }, '✓ Listo para jugar'),
-      ...TYPE_ORDER.flatMap(type => {
-        const group = defs.filter(c => c.type === type).sort((a, b) => b.atk - a.atk || a.name.localeCompare(b.name));
-        if (!group.length) return [];
-        return [
-          h('h3', { class: 'deck-panel__group' }, `${TYPE_LABEL[type]} (${group.reduce((n, c) => n + counts.get(c.id)!, 0)})`),
-          h('ul', { class: 'deck-list' }, ...group.map(c => {
-            const minus = h('button', { class: 'deck-row__x', title: `Sacar una ${c.name}`, 'aria-label': `Sacar una ${c.name}` }, '−');
-            minus.addEventListener('click', e => { e.stopPropagation(); remove(c); });
-            const row = h('div', { class: `deck-row${inspected?.id === c.id ? ' deck-row--sel' : ''}`, role: 'button', tabindex: '0', 'data-card': String(c.id) },
-              h('span', { class: 'deck-row__n' }, `×${counts.get(c.id)}`),
-              h('span', { class: `rarity-dot rarity-dot--${rarityOf(c)}`, title: RARITY_LABEL[rarityOf(c)] }),
-              h('span', { class: 'deck-row__name' }, c.name),
-              h('span', { class: 'deck-row__atk' }, c.type === 'monster' ? String(c.atk) : ''),
-              minus);
-            row.addEventListener('click', () => { sfx('click'); select(c); });
-            return h('li', {}, row);
-          })),
-        ];
-      }),
-      h('div', { class: 'deck-panel__actions' },
-        h('button', { class: 'link-btn', onclick: () => { autoFill(); changed(); } }, 'Completar con las más fuertes'),
-        h('button', { class: 'link-btn', onclick: () => {
+    vault.replaceChildren(
+      h('header', { class: 'panel__head' },
+        h('h2', { class: 'panel__title' }, 'Tu mazo'),
+        h('span', { class: `vault__count${full ? ' ok' : ''}` }, `${profile.deck.length}/${DECK_SIZE}`)),
+      h('div', { class: 'meter' }, h('span', { style: `width:${Math.min(100, profile.deck.length / DECK_SIZE * 100)}%` })),
+      h('p', { class: 'vault__stats' },
+        h('span', { title: 'Monstruos' }, `M ${byType('monster')}`), h('span', { title: 'Mágicas' }, `S ${byType('spell')}`),
+        h('span', { title: 'Equipos' }, `E ${byType('equip')}`), h('span', { title: 'Trampas' }, `T ${byType('trap')}`),
+        h('span', { title: 'ATK promedio de tus monstruos' }, `ATK ⌀ ${avg}`)),
+      errors.length ? h('p', { class: 'vault__error' }, errors[0]) : h('p', { class: 'vault__ok' }, '✓ Listo para jugar'),
+      h('div', { class: 'vault__grid' }, ...defs.map(c => {
+        const t = thumb(c, { level: levelOf(profile, c.id), selected: inspected?.id === c.id, onClick: () => select(c) });
+        const x = h('span', { class: 'thumb__x', role: 'button', title: `Sacar una ${c.name}`, 'aria-label': `Sacar una ${c.name}` }, '−');
+        x.addEventListener('click', e => { e.stopPropagation(); remove(c); });
+        t.append(x);
+        return t;
+      })),
+      profile.deck.length ? '' : h('p', { class: 'empty' }, 'Tu mazo está vacío. Toca + en tus cartas para agregarlas.'),
+      h('div', { class: 'vault__actions' },
+        h('button', { class: 'chip-btn', onclick: () => { autoFill(); changed(); } }, 'Completar'),
+        h('button', { class: 'chip-btn', onclick: () => {
           const starter = (starterJson as { cards: number[] }).cards;
           if (validatePlayerDeck(profile, starter, cardDb).length === 0 && confirm('¿Volver al mazo inicial?')) { profile.deck = [...starter]; changed(); }
         } }, 'Mazo inicial'),
-        h('button', { class: 'link-btn', onclick: () => { if (confirm('¿Vaciar el mazo?')) { profile.deck = []; changed(); } } }, 'Vaciar'),
-      ),
+        h('button', { class: 'chip-btn', onclick: () => { if (confirm('¿Vaciar el mazo?')) { profile.deck = []; changed(); } } }, 'Vaciar')),
     );
   }
 
@@ -327,7 +300,7 @@ export function renderDeckBuilder(
     }
   }
 
-  renderGrid();
+  renderList();
   renderDeck();
   renderShowcase();
 }

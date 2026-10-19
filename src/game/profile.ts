@@ -18,6 +18,8 @@ export interface Profile {
   account?: Account;
   /** Nivel de cada carta (id → 1-5). Si no aparece, es nivel 1. */
   levels?: Record<string, number>;
+  /** Sobres seguidos sin UR (a los 10, UR segura). */
+  packsSinceUr?: number;
 }
 
 export interface Account {

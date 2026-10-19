@@ -69,7 +69,7 @@ export async function loadCloudProfile(): Promise<Profile> {
   const user = auth.user;
   if (!user) throw new Error('Sin sesión');
   const [p, coll, deck, prog] = await Promise.all([
-    sb.from('profiles').select('username, cacao, jade, wins, losses').eq('id', user.id).single(),
+    sb.from('profiles').select('username, cacao, jade, wins, losses, packs_since_ur').eq('id', user.id).single(),
     sb.from('collection').select('card_id, count, level').eq('user_id', user.id),
     sb.from('decks').select('cards').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
     sb.from('campaign_progress').select('duelist_id, wins').eq('user_id', user.id),
@@ -91,6 +91,7 @@ export async function loadCloudProfile(): Promise<Profile> {
     deck: deck.data?.cards ?? [],
     defeated: (prog.data ?? []).filter(r => r.wins > 0).map(r => r.duelist_id),
     levels,
+    packsSinceUr: me.packs_since_ur ?? 0,
     wins: me.wins,
     losses: me.losses,
     account: {
@@ -181,4 +182,13 @@ export async function levelUpCloud(cardId: number): Promise<LevelUpResult> {
 export async function ascendCloud(cardId: number): Promise<AscendResult> {
   await flushDeck();   // que el servidor vea tu mazo actual antes de recortarlo
   return invoke<AscendResult>('card-upgrade', { action: 'ascend', cardId, dataVersion: DATA_VERSION });
+}
+
+// ---------------------------------------------------------------- sobres (tienda)
+
+export interface PackCardResult { id: number; converted: boolean; cacao?: number; jade?: number }
+export interface OpenPacksResult { ok: true; packs: { cards: PackCardResult[]; pity: boolean }[]; jade: number; cacao: number; sinceUr: number }
+
+export function openPacksCloud(packId: string, count: number): Promise<OpenPacksResult> {
+  return invoke<OpenPacksResult>('pack-open', { packId, count, dataVersion: DATA_VERSION });
 }

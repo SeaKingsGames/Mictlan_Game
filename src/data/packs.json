@@ -1,0 +1,38 @@
+[
+  {
+    "id": "quinto-sol",
+    "name": "Sobre del Quinto Sol",
+    "glyph": "☀",
+    "color": "#e0a526",
+    "description": "Guerreros águila y jaguar, aves de Huitzilopochtli y el fuego del Sol.",
+    "price": 100,
+    "monsters": { "tags": ["guerrero", "jaguar", "sol", "fuego"], "attributes": ["sol"] },
+    "support": ["sol", "tierra"],
+    "include": [],
+    "exclude": []
+  },
+  {
+    "id": "tlalocan",
+    "name": "Sobre de Tlalocan",
+    "glyph": "≈",
+    "color": "#3fa7c9",
+    "description": "El paraíso de Tláloc: criaturas del lago, serpientes emplumadas y el viento de Ehécatl.",
+    "price": 100,
+    "monsters": { "tags": ["agua", "serpiente", "viento"], "attributes": ["agua", "viento"] },
+    "support": ["agua", "viento"],
+    "include": [],
+    "exclude": []
+  },
+  {
+    "id": "mictlan",
+    "name": "Sobre del Mictlán",
+    "glyph": "☠",
+    "color": "#9b6bd6",
+    "description": "El inframundo: xolos, bestias de la noche y los señores de la muerte.",
+    "price": 100,
+    "monsters": { "tags": ["muerte", "bestia"], "attributes": [] },
+    "support": ["tierra", "viento"],
+    "include": [],
+    "exclude": []
+  }
+]
