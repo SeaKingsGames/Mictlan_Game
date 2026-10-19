@@ -8,6 +8,7 @@ import { aiStep, createDuel } from '../game/replay.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects, KEYWORD_TEXT } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
+import { muteButton, sfx, type Sfx } from './sound.ts';
 
 const AI_STEP_MS = 750;
 const FUSION_SHOW_MS = 2200;
@@ -177,6 +178,7 @@ export class DuelView {
       albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'), timeBox: ref('timeBox'), signBox: ref('signBox'),
     };
     this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit'), claim: btn('claim') };
+    root.querySelector('.side-buttons')!.append(muteButton('tag-btn'));
     this.btn.claim.addEventListener('click', () => {
       this.btn.claim.disabled = true;
       this.setup.remote?.claim().catch(e => { this.message = e instanceof Error ? e.message : String(e); this.render(); })
@@ -204,6 +206,29 @@ export class DuelView {
     void this.newDuel();
     // Solo en desarrollo (npm run dev): window.__duel para probar desde la consola
     if (import.meta.env.DEV) (window as unknown as { __duel: DuelView }).__duel = this;
+  }
+
+  /** Un sonido por tipo de cosa que pasó (sin amontonar repetidos). */
+  private playSounds(events: DuelEvent[]): void {
+    const played = new Set<Sfx>();
+    const play = (s: Sfx) => { if (!played.has(s)) { played.add(s); sfx(s); } };
+    for (const e of events) {
+      switch (e.type) {
+        case 'cardsDrawn': if (e.player === this.me && this.engine?.state.turn > 1) play('draw'); break;
+        case 'cardPlayed': case 'trapSet': case 'specialSummoned': play('play'); break;
+        case 'fusion': play('fusion'); break;
+        case 'fusionFailed': play('fusionFail'); break;
+        case 'activated': play('spell'); break;
+        case 'trapActivated': play('trap'); break;
+        case 'attackDeclared': play('attack'); break;
+        case 'sentToMictlan': if (e.reason === 'battle' || e.reason === 'effect') play('destroy'); break;
+        case 'damage': play(e.amount >= 1000 ? 'hit' : 'damage'); break;
+        case 'healed': play('heal'); break;
+        case 'timeChanged': play(e.night ? 'night' : 'phase'); break;
+        case 'gameOver': play(e.winner === this.me ? 'win' : 'lose'); break;
+        default: break;
+      }
+    }
   }
 
   /** Deja de escuchar la sala (al salir de la pantalla). */
@@ -262,6 +287,7 @@ export class DuelView {
     if ((this.aiThinking || this.remoteBusy) && intent.type !== 'surrender') return;
     const result = this.engine.apply(intent);
     if (!result.ok) {
+      sfx('error');
       this.message = result.error;
       this.render();
       return;
@@ -1001,6 +1027,7 @@ export class DuelView {
   // ---------------------------------------------------------------- registro
 
   private record(events: DuelEvent[]): void {
+    this.playSounds(events);
     for (const e of events) {
       if (e.type === 'fusion') {
         // Se aprende de TODAS las fusiones que se ven, tuyas y del rival.

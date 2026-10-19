@@ -4,6 +4,7 @@ import { duelists } from '../game/duelists.ts';
 import { resetProfile, saveProfile, type Profile } from '../game/profile.ts';
 import { h } from './dom.ts';
 import { canPromptInstall, installHelpText, isInstalled, onInstallChange, promptInstall } from './install.ts';
+import { muteButton } from './sound.ts';
 
 /** Pantalla de inicio. */
 export interface MenuActions {
@@ -41,7 +42,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
       h('button', { class: 'big-btn', onclick: () => go('#/libre') }, 'Duelo libre'),
       h('button', { class: 'big-btn', onclick: () => go('#/pvp') }, '⚔ Contra otro jugador'),
     ),
-    installButton(),
+    h('div', { class: 'menu__install' }, installButton(), muteButton()),
     h('p', { class: 'menu__stats' },
       `Victorias ${profile.wins} · Derrotas ${profile.losses} · Cartas ${distinct}/${total} · Duelistas vencidos ${beaten}/${duelists.length}`),
     // Editores: solo en tu compu (npm run dev), no en la página pública
@@ -70,7 +71,7 @@ function installButton(): HTMLElement | string {
     if (canPromptInstall()) { if (await promptInstall()) wrap.remove(); }
     else help.textContent = installHelpText();
   });
-  const wrap = h('div', { class: 'menu__install' }, btn, help);
+  const wrap = h('div', { class: 'install-wrap' }, btn, help);
   const off = onInstallChange(() => { if (isInstalled()) { wrap.remove(); off(); } });
   return wrap;
 }

@@ -13,6 +13,7 @@ import { h } from './html/dom.ts';
 import { DuelView, type DuelResult } from './html/DuelView.ts';
 import { renderLogin } from './html/LoginView.ts';
 import { renderMenu } from './html/MenuView.ts';
+import { renderFreeDuel } from './html/FreeDuelView.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
 import { setupInstall } from './html/install.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
@@ -77,7 +78,7 @@ function route(): void {
   switch (page) {
     case 'mazo': renderDeckBuilder(app, p, go, cloudEnabled ? pr => queueDeckSave(pr.deck) : saveProfile, upgradesFor(p)); return;
     case 'campana': renderCampaign(app, p, go); return;
-    case 'libre': renderCampaign(app, p, go, true); return;
+    case 'libre': renderFreeDuel(app, p, go); return;
     case 'duelo': startDuel(p, arg); return;
     case 'pvp':
       if (arg) void startPvp(p, arg);
