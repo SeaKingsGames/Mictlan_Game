@@ -1,0 +1,4 @@
+Aquí va el archivo assetlinks.json que te da PWABuilder al crear el APK (Android).
+Sirve para que Android sepa que la app y cartas.seakingsstudios.com son del mismo dueño
+y abra el juego a pantalla completa, sin la barra de direcciones de Chrome.
+Quedará en: https://cartas.seakingsstudios.com/.well-known/assetlinks.json

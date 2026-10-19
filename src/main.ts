@@ -28,6 +28,7 @@ import { MAX_COPIES, rarityOf } from './data/types.ts';
 import { DUPLICATE_VALUE } from './game/config.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
 import { setupInstall } from './html/install.ts';
+import { versionLabel } from './version.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
@@ -56,6 +57,8 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  */
 const app = document.querySelector<HTMLDivElement>('#app')!;
 setupInstall();
+// Versión en letras pequeñas arriba (en todas las pantallas)
+document.body.append(Object.assign(document.createElement('div'), { className: 'app-version', textContent: versionLabel() }));
 document.title = GAME_TITLE;
 let profile: Profile | null = cloudEnabled ? null : loadProfile();
 let leaveScreen: (() => void) | null = null;   // limpia escuchas de la pantalla anterior (salas)
