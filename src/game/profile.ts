@@ -20,6 +20,8 @@ export interface Profile {
   levels?: Record<string, number>;
   /** Sobres seguidos sin UR (a los 10, UR segura). */
   packsSinceUr?: number;
+  /** Solo modo local: ruleta y mercado (en la nube viven en Supabase). */
+  market?: { featured: number; shop: { slots: { card: number; price: number; sold: boolean }[]; day: string } };
 }
 
 export interface Account {
@@ -28,6 +30,8 @@ export interface Account {
   guest: boolean;
   cacao: number;
   jade: number;
+  tickets: number;
+  gold: number;
 }
 
 const KEY = 'cartas.perfil.v1';

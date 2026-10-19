@@ -79,7 +79,7 @@ export function renderShop(root: HTMLElement, profile: Profile, go: (hash: strin
       h('h2', { class: 'shop__name' }, p.name),
       h('p', { class: 'shop__desc' }, p.description),
       h('div', { class: 'shop__buttons' }, ...buttons),
-      jade !== null && jade < p.price ? h('p', { class: 'shop__hint' }, `Te falta jade. Lo consigues con cartas repetidas (R +1, SR +2, UR +5).`) : '',
+      jade !== null && jade < p.price ? h('p', { class: 'shop__hint' }, `Te falta jade. Lo consigues en la ruleta o con cartas repetidas (R +1, SR +2, UR +5).`) : '',
       msg,
       h('div', { class: 'pity', title: `Si abres ${PACK_PITY} sobres seguidos sin UR, el último trae una UR segura` },
         h('div', { class: 'pity__head' }, h('span', {}, 'UR garantizada'), h('b', {}, left === 1 ? '¡en el próximo sobre!' : `en ${left} sobres`)),

@@ -6,6 +6,8 @@ export const GAME_SUBTITLE = 'Duelos de fusión de la mitología mexica';
 export const CURRENCY = {
   common: { name: 'Cacao', icon: '🫘' },   // moneda común: victorias, repetidas, vitrina, boleto de oro
   premium: { name: 'Jade', icon: '◆' },    // moneda valiosa: sobres
+  ticket: { name: 'Tickets', icon: '🎟' },  // renovar el mercado de cartas (1 por victoria)
+  gold: { name: 'Ticket oro', icon: '✪' },  // 1 giro de la ruleta (3000 de cacao)
 } as const;
 
 /** Repetidas: cada copia arriba de 3 se convierte en esto. */

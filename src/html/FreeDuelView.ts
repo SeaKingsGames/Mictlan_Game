@@ -67,7 +67,7 @@ export function renderFreeDuel(root: HTMLElement, profile: Profile, go: (hash: s
         h('h2', { class: 'free__name' }, d.name),
         h('p', { class: 'free__stars' }, `Dificultad ${stars(d)}`),
         h('p', { class: 'free__record' }, beaten ? '✓ Ya lo venciste' : 'Aún no lo vences'),
-        h('p', { class: 'free__prize' }, `Premio: ${CURRENCY.common.icon} ${WIN_CACAO[d.level]} ${CURRENCY.common.name} + 1 carta`)),
+        h('p', { class: 'free__prize' }, `Premio: ${CURRENCY.common.icon} ${WIN_CACAO[d.level]} ${CURRENCY.common.name} + 1 carta + 1 ${CURRENCY.ticket.icon}`)),
       h('p', { class: 'free__intro' }, d.intro),
       deckErrors.length
         ? h('p', { class: 'warn-box' }, deckErrors[0], ' ', h('button', { class: 'link-btn', onclick: () => go('#/mazo') }, 'Arreglar mazo →'))

@@ -32,7 +32,7 @@ export const PACK_SIZE = 5;
 export const PACK_ODDS: Record<CardRarity, number> = { N: 60, R: 28, SR: 10, UR: 2 };
 /** Si abres este número de sobres seguidos sin UR, el último trae una UR segura. */
 export const PACK_PITY = 10;
-/** Jade con el que empieza una cuenta nueva (= 3 sobres). */
+/** Jade con el que empieza una cuenta nueva (= 2 sobres de 150). */
 export const START_JADE = 300;
 /** Se pueden abrir de 1 en 1 o de 10 en 10. */
 export const PACK_COUNTS = [1, 10] as const;

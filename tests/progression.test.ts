@@ -24,7 +24,7 @@ const play = (e: DuelEngine, p: PlayerIndex, id: number, slot: number) =>
 describe('Niveles', () => {
   it('costos: base por rareza × nivel; nivel 5 es el máximo', () => {
     const n = cardDb.get(2);
-    expect([1, 2, 3, 4].map(l => levelUpCost(n, l))).toEqual([50, 100, 150, 200]);
+    expect([1, 2, 3, 4].map(l => levelUpCost(n, l))).toEqual([150, 300, 450, 600]);
     expect(levelUpCost(n, 5)).toBeNull();
   });
 

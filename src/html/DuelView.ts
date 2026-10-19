@@ -5,6 +5,7 @@ import { describePhase, phaseOf, PHASE_INFO, TIME_PHASES, turnsLeftInPhase } fro
 import { cardDb, fusionDb } from '../data/index.ts';
 import type { Duelist } from '../game/duelists.ts';
 import { aiStep, createDuel } from '../game/replay.ts';
+import { HIDDEN_CARD, ViewEngine, type PvpStep, type PvpView } from '../game/pvpView.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects, KEYWORD_TEXT } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
@@ -25,17 +26,28 @@ export interface DuelResult {
   error?: string;         // si no se pudo guardar el resultado
 }
 
-/** Multijugador: el rival juega desde otro navegador y el servidor revisa cada jugada. */
+/** Lo que manda el servidor en multijugador: tu vista y, si hubo jugadas nuevas, cada una con sus eventos. */
+export interface RemoteSnapshot {
+  view: PvpView;
+  steps: PvpStep[];
+  index: number;          // cuántas jugadas lleva la partida
+  lastMoveAt: number;
+}
+
+/**
+ * Multijugador: el rival juega desde otro navegador. El SERVIDOR tiene el duelo completo y aquí solo
+ * llega tu vista (sin la mano del rival ni sus cartas boca abajo).
+ */
 export interface RemoteDuel {
   me: PlayerIndex;
-  /** Crea el mismo duelo que el servidor (semilla, mazos y niveles de la sala). */
-  createEngine(): DuelEngine;
+  /** Vista actual (al entrar o recargar). */
+  load(): Promise<RemoteSnapshot>;
+  /** Jugadas desde `index` (las del rival que todavía no ves). */
+  since(index: number): Promise<RemoteSnapshot>;
   /** Manda tu jugada. `index` = cuántas jugadas había antes. Lanza error si el servidor la rechaza. */
-  send(intent: Intent, index: number): Promise<void>;
-  /** Lista completa de jugadas guardadas en el servidor (para sincronizar). */
-  fetch(): Promise<{ intents: Intent[]; lastMoveAt: number }>;
-  /** Avisa cada vez que cambian las jugadas. Devuelve la función para dejar de escuchar. */
-  watch(cb: (intents: Intent[], lastMoveAt: number) => void): () => void;
+  send(intent: Intent, index: number): Promise<RemoteSnapshot>;
+  /** Avisa cuando cambia la sala (cuántas jugadas van). Devuelve la función para dejar de escuchar. */
+  watch(cb: (moveCount: number, lastMoveAt: number) => void): () => void;
   /** Reclamar la victoria si el rival no juega a tiempo. */
   claim(): Promise<void>;
   timeoutMs: number;
@@ -64,7 +76,7 @@ export interface DuelSetup {
  * Solo DIBUJA el estado y manda intenciones al motor; nunca cambia el estado ella misma.
  */
 export class DuelView {
-  private engine!: DuelEngine;
+  private engine!: DuelEngine | ViewEngine;
   private selectedHand: number[] = [];
   private selectedAttacker: number | null = null;
   private aiThinking = false;
@@ -95,7 +107,7 @@ export class DuelView {
   private readonly foe: PlayerIndex;
   // multijugador
   private applied = 0;              // jugadas del servidor ya aplicadas aquí
-  private remoteQueue: Intent[] = [];
+  private remoteSeen = 0;           // jugadas que la sala dice que hay
   private remoteBusy = false;
   private lastMoveAt = Date.now();
   private unwatch: (() => void) | null = null;
@@ -285,6 +297,7 @@ export class DuelView {
 
   private submit(intent: Intent): void {
     if ((this.aiThinking || this.remoteBusy) && intent.type !== 'surrender') return;
+    if (this.setup.remote) { void this.submitRemote(intent); return; }
     const result = this.engine.apply(intent);
     if (!result.ok) {
       sfx('error');
@@ -293,17 +306,12 @@ export class DuelView {
       return;
     }
     if (intent.player === this.me) this.intents.push(intent);
-    if (this.setup.remote) {
-      const index = this.applied++;
-      this.lastMoveAt = Date.now();
-      this.setup.remote.send(intent, index).catch(e => void this.resync(e, intent));
-    }
     this.message = '';
     this.selectedHand = [];
     if (intent.type !== 'changePosition') this.selectedAttacker = null;   // tras cambiar posición sigue elegido
     this.record(result.events);
     this.render();
-    if (!this.setup.remote && this.engine.state.turnPlayer === this.foe && this.engine.state.winner === null && !this.aiThinking) this.runAiTurn();
+    if (this.engine.state.turnPlayer === this.foe && this.engine.state.winner === null && !this.aiThinking) this.runAiTurn();
   }
 
   // ---------------------------------------------------------------- multijugador
@@ -311,77 +319,92 @@ export class DuelView {
   private async startRemote(): Promise<void> {
     const remote = this.setup.remote!;
     this.showOverlayMessage('Conectando con la sala…');
-    let saved: { intents: Intent[]; lastMoveAt: number };
-    try { saved = await remote.fetch(); } catch (e) { this.showOverlayMessage(e instanceof Error ? e.message : String(e), true); return; }
+    let snap: RemoteSnapshot;
+    try { snap = await remote.load(); } catch (e) { this.showOverlayMessage(e instanceof Error ? e.message : String(e), true); return; }
     this.el.overlay.replaceChildren();
     this.el.overlay.hidden = true;
     this.album.clear();
     this.finished = null;
     this.finishing = false;
     this.log = [];
-    this.lastLife = [START_LIFE, START_LIFE];
-    this.engine = remote.createEngine();
-    this.record(this.engine.start());
-    // Si ya había jugadas (por ejemplo, recargaste la página), se aplican sin animación
-    this.applied = 0;
-    for (const it of saved.intents) { const r = this.engine.apply(it); if (r.ok) this.record(r.events); this.applied++; }
-    this.lastMoveAt = saved.lastMoveAt;
+    this.engine = new ViewEngine(cardDb, snap.view);
+    this.lastLife = [this.engine.state.players[0].life, this.engine.state.players[1].life];
+    this.applied = snap.index;
+    this.remoteSeen = snap.index;
+    this.lastMoveAt = snap.lastMoveAt;
     const sign = this.engine.state.daySign;
     if (sign) this.toast(`Signo del día: ${sign.glyph} ${sign.name} — ${sign.text}`);
     this.unwatch?.();
-    this.unwatch = remote.watch((intents, lastMoveAt) => { this.lastMoveAt = lastMoveAt; this.onRemoteIntents(intents); });
+    this.unwatch = remote.watch((count, lastMoveAt) => {
+      this.lastMoveAt = lastMoveAt;
+      this.remoteSeen = Math.max(this.remoteSeen, count);
+      if (count > this.applied && !this.remoteBusy) void this.pullRemote();
+    });
     clearInterval(this.clock);
     this.clock = window.setInterval(() => this.renderTimer(), 1000);
     this.render();
+    if (this.engine.state.winner !== null) this.render();
   }
 
-  /** Llegaron jugadas del servidor: aplica las que faltan, una por una (como el turno de la IA). */
-  private onRemoteIntents(intents: Intent[]): void {
-    const pending = intents.length - this.applied - this.remoteQueue.length;
-    if (pending <= 0) return;
-    this.remoteQueue.push(...intents.slice(intents.length - pending));
-    if (!this.remoteBusy) this.playRemoteQueue();
-  }
-
-  private playRemoteQueue(): void {
-    const next = this.remoteQueue.shift();
-    if (!next || !this.engine) { this.remoteBusy = false; this.render(); return; }
+  /** Tu jugada en multijugador: la revisa el servidor y regresa tu vista nueva. */
+  private async submitRemote(intent: Intent): Promise<void> {
+    const remote = this.setup.remote!;
     this.remoteBusy = true;
-    const result = this.engine.apply(next);
-    if (!result.ok) { this.remoteQueue = []; this.remoteBusy = false; void this.resync(new Error(result.error)); return; }
-    this.applied++;
-    this.record(result.events);
+    this.message = '';
     this.render();
-    const fusions = result.events.filter(e => e.type === 'fusion').length;
-    setTimeout(() => this.playRemoteQueue(), this.remoteQueue.length ? AI_STEP_MS + fusions * FUSION_SHOW_MS : 0);
+    try {
+      const snap = await remote.send(intent, this.applied);
+      this.selectedHand = [];
+      if (intent.type !== 'changePosition') this.selectedAttacker = null;
+      this.remoteBusy = false;
+      await this.playSteps(snap);
+    } catch (e) {
+      this.remoteBusy = false;
+      const code = (e as { code?: string })?.code;
+      if (code === 'conflict') { void this.pullRemote(); return; }
+      if (code !== 'finished') { sfx('error'); this.message = e instanceof Error ? e.message : String(e); }
+      this.render();
+    }
   }
 
-  /** Algo no cuadró con el servidor: se vuelve a armar el duelo con lo que tiene el servidor. */
-  private async resync(err: unknown, retry?: Intent): Promise<void> {
+  /** Trae las jugadas del rival que faltan y las anima una por una. */
+  private async pullRemote(): Promise<void> {
     const remote = this.setup.remote;
-    if (!remote) return;
-    const code = (err as { code?: string })?.code;
-    if (code === 'finished') { this.render(); return; }
+    if (!remote || this.remoteBusy) return;
+    this.remoteBusy = true;
     try {
-      const saved = await remote.fetch();
-      this.remoteQueue = [];
+      const snap = await remote.since(this.applied);
       this.remoteBusy = false;
-      this.engine = remote.createEngine();
-      this.engine.start();
-      this.applied = 0;
-      for (const it of saved.intents) { if (this.engine.apply(it).ok) this.applied++; }
-      this.lastMoveAt = saved.lastMoveAt;
-      this.selectedHand = [];
-      this.selectedAttacker = null;
-      this.message = code === 'conflict' ? '' : (err instanceof Error ? err.message : '');
-      this.log.push('— sincronizado con el servidor —');
-      this.render();
-      if (retry?.type === 'surrender' && this.engine.state.winner === null) this.submit(retry);
-    } catch (e) {
+      await this.playSteps(snap);
+    } catch {
+      this.remoteBusy = false;
       this.message = 'Sin conexión con la sala. Reintentando…';
       this.render();
-      setTimeout(() => void this.resync(err, retry), 3000);
+      setTimeout(() => void this.pullRemote(), 3000);
+      return;
     }
+    if (this.remoteSeen > this.applied) void this.pullRemote();
+  }
+
+  /** Aplica cada jugada que mandó el servidor (vista + eventos), con pausa entre jugadas como la IA. */
+  private async playSteps(snap: RemoteSnapshot): Promise<void> {
+    const engine = this.engine as ViewEngine;
+    this.remoteBusy = true;
+    for (let i = 0; i < snap.steps.length; i++) {
+      const step = snap.steps[i];
+      engine.load(step.view);
+      this.record(step.events);
+      this.render();
+      const fusions = step.events.filter(e => e.type === 'fusion').length;
+      if (i < snap.steps.length - 1) await new Promise(r => setTimeout(r, AI_STEP_MS + fusions * FUSION_SHOW_MS));
+    }
+    engine.load(snap.view);
+    this.applied = snap.index;
+    this.remoteSeen = Math.max(this.remoteSeen, snap.index);
+    this.lastMoveAt = snap.lastMoveAt;
+    this.remoteBusy = false;
+    this.message = '';
+    this.render();
   }
 
   /** Reloj del turno (multijugador): cuánto lleva el turno y botón para reclamar si el rival no juega. */
@@ -407,7 +430,7 @@ export class DuelView {
         this.render();
         return;
       }
-      const result = aiStep(this.engine, this.setup.opponent as Duelist, fusionDb);   // la misma IA que repite el servidor
+      const result = aiStep(this.engine as DuelEngine, this.setup.opponent as Duelist, fusionDb);   // la misma IA que repite el servidor
       if (result.ok) this.record(result.events);
       this.render();
       // Si el rival fusionó, espera a que se vea la fusión antes de seguir.
@@ -1008,7 +1031,7 @@ export class DuelView {
     const op = (txt: string) => { const s2 = document.createElement('span'); s2.className = 'fusion-show__op'; s2.textContent = txt; return s2; };
     const ca = createCardElement(next.a); ca.classList.add('fs-a');
     const cb = createCardElement(next.b); cb.classList.add('fs-b');
-    const cr = createCardElement(next.r); cr.classList.add('fs-r');
+    const cr = createCardElement(next.r, { hidden: next.r.id === 0 }); cr.classList.add('fs-r');   // fusión boca abajo del rival: no se ve
     row.append(ca, op('+'), cb, op('='), cr);
     box.replaceChildren(title, row);
     box.classList.toggle('fusion-show--foe', next.player === this.foe);
@@ -1031,10 +1054,10 @@ export class DuelView {
     for (const e of events) {
       if (e.type === 'fusion') {
         // Se aprende de TODAS las fusiones que se ven, tuyas y del rival.
-        const [a, b] = e.materialIds.map(id => this.engine.getCard(id)!.def);
-        const result = this.engine.getCard(e.resultId)!;
-        this.album.add(albumKey(a.id, b.id, result.def.id));
-        this.inspected = result;
+        const [a, b] = e.materialIds.map(id => this.engine.getCard(id)?.def ?? HIDDEN_CARD);
+        const result = this.engine.getCard(e.resultId);
+        if (!result) continue;
+        if (result.def.id !== 0) { this.album.add(albumKey(a.id, b.id, result.def.id)); this.inspected = result; }
         this.fusionQueue.push({ player: e.player, a, b, r: result.def });
         this.showNextFusion();
       }

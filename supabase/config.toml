@@ -15,3 +15,6 @@ verify_jwt = true
 
 [functions.pack-open]
 verify_jwt = true
+
+[functions.market]
+verify_jwt = true

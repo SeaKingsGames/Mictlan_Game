@@ -26,7 +26,7 @@ Deno.serve(handler(async (req, body) => {
   }
 
   const won = verified.value.won;
-  let plan = { cacao: 0, jade: 0, cards: [] as { id: number; cacao: number; jade: number }[] };
+  let plan = { cacao: 0, jade: 0, tickets: 0, cards: [] as { id: number; cacao: number; jade: number }[] };
   if (won) {
     const { data: prog } = await db.from('campaign_progress').select('wins')
       .eq('user_id', user.id).eq('duelist_id', duel.duelist_id).maybeSingle();
@@ -35,11 +35,11 @@ Deno.serve(handler(async (req, body) => {
 
   const { data: result, error: rpcError } = await db.rpc('settle_duel', {
     p_duel: duel.id, p_won: won, p_cacao: plan.cacao, p_jade: plan.jade,
-    p_cards: plan.cards, p_rewards: { turns: verified.value.turns },
+    p_cards: plan.cards, p_rewards: { turns: verified.value.turns, tickets: plan.tickets },
   });
   if (rpcError) throw rpcError;
   if (!result.ok) return json({ error: 'Este duelo ya se guardó', code: 'already_settled' }, 409);
 
-  const { data: balance } = await db.from('profiles').select('cacao, jade, wins, losses').eq('id', user.id).single();
+  const { data: balance } = await db.from('profiles').select('cacao, jade, tickets, gold_tickets, wins, losses').eq('id', user.id).single();
   return json({ won, ...result, balance });
 }));

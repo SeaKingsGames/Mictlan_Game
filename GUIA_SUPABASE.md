@@ -177,3 +177,26 @@ En el editor de cartas, cada monstruo tiene la sección **⚗ Cómo surge esta c
 - **Por cartas específicas**: parejas exactas (carta A + carta B) que siempre dan esta carta. Se guardan en la misma carta: `"recipes": [[51, 15], [54, 5]]`.
 
 Las recetas viejas de `fusions.json` siguen funcionando; si una pareja está en los dos lados, gana la de la carta. Como cambia `cards.json`, después de editar recetas haz lo de siempre: `npm run build:server`, desplegar funciones y `npm test`.
+
+## Ruleta, mercado de cartas y multijugador seguro (actualización)
+
+1. **SQL nuevo**: SQL Editor → pega TODO `supabase/migrations/20261020000000_ruleta_mercado_pvp.sql` → **Run** (una sola vez).
+2. **Funciones** (todas; hay una nueva, `market`):
+   ```bash
+   npm run build:server
+   npx supabase functions deploy market --use-api
+   npx supabase functions deploy pvp --use-api
+   npx supabase functions deploy duel-start --use-api
+   npx supabase functions deploy duel-finish --use-api
+   npx supabase functions deploy card-upgrade --use-api
+   npx supabase functions deploy pack-open --use-api
+   ```
+3. `npm test` y sube a GitHub.
+
+**Economía**: ganar un duelo da 10 de cacao + 1 ticket estándar (+ lo de las repetidas). Subir de nivel cuesta 3 veces más que antes. Los sobres cuestan 150 de jade.
+
+**Ruleta** (`#/ruleta`): 1 ticket oro = 1 giro; el ticket oro cuesta 3000 de cacao. Premios: 1000 cacao 26% · 50 jade 18% · 25 tickets 16% · 1500 cacao 14% · 100 jade 8% · 50 tickets 8% · ticket oro 6% · la carta a la vista 4% (una R o SR que se ve antes de girar y cambia en cada giro). Se cambian en `src/game/roulette.ts`.
+
+**Mercado de cartas** (`#/mercado`): 6 cartas al azar que se compran con cacao (N 300 · R 800 · SR 2000 · UR 10000), cada una una sola vez. Cada lugar tiene 3% de ser UR, así que no siempre hay. Se renueva gratis cada día (medianoche de México) o cuando quieras por 25 tickets. Se cambia en `src/game/cardShop.ts`.
+
+**Multijugador seguro**: el navegador ya no recibe la semilla, el mazo del rival ni la lista de jugadas. La función `pvp` repite la partida y le manda a cada jugador solo lo que vería en la mesa. Los números de las cartas van disfrazados. Ahora sí se puede pensar en emparejamiento con desconocidos o ranking.

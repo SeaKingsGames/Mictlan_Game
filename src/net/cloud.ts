@@ -69,7 +69,7 @@ export async function loadCloudProfile(): Promise<Profile> {
   const user = auth.user;
   if (!user) throw new Error('Sin sesión');
   const [p, coll, deck, prog] = await Promise.all([
-    sb.from('profiles').select('username, cacao, jade, wins, losses, packs_since_ur').eq('id', user.id).single(),
+    sb.from('profiles').select('username, cacao, jade, tickets, gold_tickets, wins, losses, packs_since_ur').eq('id', user.id).single(),
     sb.from('collection').select('card_id, count, level').eq('user_id', user.id),
     sb.from('decks').select('cards').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
     sb.from('campaign_progress').select('duelist_id, wins').eq('user_id', user.id),
@@ -100,6 +100,8 @@ export async function loadCloudProfile(): Promise<Profile> {
       guest: user.is_anonymous ?? false,
       cacao: me.cacao,
       jade: me.jade,
+      tickets: me.tickets ?? 0,
+      gold: me.gold_tickets ?? 0,
     },
   };
 }
@@ -162,7 +164,8 @@ export interface CloudDuelResult {
   cacao: number;
   jade: number;
   cards: { id: number; converted: boolean; cacao?: number; jade?: number }[];
-  balance: { cacao: number; jade: number; wins: number; losses: number };
+  tickets?: number;
+  balance: { cacao: number; jade: number; tickets?: number; gold_tickets?: number; wins: number; losses: number };
 }
 
 export function finishCloudDuel(duelId: string, intents: readonly Intent[]): Promise<CloudDuelResult> {

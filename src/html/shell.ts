@@ -35,6 +35,8 @@ export function wallets(p: Profile): HTMLElement[] {
   return [
     h('span', { class: 'wallet', title: CURRENCY.common.name }, `${CURRENCY.common.icon} ${acc.cacao.toLocaleString('es-MX')}`),
     h('span', { class: 'wallet wallet--jade', title: CURRENCY.premium.name }, `${CURRENCY.premium.icon} ${acc.jade.toLocaleString('es-MX')}`),
+    h('span', { class: 'wallet wallet--ticket', title: 'Tickets estándar' }, `${CURRENCY.ticket.icon} ${acc.tickets.toLocaleString('es-MX')}`),
+    h('span', { class: 'wallet wallet--gold', title: CURRENCY.gold.name }, `${CURRENCY.gold.icon} ${acc.gold.toLocaleString('es-MX')}`),
   ];
 }
 

@@ -14,8 +14,8 @@ export const LEVEL_STAT_BONUS = 100;          // por nivel arriba del 1
 export const EFFECT_BOOST_LEVEL = 3;          // desde aquí los efectos mejoran
 export const EFFECT_BOOST = 1.25;
 
-/** Cacao base por rareza. Subir del nivel L al L+1 cuesta base × L. */
-export const LEVEL_COST_BASE: Record<CardRarity, number> = { N: 50, R: 100, SR: 200, UR: 400 };
+/** Cacao base por rareza. Subir del nivel L al L+1 cuesta base × L (N: 150, 300, 450, 600 · UR: 1200 … 4800). */
+export const LEVEL_COST_BASE: Record<CardRarity, number> = { N: 150, R: 300, SR: 600, UR: 1200 };
 
 export const levelBonus = (level: number): number => (clampLevel(level) - 1) * LEVEL_STAT_BONUS;
 

@@ -18,6 +18,10 @@ import { renderFreeDuel } from './html/FreeDuelView.ts';
 import { renderLibrary } from './html/LibraryView.ts';
 import { renderShop, type PackShop } from './html/ShopView.ts';
 import { openPacks } from './game/packs.ts';
+import { renderCardMarket, renderRoulette, type Market } from './html/MarketView.ts';
+import { cloudMarket } from './net/market.ts';
+import { pickFeatured, ROULETTE_PRIZES, spinIndex } from './game/roulette.ts';
+import { rollShop, shopDay } from './game/cardShop.ts';
 import { MAX_COPIES, rarityOf } from './data/types.ts';
 import { DUPLICATE_VALUE } from './game/config.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
@@ -37,6 +41,8 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  *   #/libre       duelo libre (rivales desbloqueados)
  *   #/tienda      tienda de sobres
  *   #/biblioteca  todas las cartas del juego
+ *   #/ruleta      ruleta de premios (tickets oro)
+ *   #/mercado     mercado de cartas (6 cartas al azar por cacao)
  *   #/duelo/<id>  duelo contra ese duelista
  *   #/cuenta      (invitado) guardar cuenta con correo
  *   #/pvp         multijugador: crear sala o unirse con código
@@ -89,6 +95,8 @@ function route(): void {
     case 'libre': renderFreeDuel(app, p, go); return;
     case 'tienda': renderShop(app, p, go, shopFor(p)); return;
     case 'biblioteca': renderLibrary(app, p, go); return;
+    case 'ruleta': renderRoulette(app, p, go, marketFor(p)); return;
+    case 'mercado': renderCardMarket(app, p, go, marketFor(p)); return;
     case 'duelo': startDuel(p, arg); return;
     case 'pvp':
       if (arg) void startPvp(p, arg);
@@ -169,6 +177,46 @@ function shopFor(p: Profile): PackShop {
   };
 }
 
+/** Ruleta y mercado: en la nube el servidor; en modo local, gratis en el navegador (para probar). */
+function marketFor(p: Profile): Market {
+  if (cloudEnabled) return cloudMarket(p);
+  const rnd = () => createRng((Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
+  const m = (p.market ??= { featured: pickFeatured(cardDb, rnd()), shop: { slots: rollShop(cardDb, rnd()), day: shopDay() } });
+  const give = (id: number) => {
+    if ((p.collection[id] ?? 0) >= MAX_COPIES) return { id, converted: true, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] };
+    p.collection[id] = (p.collection[id] ?? 0) + 1;
+    return { id, converted: false };
+  };
+  return {
+    local: true,
+    async state() {
+      if (m.shop.day !== shopDay()) m.shop = { slots: rollShop(cardDb, rnd()), day: shopDay() };
+      saveProfile(p);
+      return { featured: m.featured, shop: m.shop };
+    },
+    async buyGold() { /* en modo local no hace falta */ },
+    async spin() {
+      const rng = rnd();
+      const index = spinIndex(rng);
+      const prize = ROULETTE_PRIZES[index];
+      const card = prize.kind === 'card' ? give(m.featured) : null;
+      m.featured = pickFeatured(cardDb, rng, m.featured);
+      saveProfile(p);
+      return { index, prize: { kind: prize.kind, amount: prize.amount, card: card?.id ?? null }, card, featured: m.featured };
+    },
+    async refresh() { m.shop = { slots: rollShop(cardDb, rnd()), day: shopDay() }; saveProfile(p); return m.shop; },
+    async buy(slot) {
+      const s = m.shop.slots[slot];
+      if (!s || s.sold) throw new Error('Esa carta ya no está');
+      if ((p.collection[s.card] ?? 0) >= MAX_COPIES) throw new Error('Ya tienes 3 copias de esa carta');
+      give(s.card);
+      s.sold = true;
+      saveProfile(p);
+      return m.shop;
+    },
+  };
+}
+
 function startDuel(p: Profile, id: string): void {
   const rival = getDuelist(id);
   if (!rival || !isUnlocked(rival.id, p.defeated) || validatePlayerDeck(p, p.deck, cardDb).length) {
@@ -206,9 +254,9 @@ async function startPvp(p: Profile, matchId: string): Promise<void> {
     const me = m.host_id === uid ? 0 : 1;
     const rivalName = (me === 0 ? m.guest_name : m.host_name) ?? 'Rival';
     const view = new DuelView(app, {
-      playerDeck: me === 0 ? m.host_deck : (m.guest_deck ?? []),
+      playerDeck: [],   // el mazo lo tiene el servidor
       opponent: { id: 'pvp', name: rivalName, glyph: '⚔' },
-      remote: remoteFor(m, me),
+      remote: remoteFor(m.id, me),
       onFinish: async won => {
         const done = await waitForResult(matchId);
         const r = done.rewards;
@@ -242,7 +290,10 @@ function unlockNote(rival: Duelist): string {
 /** Modo nube: el servidor repite el duelo y decide el premio. Aquí solo se refleja. */
 async function finishInCloud(p: Profile, rival: Duelist, duelId: string, intents: readonly Intent[]): Promise<DuelResult> {
   const r = await finishCloudDuel(duelId, intents);
-  if (p.account) { p.account.cacao = r.balance.cacao; p.account.jade = r.balance.jade; }
+  if (p.account) {
+    p.account.cacao = r.balance.cacao; p.account.jade = r.balance.jade;
+    if (r.balance.tickets !== undefined) p.account.tickets = r.balance.tickets;
+  }
   p.wins = r.balance.wins;
   p.losses = r.balance.losses;
   if (!r.won) return { rewards: [], notes: [] };
@@ -253,7 +304,7 @@ async function finishInCloud(p: Profile, rival: Duelist, duelId: string, intents
     const name = cardDb.tryGet(c.id)?.name ?? `#${c.id}`;
     notes.push(`Ya tenías 3 de ${name}: se convirtió en ${c.cacao ?? 0} ${CURRENCY.common.name}${c.jade ? ` y ${c.jade} ${CURRENCY.premium.name}` : ''}`);
   }
-  notes.unshift(`+${r.cacao} ${CURRENCY.common.icon} ${CURRENCY.common.name}${r.jade ? ` · +${r.jade} ${CURRENCY.premium.icon} ${CURRENCY.premium.name}` : ''}`);
+  notes.unshift(`+${r.cacao} ${CURRENCY.common.icon} ${CURRENCY.common.name}${r.jade ? ` · +${r.jade} ${CURRENCY.premium.icon} ${CURRENCY.premium.name}` : ''}${r.tickets ? ` · +${r.tickets} ${CURRENCY.ticket.icon} ticket` : ''}`);
   if (r.firstWin && !p.defeated.includes(rival.id)) {
     p.defeated.push(rival.id);
     notes.push(unlockNote(rival));

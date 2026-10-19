@@ -4,13 +4,16 @@ import { cardDb, fusionDb, DATA_VERSION } from '../data/index.ts';
 import { rarityOf, type CardDef } from '../data/types.ts';
 import { DUPLICATE_VALUE } from '../game/config.ts';
 import { getDuelist, isUnlocked, type Duelist } from '../game/duelists.ts';
-import { WIN_CACAO } from '../game/economy.ts';
+import { WIN_CACAO, WIN_TICKETS } from '../game/economy.ts';
+import { GOLD_TICKET_PRICE, GOLD_BUY_COUNTS, pickFeatured, ROULETTE_PRIZES, spinIndex } from '../game/roulette.ts';
+import { rollShop, SHOP_REFRESH_TICKETS, shopDay, type ShopSlot } from '../game/cardShop.ts';
 import { validatePlayerDeck, type Profile } from '../game/profile.ts';
 import { replayDuel, replayPvp, pvpFirstPlayer, type PvpSetup } from '../game/replay.ts';
 import type { PlayerIndex } from '../core/DuelState.ts';
 import { checkAscend, checkLevelUp, clampLevel, type UpgradeCheck } from '../core/progression.ts';
 import { rollRewards } from '../game/rewards.ts';
 import { getPack, openPacks, PACK_COUNTS } from '../game/packs.ts';
+import { idMask, pvpSnapshotFor, unmaskIntent, type PvpSnapshot } from '../game/pvpView.ts';
 
 /**
  * Reglas que corre el SERVIDOR (Edge Functions de Supabase).
@@ -60,6 +63,7 @@ export function verifyDuel(input: { seed: number; deck: readonly number[]; dueli
 export interface RewardPlan {
   cacao: number;
   jade: number;
+  tickets: number;
   /** Cartas ganadas y cuánto valen si ya tienes 3 copias (la base de datos decide). */
   cards: { id: number; cacao: number; jade: number }[];
 }
@@ -67,11 +71,12 @@ export interface RewardPlan {
 /** Premio por ganar. Usa una semilla derivada del duelo: el mismo duelo siempre da lo mismo. */
 export function planRewards(duelistId: string, seed: number, firstWin: boolean): RewardPlan {
   const duelist = getDuelist(duelistId);
-  if (!duelist) return { cacao: 0, jade: 0, cards: [] };
+  if (!duelist) return { cacao: 0, jade: 0, tickets: 0, cards: [] };
   const cards = rollRewards(duelist, firstWin, createRng((seed ^ 0x9e3779b9) >>> 0));
   return {
     cacao: WIN_CACAO[duelist.level],
     jade: 0,
+    tickets: WIN_TICKETS,
     cards: cards.map(id => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id) as CardDef)] })),
   };
 }
@@ -146,9 +151,10 @@ function setupOf(m: PvpMatchData): PvpSetup {
  * Revisa una jugada nueva de `player` (0 = anfitrión, 1 = invitado) repitiendo toda la partida.
  * Devuelve la lista nueva de jugadas y si alguien ganó.
  */
-export function pvpMove(m: PvpMatchData, player: PlayerIndex, intent: unknown): Check<{ intents: unknown[]; winner: PlayerIndex | null; turnPlayer: PlayerIndex }> {
+export function pvpMove(m: PvpMatchData, player: PlayerIndex, intent: unknown, masked = false): Check<{ intents: unknown[]; winner: PlayerIndex | null; turnPlayer: PlayerIndex }> {
   if (!intent || typeof intent !== 'object') return { ok: false, error: 'Jugada inválida' };
-  const it = intent as Intent;
+  // El navegador manda los números disfrazados que ve; aquí se traducen a los verdaderos
+  const it = masked ? unmaskIntent(intent as Intent, idMask(Number(m.seed))) : intent as Intent;
   if (it.player !== player) return { ok: false, error: 'Esa jugada no es tuya' };
   if (m.intents.length >= MAX_INTENTS) return { ok: false, error: 'Demasiadas jugadas' };
   const all = [...m.intents, it] as Intent[];
@@ -188,4 +194,51 @@ export function planPacks(packId: string, count: number, seed: number, sinceUr: 
       packs: r.packs.map(o => ({ pity: o.pity, cards: o.cards.map(id => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] })) })),
     },
   };
+}
+
+// ---------------------------------------------------------------- ruleta y mercado
+
+export { GOLD_TICKET_PRICE, GOLD_BUY_COUNTS, ROULETTE_PRIZES, SHOP_REFRESH_TICKETS, shopDay };
+export type { ShopSlot };
+
+/** Una carta "a la vista" para la ruleta (distinta a la anterior). */
+export function planFeatured(seed: number, previous?: number | null): number {
+  return pickFeatured(cardDb, createRng((seed ^ 0xfea7) >>> 0), previous ?? undefined);
+}
+
+export interface SpinPlan {
+  index: number;                       // gajo de la ruleta que salió
+  prize: { kind: string; amount: number; card: number | null; cacao: number; jade: number };
+  nextFeatured: number;
+}
+
+/** Un giro: qué premio sale y cuál será la siguiente carta a la vista. */
+export function planSpin(seed: number, featured: number): Check<SpinPlan> {
+  const card = cardDb.tryGet(featured);
+  if (!card) return { ok: false, error: 'La carta a la vista ya no existe' };
+  const rng = createRng((seed ^ 0x5b1e) >>> 0);
+  const index = spinIndex(rng);
+  const p = ROULETTE_PRIZES[index];
+  const dup = DUPLICATE_VALUE[rarityOf(card)];
+  return {
+    ok: true,
+    value: {
+      index,
+      prize: { kind: p.kind, amount: p.amount, card: p.kind === 'card' ? featured : null, cacao: p.kind === 'card' ? dup.cacao : 0, jade: p.kind === 'card' ? dup.jade : 0 },
+      nextFeatured: pickFeatured(cardDb, rng, featured),
+    },
+  };
+}
+
+/** Las 6 cartas nuevas del mercado. */
+export function planShop(seed: number): ShopSlot[] {
+  return rollShop(cardDb, createRng((seed ^ 0x5409) >>> 0));
+}
+
+/**
+ * Lo que ve `player` de la partida: la vista actual y, desde la jugada `since`, cada jugada con sus
+ * eventos (para animarlas). Nunca incluye la mano del rival ni sus cartas boca abajo.
+ */
+export function pvpView(m: PvpMatchData, player: PlayerIndex, since: number): PvpSnapshot {
+  return pvpSnapshotFor(setupOf(m), m.intents as Intent[], player, since, cardDb, fusionDb);
 }

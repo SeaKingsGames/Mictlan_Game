@@ -1012,7 +1012,7 @@ var packs_default = [
     glyph: "\u2600",
     color: "#e0a526",
     description: "Guerreros \xE1guila y jaguar, aves de Huitzilopochtli y el fuego del Sol.",
-    price: 100,
+    price: 150,
     monsters: { tags: ["guerrero", "jaguar", "sol", "fuego"], attributes: ["sol"] },
     support: ["sol", "tierra"],
     include: [],
@@ -1024,7 +1024,7 @@ var packs_default = [
     glyph: "\u2248",
     color: "#3fa7c9",
     description: "El para\xEDso de Tl\xE1loc: criaturas del lago, serpientes emplumadas y el viento de Eh\xE9catl.",
-    price: 100,
+    price: 150,
     monsters: { tags: ["agua", "serpiente", "viento"], attributes: ["agua", "viento"] },
     support: ["agua", "viento"],
     include: [],
@@ -1036,7 +1036,7 @@ var packs_default = [
     glyph: "\u2620",
     color: "#9b6bd6",
     description: "El inframundo: xolos, bestias de la noche y los se\xF1ores de la muerte.",
-    price: 100,
+    price: 150,
     monsters: { tags: ["muerte", "bestia"], attributes: [] },
     support: ["tierra", "viento"],
     include: [],
@@ -1400,7 +1400,145 @@ function isUnlocked(id, defeated) {
 }
 
 // src/game/economy.ts
-var WIN_CACAO = { 1: 20, 2: 35, 3: 50 };
+var WIN_CACAO = { 1: 10, 2: 10, 3: 10 };
+var WIN_TICKETS = 1;
+
+// src/game/packs.ts
+var packs = packs_default;
+var getPack = (id) => packs.find((p) => p.id === id);
+var PACK_SIZE = 5;
+var PACK_ODDS = { N: 60, R: 28, SR: 10, UR: 2 };
+var PACK_PITY = 10;
+var START_JADE = 300;
+var PACK_COUNTS = [1, 10];
+function packPool(pack, db) {
+  const ascensionOnly = new Set(db.all().map((c) => c.ascendsTo).filter((x) => !!x));
+  const pool = { N: [], R: [], SR: [], UR: [] };
+  for (const c of db.all()) {
+    if (ascensionOnly.has(c.id) || pack.exclude.includes(c.id)) continue;
+    const fits = pack.include.includes(c.id) || (c.type === "monster" ? c.tags.some((t) => pack.monsters.tags.includes(t)) || pack.monsters.attributes.includes(c.attribute) : pack.support.includes(c.attribute));
+    if (fits) pool[rarityOf(c)].push(c);
+  }
+  return pool;
+}
+function fallbackRarity(pool, wanted) {
+  const order = [...RARITIES];
+  for (let i = order.indexOf(wanted); i >= 0; i--) if (pool[order[i]].length) return order[i];
+  for (const r of order) if (pool[r].length) return r;
+  return null;
+}
+function rollRarity(rng) {
+  let x = rng() * 100;
+  for (const r of [...RARITIES].reverse()) {
+    x -= PACK_ODDS[r];
+    if (x < 0) return r;
+  }
+  return "N";
+}
+function openPack(pack, db, rng, sinceUr) {
+  const pool = packPool(pack, db);
+  const pick = (r) => {
+    const target = fallbackRarity(pool, r);
+    if (!target) return null;
+    const list = pool[target];
+    return list[Math.floor(rng() * list.length)];
+  };
+  const cards = [];
+  for (let i = 0; i < PACK_SIZE; i++) {
+    const c = pick(rollRarity(rng));
+    if (c) cards.push(c);
+  }
+  let pity = false;
+  const hasUr = () => cards.some((c) => rarityOf(c) === "UR");
+  if (!hasUr() && sinceUr + 1 >= PACK_PITY && pool.UR.length) {
+    cards.sort((a, b) => RARITIES.indexOf(rarityOf(a)) - RARITIES.indexOf(rarityOf(b)));
+    cards[0] = pool.UR[Math.floor(rng() * pool.UR.length)];
+    pity = true;
+  }
+  const got = hasUr();
+  cards.sort((a, b) => RARITIES.indexOf(rarityOf(a)) - RARITIES.indexOf(rarityOf(b)) || a.id - b.id);
+  return { cards: cards.map((c) => c.id), sinceUr: got ? 0 : sinceUr + 1, pity };
+}
+function openPacks(pack, db, rng, sinceUr, count) {
+  const out = [];
+  let since = sinceUr;
+  for (let i = 0; i < count; i++) {
+    const o = openPack(pack, db, rng, since);
+    out.push(o);
+    since = o.sinceUr;
+  }
+  return { packs: out, sinceUr: since };
+}
+
+// src/game/roulette.ts
+var GOLD_TICKET_PRICE = 3e3;
+var GOLD_BUY_COUNTS = [1, 5];
+var ROULETTE_PRIZES = [
+  { id: "cacao1000", kind: "cacao", amount: 1e3, weight: 26, label: "1000 cacao", color: "#8a5a26" },
+  { id: "jade50", kind: "jade", amount: 50, weight: 18, label: "50 jade", color: "#2f8a66" },
+  { id: "tickets25", kind: "tickets", amount: 25, weight: 16, label: "25 tickets", color: "#3a5f9a" },
+  { id: "cacao1500", kind: "cacao", amount: 1500, weight: 14, label: "1500 cacao", color: "#b8702a" },
+  { id: "jade100", kind: "jade", amount: 100, weight: 8, label: "100 jade", color: "#1fae7a" },
+  { id: "tickets50", kind: "tickets", amount: 50, weight: 8, label: "50 tickets", color: "#4f7fd0" },
+  { id: "gold", kind: "gold", amount: 1, weight: 6, label: "Ticket oro", color: "#d9a21b" },
+  { id: "card", kind: "card", amount: 1, weight: 4, label: "La carta", color: "#7b2fd6" }
+];
+function featuredPool(db) {
+  const ascensionOnly = new Set(db.all().map((c) => c.ascendsTo).filter((x) => !!x));
+  const banned = new Set(packs.length ? packs.map((p) => p.exclude).reduce((a, b) => a.filter((x) => b.includes(x))) : []);
+  return db.all().filter((c) => (rarityOf(c) === "R" || rarityOf(c) === "SR") && !ascensionOnly.has(c.id) && !banned.has(c.id));
+}
+function pickFeatured(db, rng, avoid) {
+  const pool = featuredPool(db).filter((c) => c.id !== avoid);
+  const list = pool.length ? pool : featuredPool(db);
+  return list[Math.floor(rng() * list.length)].id;
+}
+function spinIndex(rng) {
+  const total = ROULETTE_PRIZES.reduce((n, p) => n + p.weight, 0);
+  let x = rng() * total;
+  for (let i = 0; i < ROULETTE_PRIZES.length; i++) {
+    x -= ROULETTE_PRIZES[i].weight;
+    if (x < 0) return i;
+  }
+  return 0;
+}
+
+// src/game/cardShop.ts
+var SHOP_SLOTS = 6;
+var SHOP_ODDS = { N: 50, R: 33, SR: 14, UR: 3 };
+var SHOP_PRICES = { N: 300, R: 800, SR: 2e3, UR: 1e4 };
+var SHOP_REFRESH_TICKETS = 25;
+function shopPool(db) {
+  const ascensionOnly = new Set(db.all().map((c) => c.ascendsTo).filter((x) => !!x));
+  const banned = new Set(packs.length ? packs.map((p) => p.exclude).reduce((a, b) => a.filter((x) => b.includes(x))) : []);
+  const pool = { N: [], R: [], SR: [], UR: [] };
+  for (const c of db.all()) if (!ascensionOnly.has(c.id) && !banned.has(c.id)) pool[rarityOf(c)].push(c);
+  return pool;
+}
+function rollRarity2(rng) {
+  let x = rng() * 100;
+  for (const r of [...RARITIES].reverse()) {
+    x -= SHOP_ODDS[r];
+    if (x < 0) return r;
+  }
+  return "N";
+}
+function rollShop(db, rng) {
+  const pool = shopPool(db);
+  const chosen = [];
+  for (let i = 0; i < SHOP_SLOTS; i++) {
+    let r = rollRarity2(rng);
+    while (!pool[r].length && r !== "N") r = RARITIES[RARITIES.indexOf(r) - 1];
+    const options = pool[r].filter((c) => !chosen.includes(c));
+    const list = options.length ? options : pool[r];
+    if (!list.length) continue;
+    chosen.push(list[Math.floor(rng() * list.length)]);
+  }
+  return chosen.sort((a, b) => RARITIES.indexOf(rarityOf(a)) - RARITIES.indexOf(rarityOf(b)) || a.id - b.id).map((c) => ({ card: c.id, price: SHOP_PRICES[rarityOf(c)], sold: false }));
+}
+function shopDay(now = Date.now()) {
+  return new Date(now - 6 * 36e5).toISOString().slice(0, 10);
+}
 
 // src/core/progression.ts
 var ASCEND_COPIES = 3;
@@ -1408,7 +1546,7 @@ var MAX_LEVEL = 5;
 var LEVEL_STAT_BONUS = 100;
 var EFFECT_BOOST_LEVEL = 3;
 var EFFECT_BOOST = 1.25;
-var LEVEL_COST_BASE = { N: 50, R: 100, SR: 200, UR: 400 };
+var LEVEL_COST_BASE = { N: 150, R: 300, SR: 600, UR: 1200 };
 var levelBonus = (level) => (clampLevel(level) - 1) * LEVEL_STAT_BONUS;
 function clampLevel(level) {
   return Math.min(MAX_LEVEL, Math.max(1, Math.floor(level ?? 1)));
@@ -2530,72 +2668,132 @@ function rollRewards(duelist, firstWin, rng) {
   return firstWin ? [card, duelist.signature] : [card];
 }
 
-// src/game/packs.ts
-var packs = packs_default;
-var getPack = (id) => packs.find((p) => p.id === id);
-var PACK_SIZE = 5;
-var PACK_ODDS = { N: 60, R: 28, SR: 10, UR: 2 };
-var PACK_PITY = 10;
-var START_JADE = 300;
-var PACK_COUNTS = [1, 10];
-function packPool(pack, db) {
-  const ascensionOnly = new Set(db.all().map((c) => c.ascendsTo).filter((x) => !!x));
-  const pool = { N: [], R: [], SR: [], UR: [] };
-  for (const c of db.all()) {
-    if (ascensionOnly.has(c.id) || pack.exclude.includes(c.id)) continue;
-    const fits = pack.include.includes(c.id) || (c.type === "monster" ? c.tags.some((t) => pack.monsters.tags.includes(t)) || pack.monsters.attributes.includes(c.attribute) : pack.support.includes(c.attribute));
-    if (fits) pool[rarityOf(c)].push(c);
-  }
-  return pool;
+// src/game/pvpView.ts
+var MASK_RANGE = 1024;
+function idMask(seed) {
+  const perm = shuffle(Array.from({ length: MASK_RANGE }, (_, i) => i + 1), createRng((seed ^ 1924769) >>> 0));
+  return (iid) => iid >= 1 && iid <= MASK_RANGE ? perm[iid - 1] : iid + MASK_RANGE;
 }
-function fallbackRarity(pool, wanted) {
-  const order = [...RARITIES];
-  for (let i = order.indexOf(wanted); i >= 0; i--) if (pool[order[i]].length) return order[i];
-  for (const r of order) if (pool[r].length) return r;
-  return null;
-}
-function rollRarity(rng) {
-  let x = rng() * 100;
-  for (const r of [...RARITIES].reverse()) {
-    x -= PACK_ODDS[r];
-    if (x < 0) return r;
-  }
-  return "N";
-}
-function openPack(pack, db, rng, sinceUr) {
-  const pool = packPool(pack, db);
-  const pick = (r) => {
-    const target = fallbackRarity(pool, r);
-    if (!target) return null;
-    const list = pool[target];
-    return list[Math.floor(rng() * list.length)];
+function cardView(c, visible, pub) {
+  const base = { i: pub(c.instanceId), c: 0, o: c.owner, z: c.zone, s: c.fieldSlot, p: c.position, f: c.faceDown };
+  if (!visible) return base;
+  const flags = (c.hasAttackedThisTurn ? 1 : 0) | (c.positionChangedThisTurn ? 2 : 0) | (c.summonedThisTurn ? 4 : 0) | (c.battleImmuneUsed ? 8 : 0) | (c.borrowed ? 16 : 0);
+  const keywords = c.activeKeywords;
+  return {
+    ...base,
+    c: c.def.id,
+    a: c.atk,
+    d: c.defense,
+    ...c.nightForm ? { n: true } : {},
+    ...c.level > 1 ? { l: c.level } : {},
+    ...keywords.length ? { k: keywords } : {},
+    ...c.attacksThisTurn ? { t: c.attacksThisTurn } : {},
+    ...flags ? { b: flags } : {}
   };
-  const cards = [];
-  for (let i = 0; i < PACK_SIZE; i++) {
-    const c = pick(rollRarity(rng));
-    if (c) cards.push(c);
-  }
-  let pity = false;
-  const hasUr = () => cards.some((c) => rarityOf(c) === "UR");
-  if (!hasUr() && sinceUr + 1 >= PACK_PITY && pool.UR.length) {
-    cards.sort((a, b) => RARITIES.indexOf(rarityOf(a)) - RARITIES.indexOf(rarityOf(b)));
-    cards[0] = pool.UR[Math.floor(rng() * pool.UR.length)];
-    pity = true;
-  }
-  const got = hasUr();
-  cards.sort((a, b) => RARITIES.indexOf(rarityOf(a)) - RARITIES.indexOf(rarityOf(b)) || a.id - b.id);
-  return { cards: cards.map((c) => c.id), sinceUr: got ? 0 : sinceUr + 1, pity };
 }
-function openPacks(pack, db, rng, sinceUr, count) {
+function canSee(c, area, holder, viewer) {
+  if (area === "mictlan") return true;
+  if (area === "field") return !c.faceDown || holder === viewer;
+  return holder === viewer;
+}
+function viewFor(engine, viewer, pub) {
+  const s = engine.state;
+  const pv = (p, holder) => ({
+    life: p.life,
+    deck: p.deck.length,
+    hand: p.hand.map((c) => cardView(c, canSee(c, "hand", holder, viewer), pub)),
+    field: p.field.map((c) => c ? cardView(c, canSee(c, "field", holder, viewer), pub) : null),
+    support: p.support.map((c) => c ? cardView(c, canSee(c, "support", holder, viewer), pub) : null),
+    mictlan: p.mictlan.map((c) => cardView(c, true, pub))
+  });
+  return {
+    players: [pv(s.players[0], 0), pv(s.players[1], 1)],
+    turnPlayer: s.turnPlayer,
+    turn: s.turn,
+    phase: s.phase,
+    supportUsedThisTurn: s.supportUsedThisTurn,
+    monsterPlayedThisTurn: s.monsterPlayedThisTurn,
+    winner: s.winner,
+    daySign: s.daySign,
+    attackLockUntil: [...s.attackLockUntil]
+  };
+}
+function maskEvents(events, view, pub) {
+  const hidden = /* @__PURE__ */ new Set();
+  for (const p of view.players) {
+    for (const c of [...p.hand, ...p.field, ...p.support]) if (c && c.c === 0) hidden.add(c.i);
+  }
   const out = [];
-  let since = sinceUr;
-  for (let i = 0; i < count; i++) {
-    const o = openPack(pack, db, rng, since);
-    out.push(o);
-    since = o.sinceUr;
+  for (const e of events) {
+    const m = remapEvent(e, pub);
+    if (m.type === "statChanged" && hidden.has(m.instanceId)) continue;
+    if (m.type === "effect" && hidden.has(m.instanceId)) continue;
+    if (m.type === "nahualShift") {
+      const ids = m.instanceIds.filter((id) => !hidden.has(id));
+      if (!ids.length) continue;
+      out.push({ ...m, instanceIds: ids });
+      continue;
+    }
+    out.push(m);
   }
-  return { packs: out, sinceUr: since };
+  return out;
 }
+function remapEvent(e, pub) {
+  const r = { ...e };
+  for (const key of ["instanceId", "resultId", "discardedId", "attackerId"]) {
+    if (typeof r[key] === "number") r[key] = pub(r[key]);
+  }
+  if (e.type === "attackDeclared" || e.type === "activated") {
+    const t = e.targetId;
+    r.targetId = t === null ? null : pub(t);
+  }
+  if (Array.isArray(r.instanceIds)) r.instanceIds = r.instanceIds.map(pub);
+  if (Array.isArray(r.materialIds)) r.materialIds = r.materialIds.map(pub);
+  return r;
+}
+function unmaskIntent(intent, pub) {
+  const back = /* @__PURE__ */ new Map();
+  for (let i = 1; i <= MASK_RANGE; i++) back.set(pub(i), i);
+  const real = (n) => n >= 1 && n <= MASK_RANGE ? back.get(n) : n > MASK_RANGE * 2 ? n - MASK_RANGE : -1;
+  switch (intent.type) {
+    case "play":
+      return { ...intent, handIds: intent.handIds.map(real) };
+    case "activate":
+      return { ...intent, handId: real(intent.handId), ...intent.targetId !== void 0 ? { targetId: real(intent.targetId) } : {} };
+    case "changePosition":
+      return { ...intent, instanceId: real(intent.instanceId) };
+    case "attack":
+      return { ...intent, attackerId: real(intent.attackerId), targetId: intent.targetId === null ? null : real(intent.targetId) };
+    default:
+      return intent;
+  }
+}
+function pvpSnapshotFor(setup, intents, viewer, since, db, fusion) {
+  const pub = idMask(setup.seed);
+  const engine = createPvpDuel(setup, db, fusion);
+  engine.start();
+  const steps = [];
+  const from = Math.max(0, Math.min(since, intents.length));
+  for (let i = 0; i < intents.length; i++) {
+    const r = engine.apply(intents[i]);
+    if (!r.ok) return { ok: false, error: r.error, at: i };
+    if (i >= from) {
+      const view = viewFor(engine, viewer, pub);
+      steps.push({ events: maskEvents(r.events, view, pub), view });
+    }
+  }
+  return { ok: true, view: viewFor(engine, viewer, pub), steps, index: intents.length };
+}
+var HIDDEN_CARD = Object.freeze({
+  id: 0,
+  name: "Carta boca abajo",
+  description: "",
+  type: "monster",
+  attribute: "tierra",
+  tags: [],
+  atk: 0,
+  def: 0
+});
 
 // src/server/rules.ts
 var MAX_INTENTS = 4e3;
@@ -2624,11 +2822,12 @@ function verifyDuel(input) {
 }
 function planRewards(duelistId, seed, firstWin) {
   const duelist = getDuelist(duelistId);
-  if (!duelist) return { cacao: 0, jade: 0, cards: [] };
+  if (!duelist) return { cacao: 0, jade: 0, tickets: 0, cards: [] };
   const cards = rollRewards(duelist, firstWin, createRng((seed ^ 2654435769) >>> 0));
   return {
     cacao: WIN_CACAO[duelist.level],
     jade: 0,
+    tickets: WIN_TICKETS,
     cards: cards.map((id) => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] }))
   };
 }
@@ -2672,9 +2871,9 @@ function roomCode(random = Math.random) {
 function setupOf(m) {
   return { seed: Number(m.seed), decks: [m.host_deck, m.guest_deck], levels: [cleanLevels(m.host_levels), cleanLevels(m.guest_levels)] };
 }
-function pvpMove(m, player, intent) {
+function pvpMove(m, player, intent, masked = false) {
   if (!intent || typeof intent !== "object") return { ok: false, error: "Jugada inv\xE1lida" };
-  const it = intent;
+  const it = masked ? unmaskIntent(intent, idMask(Number(m.seed))) : intent;
   if (it.player !== player) return { ok: false, error: "Esa jugada no es tuya" };
   if (m.intents.length >= MAX_INTENTS) return { ok: false, error: "Demasiadas jugadas" };
   const all = [...m.intents, it];
@@ -2700,8 +2899,35 @@ function planPacks(packId, count, seed, sinceUr) {
     }
   };
 }
+function planFeatured(seed, previous) {
+  return pickFeatured(cardDb, createRng((seed ^ 65191) >>> 0), previous ?? void 0);
+}
+function planSpin(seed, featured) {
+  const card = cardDb.tryGet(featured);
+  if (!card) return { ok: false, error: "La carta a la vista ya no existe" };
+  const rng = createRng((seed ^ 23326) >>> 0);
+  const index = spinIndex(rng);
+  const p = ROULETTE_PRIZES[index];
+  const dup = DUPLICATE_VALUE[rarityOf(card)];
+  return {
+    ok: true,
+    value: {
+      index,
+      prize: { kind: p.kind, amount: p.amount, card: p.kind === "card" ? featured : null, cacao: p.kind === "card" ? dup.cacao : 0, jade: p.kind === "card" ? dup.jade : 0 },
+      nextFeatured: pickFeatured(cardDb, rng, featured)
+    }
+  };
+}
+function planShop(seed) {
+  return rollShop(cardDb, createRng((seed ^ 21513) >>> 0));
+}
+function pvpView(m, player, since) {
+  return pvpSnapshotFor(setupOf(m), m.intents, player, since, cardDb, fusionDb);
+}
 export {
   DATA_VERSION,
+  GOLD_BUY_COUNTS,
+  GOLD_TICKET_PRICE,
   MAX_INTENTS,
   PACK_PITY,
   PACK_SIZE,
@@ -2709,6 +2935,8 @@ export {
   PVP_SAME_RIVAL_DAILY,
   PVP_TURN_TIMEOUT_MS,
   PVP_WIN_CACAO,
+  ROULETTE_PRIZES,
+  SHOP_REFRESH_TICKETS,
   START_JADE,
   checkDuelStart,
   checkPvpDeck,
@@ -2716,13 +2944,18 @@ export {
   deckLevels,
   newSeed,
   planAscend,
+  planFeatured,
   planLevelUp,
   planPacks,
   planRewards,
+  planShop,
+  planSpin,
   pvpFirstPlayer,
   pvpMove,
   pvpTurnOf,
+  pvpView,
   roomCode,
+  shopDay,
   trimDeckToCollection,
   verifyDuel
 };

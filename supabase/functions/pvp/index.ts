@@ -1,12 +1,13 @@
 // Multijugador con código de sala. POST { action, ... }
 //   create { dataVersion }             → { matchId, code }
 //   join   { code, dataVersion }       → { matchId }
-//   move   { matchId, index, intent }  → { ok, winner, rewards? }   (index = cuántas jugadas había)
+//   view   { matchId, since }          → tu VISTA de la partida + las jugadas desde `since` (para animarlas)
+//   move   { matchId, index, intent }  → igual que view, después de tu jugada   (index = cuántas jugadas había)
 //   claim  { matchId }                 → reclamar victoria si el rival lleva 2 min sin jugar
 //   leave  { matchId }                 → cancelar sala (si nadie entró) o rendirse
 import {
   checkPvpDeck, DATA_VERSION, deckLevels, PVP_DAILY_REWARDED_WINS, PVP_SAME_RIVAL_DAILY, PVP_TURN_TIMEOUT_MS,
-  PVP_WIN_CACAO, pvpMove, pvpTurnOf, roomCode, type PvpMatchData,
+  PVP_WIN_CACAO, pvpMove, pvpTurnOf, pvpView, roomCode, type PvpMatchData,
 } from '../_shared/game.js';
 import { admin, currentUser, handler, json } from '../_shared/http.ts';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
@@ -61,13 +62,17 @@ Deno.serve(handler(async (req, body) => {
       return json({ ok: true });
     }
     if (m.status !== 'playing') return json({ ok: true });
-    return await applyMove(db, m, me, { type: 'surrender', player: me });
+    return await applyMove(db, m, me, me, { type: 'surrender', player: me }, false);
+  }
+
+  if (action === 'view') {
+    return json(snapshot(m, me, Number(body.since ?? m.intents.length)));
   }
 
   if (action === 'move') {
     if (m.status !== 'playing') return json({ error: 'La partida ya terminó', code: 'finished' }, 409);
     if (Number(body.index) !== m.intents.length) return json({ error: 'La partida cambió, sincronizando…', code: 'conflict' }, 409);
-    return await applyMove(db, m, me, body.intent);
+    return await applyMove(db, m, me, me, body.intent, true);
   }
 
   if (action === 'claim') {
@@ -76,15 +81,26 @@ Deno.serve(handler(async (req, body) => {
     const idle = Date.now() - new Date(m.last_move_at).getTime();
     if (turn === null || turn === me) return json({ error: 'Es tu turno' }, 400);
     if (idle < PVP_TURN_TIMEOUT_MS) return json({ error: `Espera ${Math.ceil((PVP_TURN_TIMEOUT_MS - idle) / 1000)} s más` }, 400);
-    return await applyMove(db, m, turn, { type: 'surrender', player: turn });   // el que no jugó se rinde
+    return await applyMove(db, m, turn, me, { type: 'surrender', player: turn }, false);   // el que no jugó se rinde
   }
 
   return json({ error: 'Acción desconocida' }, 400);
 }));
 
+type Match = PvpMatchData & { id: string; intents: unknown[]; status: string; winner: 0 | 1 | null; rewards: unknown; last_move_at: string; guest_id: string | null };
+
+/** Lo que ve `viewer`: nunca la mano del rival, sus cartas boca abajo ni la semilla. */
+function snapshot(m: Match, viewer: 0 | 1, since: number) {
+  const base = { status: m.status, winner: m.winner, rewards: m.rewards, lastMoveAt: Date.parse(m.last_move_at), me: viewer, index: m.intents.length };
+  if (m.status === 'waiting' || m.status === 'cancelled' || !m.guest_id) return base;
+  const v = pvpView(m, viewer, since);
+  if (!v.ok) return { ...base, error: 'La partida guardada no cuadra' };
+  return { ...base, view: v.view, steps: v.steps, index: v.index };
+}
+
 /** Revisa la jugada repitiendo la partida, la guarda (si nadie jugó antes) y paga si terminó. */
-async function applyMove(db: SupabaseClient, m: PvpMatchData & { id: string; intents: unknown[] }, player: 0 | 1, intent: unknown): Promise<Response> {
-  const r = pvpMove(m, player, intent);
+async function applyMove(db: SupabaseClient, m: Match, player: 0 | 1, viewer: 0 | 1, intent: unknown, masked: boolean): Promise<Response> {
+  const r = pvpMove(m, player, intent, masked);
   if (!r.ok) return json({ error: r.error, code: 'rejected' }, 422);
   const { data: saved, error } = await db.rpc('pvp_append', {
     p_match: m.id, p_expected: m.intents.length, p_intents: r.value.intents, p_winner: r.value.winner,
@@ -99,7 +115,11 @@ async function applyMove(db: SupabaseClient, m: PvpMatchData & { id: string; int
     if (sErr) throw sErr;
     rewards = data;
   }
-  return json({ ok: true, index: r.value.intents.length, winner: r.value.winner, rewards });
+  const after: Match = {
+    ...m, intents: r.value.intents, winner: r.value.winner, rewards,
+    status: r.value.winner === null ? m.status : 'finished', last_move_at: new Date().toISOString(),
+  };
+  return json({ ok: true, ...snapshot(after, viewer, m.intents.length) });
 }
 
 /** Tu mazo activo, revisado, con tus niveles y tu nombre. */

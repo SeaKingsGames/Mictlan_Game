@@ -1,8 +1,10 @@
 import { DUPLICATE_VALUE } from './config.ts';
 import { MAX_COPIES, rarityOf, type CardDef } from '../data/types.ts';
 
-/** Cacao por ganar un duelo, según la dificultad del rival. */
-export const WIN_CACAO: Record<1 | 2 | 3, number> = { 1: 20, 2: 35, 3: 50 };
+/** Cacao por ganar un duelo (campaña o libre). Las repetidas dan además su cacao/jade. */
+export const WIN_CACAO: Record<1 | 2 | 3, number> = { 1: 10, 2: 10, 3: 10 };
+/** Tickets estándar por ganar un duelo (sirven para renovar el mercado de cartas). */
+export const WIN_TICKETS = 1;
 
 export interface CardGains {
   added: number[];                                          // cartas que entraron a tu colección
