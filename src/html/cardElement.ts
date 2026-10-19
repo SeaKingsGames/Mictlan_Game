@@ -10,6 +10,10 @@ const TYPE_LABEL: Record<CardDef['type'], string> = {
   monster: 'Monstruo', spell: 'Mágica', equip: 'Equipo', trap: 'Trampa', ritual: 'Ritual',
 };
 
+/** Arte del dorso (opcional). Formato 5:7, por ejemplo 1000×1400 px. */
+const BACK_ART = '/cards/dorso.webp';
+let backArt: boolean | null = null;   // null = aún no se sabe si existe el archivo
+
 export interface CardElementOptions {
   hidden?: boolean;            // dorso
   selectionOrder?: number;     // número de la cadena de fusión
@@ -52,6 +56,18 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
   if (opts.hidden) {
     el.setAttribute('aria-label', 'Carta boca abajo');
     el.innerHTML = `<div class="card__back-sun">✺</div>`;
+    // Dorso con arte propio: pon el archivo en public/cards/dorso.webp (si no existe, queda el dorso dibujado)
+    if (backArt !== false) {
+      const img = document.createElement('img');
+      img.className = 'card__back-art';
+      img.src = BACK_ART;
+      img.alt = '';
+      img.decoding = 'async';
+      img.addEventListener('load', () => { backArt = true; el.classList.add('card--back-art'); });
+      img.addEventListener('error', () => { backArt = false; img.remove(); });
+      if (backArt === true) el.classList.add('card--back-art');
+      el.append(img);
+    }
     return el;
   }
 

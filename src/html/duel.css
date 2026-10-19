@@ -136,6 +136,17 @@ body.in-duel { height: 100%; overflow: hidden; background: #0b0908; }
 .zones--foe .zone { border-color: #8a3d32; background: radial-gradient(circle, transparent 40%, rgb(0 0 0 / .35)), linear-gradient(135deg, #5e2620, #34150f); }
 .zones--foe .zone::before { color: rgb(255 140 110 / .25); }
 .zone--support { cursor: default; opacity: .8; }
+.zone--support:has(.card) { opacity: 1; }
+/* Cartas boca abajo en el tablero: borde dorado que brilla, para que se vean sobre cualquier zona */
+.zone .card--back { box-shadow: 0 0 0 .18em #ffd76a, 0 0 1.1em rgb(255 215 106 / .55); }
+.zones--foe.zones--support .zone:has(.card--back)::after {
+  content: '◈'; position: absolute; top: calc(-10 * var(--u)); right: calc(-10 * var(--u)); z-index: 3;
+  width: calc(34 * var(--u)); height: calc(34 * var(--u)); border-radius: 50%; display: grid; place-items: center;
+  font-size: calc(20 * var(--u)); color: #2a1a05; background: #ffd76a; box-shadow: 0 0 calc(10 * var(--u)) #ffd76a;
+  animation: trap-pulse 1.6s ease-in-out infinite;
+}
+@keyframes trap-pulse { 50% { transform: scale(1.15); box-shadow: 0 0 calc(18 * var(--u)) #ffd76a; } }
+@media (prefers-reduced-motion: reduce) { .zones--foe.zones--support .zone:has(.card--back)::after { animation: none; } }
 .zone--support::before { content: '◈'; font-size: calc(40 * var(--u)); }
 .zones--mine.zones--monster .zone:hover { filter: brightness(1.15); }
 .zones--placing .zone { border-color: #f2c12e; animation: pulse 1.1s ease-in-out infinite; }
