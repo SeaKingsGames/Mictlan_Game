@@ -1,6 +1,5 @@
-import fusionsJson from '../data/fusions.json';
 import starterJson from '../data/starter.json';
-import { cardDb } from '../data/index.ts';
+import { cardDb, fusionDb } from '../data/index.ts';
 import { describeEffects } from '../data/effectText.ts';
 import { RARITIES, RARITY_LABEL, rarityOf, type CardAttribute, type CardDef, type CardRarity } from '../data/types.ts';
 import { duelists, isUnlocked } from '../game/duelists.ts';
@@ -117,11 +116,9 @@ export function renderLibrary(root: HTMLElement, profile: Profile, go: (hash: st
     }
     for (const p of packsWithCard(c.id, cardDb)) out.push(h('li', {}, `${p.glyph} ${p.name}`));
     for (const from of cardDb.all().filter(x => x.ascendsTo === c.id)) out.push(h('li', {}, `✺ Ascensión: 3 × ${from.name}`));
-    for (const r of (fusionsJson as { recipes: { a: number; b: number; result: number }[] }).recipes.filter(r => r.result === c.id)) {
-      const a = cardDb.tryGet(r.a)?.name ?? `#${r.a}`;
-      const b = cardDb.tryGet(r.b)?.name ?? `#${r.b}`;
-      out.push(h('li', {}, `⚗ Receta de fusión (en duelo): ${a} + ${b}`));
-    }
+    for (const [a, b] of fusionDb.recipesFor(c.id)) out.push(h('li', {}, `⚗ Fusión exacta (en duelo): ${a.name} + ${b.name}`));
+    const rules = fusionDb.rulesFor(c);
+    if (rules.length) out.push(h('li', {}, `⚗ Combinación (en duelo): ${rules.map(r => `${r.a} + ${r.b}`).join(' · ')}`));
     if (!out.length) out.push(h('li', {}, c.type === 'monster' ? '⚗ Solo aparece al fusionar durante un duelo (no se guarda en tu colección)' : 'Por ahora no se consigue'));
     return out;
   }

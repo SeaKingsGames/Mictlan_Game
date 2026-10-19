@@ -15,11 +15,18 @@ export class CardDatabase {
         throw new Error(`ID duplicado ${raw.id}: "${raw.name}" y "${this.byId.get(raw.id)!.name}"`);
       }
       // freeze = nadie puede modificar la definición en runtime por accidente
-      this.byId.set(raw.id, Object.freeze({ ...raw, tags: Object.freeze([...raw.tags]), effects: raw.effects ? Object.freeze([...raw.effects]) : undefined }));
+      this.byId.set(raw.id, Object.freeze({ ...raw, tags: Object.freeze([...raw.tags]), effects: raw.effects ? Object.freeze([...raw.effects]) : undefined, recipes: raw.recipes ? Object.freeze(raw.recipes.map(r => Object.freeze([r[0], r[1]] as const))) : undefined }));
     }
     for (const c of this.byId.values()) {
       if (c.ascendsTo !== undefined && !this.byId.has(c.ascendsTo)) {
         throw new Error(`Carta inválida "${c.name}" (id ${c.id}): asciende a la carta ${c.ascendsTo}, que no existe`);
+      }
+      for (const pair of c.recipes ?? []) {
+        for (const id of pair) {
+          const m = this.byId.get(id);
+          if (!m) throw new Error(`Carta inválida "${c.name}" (id ${c.id}): su receta usa la carta ${id}, que no existe`);
+          if (m.type !== 'monster') throw new Error(`Carta inválida "${c.name}" (id ${c.id}): su receta usa "${m.name}", que no es monstruo`);
+        }
       }
     }
   }
@@ -84,6 +91,12 @@ function validateCard(c: CardDef): string[] {
     p.push('las mágicas y equipos necesitan un efecto onActivate');
   }
   if (c.ascendsTo !== undefined && (!Number.isInteger(c.ascendsTo) || c.ascendsTo === c.id)) p.push('"asciende a" debe ser el id de OTRA carta');
+  if (c.recipes !== undefined) {
+    if (c.type !== 'monster') p.push('solo los monstruos pueden tener recetas de fusión');
+    if (!Array.isArray(c.recipes) || c.recipes.some(r => !Array.isArray(r) || r.length !== 2 || !r.every(x => Number.isInteger(x) && x > 0))) {
+      p.push('cada receta debe ser una pareja de ids, ej. [15, 4]');
+    } else if (c.recipes.some(r => r.includes(c.id))) p.push('una receta no puede usar la misma carta que crea');
+  }
   if (c.nahual) {
     if (c.type !== 'monster') p.push('solo los monstruos pueden ser nahuales');
     if (!c.nahual.name?.trim()) p.push('al nahual le falta el nombre de su forma de noche');

@@ -1,57 +1,7 @@
 {
-  "notes": "Recetas: carta A + carta B = carta exacta (se revisan primero). Reglas: etiqueta + etiqueta = la carta más débil con TODAS las etiquetas de 'result' cuyo ATK supere a ambos materiales. Las reglas se prueban en orden; si una no tiene resultado válido, se prueba la siguiente.",
-  "recipeOnly": [
-    8,
-    59,
-    60,
-    61,
-    62,
-    63,
-    64,
-    65
-  ],
-  "recipes": [
-    {
-      "a": 15,
-      "b": 4,
-      "result": 8
-    },
-    {
-      "a": 48,
-      "b": 42,
-      "result": 60
-    },
-    {
-      "a": 43,
-      "b": 34,
-      "result": 61
-    },
-    {
-      "a": 50,
-      "b": 31,
-      "result": 62
-    },
-    {
-      "a": 42,
-      "b": 12,
-      "result": 64
-    },
-    {
-      "a": 64,
-      "b": 60,
-      "result": 63
-    },
-    {
-      "a": 13,
-      "b": 55,
-      "result": 65
-    },
-    {
-      "a": 49,
-      "b": 56,
-      "result": 59
-    }
-  ],
+  "notes": "Reglas genéricas: etiqueta + etiqueta = la carta más débil con TODAS las etiquetas de 'result' cuyo ATK supere a ambos materiales. Las recetas exactas (carta + carta) ahora se guardan en cada carta (campo 'recipes', editor de cartas). Las de 'recipes' de este archivo siguen funcionando, pero si una pareja se repite gana la de la carta.",
+  "recipeOnly": [],
+  "recipes": [],
   "rules": [
     {
       "a": "guerrero",
@@ -78,6 +28,22 @@
       ]
     },
     {
+      "a": "guerrero",
+      "b": "bestia",
+      "result": [
+        "guerrero",
+        "bestia"
+      ]
+    },
+    {
+      "a": "guerrero",
+      "b": "viento",
+      "result": [
+        "guerrero",
+        "viento"
+      ]
+    },
+    {
       "a": "serpiente",
       "b": "fuego",
       "result": [
@@ -94,6 +60,14 @@
       ]
     },
     {
+      "a": "serpiente",
+      "b": "muerte",
+      "result": [
+        "serpiente",
+        "muerte"
+      ]
+    },
+    {
       "a": "bestia",
       "b": "agua",
       "result": [
@@ -102,11 +76,27 @@
       ]
     },
     {
-      "a": "agua",
+      "a": "bestia",
       "b": "muerte",
       "result": [
-        "agua",
+        "bestia",
         "muerte"
+      ]
+    },
+    {
+      "a": "jaguar",
+      "b": "muerte",
+      "result": [
+        "jaguar",
+        "muerte"
+      ]
+    },
+    {
+      "a": "jaguar",
+      "b": "bestia",
+      "result": [
+        "jaguar",
+        "bestia"
       ]
     },
     {
@@ -115,6 +105,29 @@
       "result": [
         "ave",
         "muerte"
+      ]
+    },
+    {
+      "a": "ave",
+      "b": "sol",
+      "result": [
+        "ave",
+        "sol"
+      ]
+    },
+    {
+      "a": "ave",
+      "b": "viento",
+      "result": [
+        "ave",
+        "viento"
+      ]
+    },
+    {
+      "a": "agua",
+      "b": "agua",
+      "result": [
+        "agua"
       ]
     }
   ]

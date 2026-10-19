@@ -21,6 +21,8 @@ const pairKey = (x: number, y: number) => (x < y ? `${x}+${y}` : `${y}+${x}`);  
 export class FusionDatabase implements FusionResolver {
   private readonly recipes = new Map<string, CardDef>();
   private readonly rules: Rule[] = [];
+  private readonly recipesByResult = new Map<number, [CardDef, CardDef][]>();
+  private readonly recipeOnlyIds = new Set<number>();
   /** Problemas encontrados (solo se llenan con strict = false; con strict = true lanzan error). */
   readonly problems: string[] = [];
   /** Avisos que no impiden jugar (por ejemplo, una receta que da una carta más débil). */
@@ -31,14 +33,31 @@ export class FusionDatabase implements FusionResolver {
     const recipeOnly = new Set(data.recipeOnly ?? []);
     // Las cartas ascendidas solo se consiguen ascendiendo (o por receta), no por reglas genéricas
     for (const c of db.all()) if (c.ascendsTo) recipeOnly.add(c.ascendsTo);
+    for (const id of recipeOnly) this.recipeOnlyIds.add(id);
 
+    // 1) Recetas guardadas en cada carta (editor de cartas): mandan sobre las de fusions.json
+    for (const res of db.all()) {
+      for (const [x, y] of res.recipes ?? []) {
+        const [a, b] = [db.get(x), db.get(y)];
+        const key = pairKey(x, y);
+        const prev = this.recipes.get(key);
+        if (prev) { problems.push(`${a.name} + ${b.name} da dos cartas distintas: ${prev.name} y ${res.name}`); continue; }
+        if (res.atk <= a.atk || res.atk <= b.atk) this.warnings.push(`Receta ${a.name} + ${b.name} = ${res.name}: el resultado no es más fuerte que los materiales.`);
+        this.recipes.set(key, res);
+        this.byResult(res.id).push([a, b]);
+      }
+    }
+    // 2) Recetas viejas de fusions.json (si la pareja ya está en una carta, gana la de la carta)
     for (const r of data.recipes) {
       const [a, b, res] = [db.tryGet(r.a), db.tryGet(r.b), db.tryGet(r.result)];
       if (!a || !b || !res) { problems.push(`receta ${r.a}+${r.b}=${r.result}: id inexistente`); continue; }
-      if (res.atk <= a.atk || res.atk <= b.atk) this.warnings.push(`Receta ${a.name} + ${b.name} = ${res.name}: el resultado no es más fuerte que los materiales.`);
       const key = pairKey(r.a, r.b);
-      if (this.recipes.has(key)) problems.push(`receta repetida ${key}`);
+      const prev = this.recipes.get(key);
+      if (prev && prev.id === res.id) continue;   // la misma receta en los dos lados
+      if (prev) { this.warnings.push(`fusions.json: ${a.name} + ${b.name} = ${res.name} se ignora; la carta ${prev.name} ya usa esa pareja.`); continue; }
+      if (res.atk <= a.atk || res.atk <= b.atk) this.warnings.push(`Receta ${a.name} + ${b.name} = ${res.name}: el resultado no es más fuerte que los materiales.`);
       this.recipes.set(key, res);
+      this.byResult(res.id).push([a, b]);
     }
 
     for (const r of data.rules) {
@@ -74,6 +93,23 @@ export class FusionDatabase implements FusionResolver {
       if (result) found.set(result.id, result);
     }
     return [...found.values()].sort((x, y) => y.atk - x.atk);
+  }
+
+  /** Parejas exactas que dan esta carta (de la carta y de fusions.json). */
+  recipesFor(cardId: number): readonly [CardDef, CardDef][] {
+    return this.recipesByResult.get(cardId) ?? [];
+  }
+
+  /** Reglas por etiqueta que PUEDEN dar esta carta (si no es solo-receta). */
+  rulesFor(card: CardDef): { a: CardTag; b: CardTag }[] {
+    if (card.type !== 'monster' || card.noFusion || card.nahual || this.recipeOnlyIds.has(card.id)) return [];
+    return this.rules.filter(r => r.candidates.some(c => c.id === card.id)).map(r => ({ a: r.a, b: r.b }));
+  }
+
+  private byResult(id: number): [CardDef, CardDef][] {
+    let list = this.recipesByResult.get(id);
+    if (!list) { list = []; this.recipesByResult.set(id, list); }
+    return list;
   }
 
   /** La mejor opción (la que usa la IA y la que se juega si no eliges). */

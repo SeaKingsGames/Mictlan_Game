@@ -3,10 +3,12 @@ import { nextAiIntent } from '../src/ai/aiPlayer.ts';
 import { DuelEngine } from '../src/core/DuelEngine.ts';
 import type { DuelEvent, PlayerIndex } from '../src/core/DuelState.ts';
 import type { FusionResolver } from '../src/core/fusion.ts';
-import { cardDb, fusionDb, getDeck } from '../src/data/index.ts';
+import { getDeck } from '../src/data/index.ts';
+import { testCards as cardDb, testFusion as fusionDb } from './fixtures/index.ts';
 import { START_LIFE } from '../src/data/types.ts';
 
-// IDs del cards.json: 1 Ocelote 800/600 · 2 Macehual 900/700 · 3 Guerrero Jaguar 1800/1400
+// Cartas FIJAS de tests/fixtures (no cambian aunque rebalancees tus cartas):
+// IDs: 1 Ocelote 800/600 · 2 Macehual 900/700 · 3 Guerrero Jaguar 1800/1400
 //                     7 Mictlantecuhtli 2800/2000 · 9 Colibrí 500/400 · 10 Serpiente de lago 700/900
 
 /** Duelo donde cada mazo es una sola carta repetida, para controlar qué se roba. */

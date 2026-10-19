@@ -169,3 +169,11 @@ Si cambias `packs.json` o los precios, vuelve a correr `npm run build:server` y 
 | `supabase/migrations/…_sobres.sql` | Contador de garantía, jade inicial, historial `pack_opens` y `open_packs` |
 | `supabase/functions/pack-open/` | Abre 1 o 10 sobres: tira las cartas y cobra |
 | `src/game/packs.ts` | Reglas de los sobres (probabilidades, garantía, qué cartas entran) |
+
+## Fusiones dentro de cada carta (editor de cartas)
+
+En el editor de cartas, cada monstruo tiene la sección **⚗ Cómo surge esta carta**:
+- **Sale por combinación genérica**: si está prendido, la carta puede salir por las reglas de etiquetas (ej. guerrero + jaguar). Apagado = `"noFusion": true`.
+- **Por cartas específicas**: parejas exactas (carta A + carta B) que siempre dan esta carta. Se guardan en la misma carta: `"recipes": [[51, 15], [54, 5]]`.
+
+Las recetas viejas de `fusions.json` siguen funcionando; si una pareja está en los dos lados, gana la de la carta. Como cambia `cards.json`, después de editar recetas haz lo de siempre: `npm run build:server`, desplegar funciones y `npm test`.

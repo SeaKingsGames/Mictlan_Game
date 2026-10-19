@@ -8,7 +8,7 @@ import type { Rng } from '../core/rng.ts';
  * (etiquetas y atributos), así las cartas nuevas que agregues en el editor entran solas.
  *   - monsters: monstruos con alguna de esas etiquetas O alguno de esos atributos
  *   - support:  mágicas, equipos y trampas de esos atributos
- *   - include / exclude: ids que quieres meter o sacar a mano
+ *   - include / exclude: ids que quieres meter o sacar a mano (las 5 cimas 96-100 están fuera: solo por fusión)
  * Las cartas que solo salen por ASCENSIÓN nunca vienen en sobres.
  */
 export interface PackDef {

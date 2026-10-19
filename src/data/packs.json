@@ -9,7 +9,7 @@
     "monsters": { "tags": ["guerrero", "jaguar", "sol", "fuego"], "attributes": ["sol"] },
     "support": ["sol", "tierra"],
     "include": [],
-    "exclude": []
+    "exclude": [96, 97, 98, 99, 100]
   },
   {
     "id": "tlalocan",
@@ -21,7 +21,7 @@
     "monsters": { "tags": ["agua", "serpiente", "viento"], "attributes": ["agua", "viento"] },
     "support": ["agua", "viento"],
     "include": [],
-    "exclude": []
+    "exclude": [96, 97, 98, 99, 100]
   },
   {
     "id": "mictlan",
@@ -33,6 +33,6 @@
     "monsters": { "tags": ["muerte", "bestia"], "attributes": [] },
     "support": ["tierra", "viento"],
     "include": [],
-    "exclude": []
+    "exclude": [96, 97, 98, 99, 100]
   }
 ]

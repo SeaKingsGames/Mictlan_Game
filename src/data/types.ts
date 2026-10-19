@@ -35,6 +35,11 @@ export interface CardDef {
   readonly ascendsTo?: number;
   /** true = nunca sale como resultado de una fusión GENÉRICA (solo por receta, sobres o premios). */
   readonly noFusion?: boolean;
+  /**
+   * Recetas: parejas EXACTAS de cartas que, fusionadas, dan esta carta. Ej. [[15, 4]] = carta 15 + carta 4.
+   * Se editan en el editor de cartas ("Cómo surge esta carta").
+   */
+  readonly recipes?: readonly (readonly [number, number])[];
 }
 
 export interface NahualForm {

@@ -113,6 +113,7 @@ function renderRecipes(): void {
   $('recipes').replaceChildren(
     h('h2', {}, 'Recetas (cartas específicas)'),
     h('p', { class: 'hint' }, 'Carta A + carta B = carta exacta. Se revisan antes que las reglas. El orden de A y B no importa.'),
+    ...cardRecipeList(),
     ...data.recipes.map((r, i) => h('div', { class: 'rowx' },
       cardSelect(r.a, id => update(() => { r.a = id; })),
       h('span', { class: 'op' }, '+'),
@@ -127,6 +128,16 @@ function renderRecipes(): void {
         data.recipes.push({ a: monsters[0].id, b: monsters[1].id, result: monsters.at(-1)!.id });
       }) }, '+ Agregar receta')),
   );
+}
+
+/** Recetas guardadas en cada carta (se editan en el editor de cartas, sección "Cómo surge esta carta"). */
+function cardRecipeList(): HTMLElement[] {
+  const list = cardDb.all().flatMap(c => (c.recipes ?? []).map(([a, b]) => ({ a, b, c })));
+  if (!list.length) return [];
+  const name = (id: number) => cardDb.tryGet(id)?.name ?? `#${id}`;
+  return [h('details', { class: 'card-recipes' },
+    h('summary', {}, `Recetas guardadas en las cartas (${list.length}) — se editan en el editor de cartas`),
+    h('ul', { class: 'hint' }, ...list.map(r => h('li', {}, `${name(r.a)} + ${name(r.b)} = ${r.c.name}`))))];
 }
 
 // ---------------------------------------------------------------- reglas

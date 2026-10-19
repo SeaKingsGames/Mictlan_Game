@@ -4,6 +4,7 @@ import cardsJson from '../data/cards.json';
 import decksJson from '../data/decks.json';
 import fusionsJson from '../data/fusions.json';
 import { CardDatabase } from '../data/cardDatabase.ts';
+import { FusionDatabase, type FusionData } from '../data/fusionDatabase.ts';
 import { CARD_TAGS, RARITIES, RARITY_LABEL, type CardAttribute, type CardDef, type CardRarity, type CardTag, type CardType } from '../data/types.ts';
 import { CardInstance } from '../core/CardInstance.ts';
 import { createCardElement } from './cardElement.ts';
@@ -132,6 +133,7 @@ function formatCards(list: MutableCard[]): string {
     if (c.type === 'monster' && c.nahual) o.nahual = c.nahual;
     if (c.ascendsTo) o.ascendsTo = c.ascendsTo;
     if (c.type === 'monster' && c.noFusion) o.noFusion = true;
+    if (c.type === 'monster' && c.recipes && c.recipes.length) o.recipes = c.recipes;
     return '  ' + JSON.stringify(o);
   });
   return '[\n' + ordered.join(',\n') + '\n]\n';
@@ -262,7 +264,7 @@ function renderForm(): void {
         h('p', { class: 'hint', style: 'margin:0 0 6px' }, 'Etiquetas (sirven para las fusiones)'),
         tagChips),
     ),
-    c.type === 'monster' ? noFusionToggle(c) : '',
+    c.type === 'monster' ? originSection(c) : '',
     c.type === 'monster' ? nahualSection(c) : '',
     ascendSection(c),
     h('div', { class: 'actions-row' },
@@ -270,12 +272,87 @@ function renderForm(): void {
   );
 }
 
-/** "No sale por fusión": para que una carta nueva no le quite su lugar a otra en las fusiones genéricas. */
-function noFusionToggle(c: MutableCard): HTMLElement {
-  const chk = h('input', { type: 'checkbox', checked: !!c.noFusion });
-  chk.addEventListener('change', () => { if (chk.checked) c.noFusion = true; else delete c.noFusion; changed(); });
-  return h('label', { class: 'nofusion-toggle' }, chk,
-    ' No sale como resultado de fusiones genéricas (solo por receta, premios o sobres)');
+/** Base de fusiones con las cartas del borrador (para mostrar recetas, reglas y choques). null si hay errores. */
+function draftFusion(): FusionDatabase | null {
+  try { return new FusionDatabase(fusionsJson as FusionData, new CardDatabase(cards), false); } catch { return null; }
+}
+
+/**
+ * "Cómo surge esta carta": si sale por combinación genérica (etiquetas) y con qué parejas EXACTAS se crea.
+ * Las recetas se guardan en la misma carta (campo "recipes" del cards.json).
+ */
+function originSection(c: MutableCard): HTMLElement {
+  const box = h('fieldset', { class: 'nahual-box origin-box' });
+  const monsters = cards.filter(o => o.type === 'monster' && o.id !== c.id).sort((x, y) => x.name.localeCompare(y.name));
+  const nameOf = (id: number) => cards.find(o => o.id === id)?.name ?? `#${id}`;
+
+  const paint = () => {
+    const fusion = draftFusion();
+    const ascendFrom = cards.filter(o => o.ascendsTo === c.id);
+    const recipes = (c.recipes ?? []) as [number, number][];
+
+    // Combinación genérica
+    const chk = h('input', { type: 'checkbox', checked: !c.noFusion && !c.nahual && !ascendFrom.length, disabled: !!c.nahual || ascendFrom.length > 0 });
+    chk.addEventListener('change', () => { if (chk.checked) delete c.noFusion; else c.noFusion = true; changed(); paint(); });
+    const rules = fusion?.rulesFor(c as CardDef) ?? [];
+    const genericNote = c.nahual ? 'Los nahuales no salen por combinación genérica.'
+      : ascendFrom.length ? `Se obtiene ascendiendo ${ascendFrom.map(o => o.name).join(', ')}; no sale por combinación genérica.`
+      : c.noFusion ? 'Apagado: solo sale por sus recetas exactas (o por premios y sobres).'
+      : rules.length ? `Puede salir al fusionar ${rules.map(r => `${r.a} + ${r.b}`).join(' · ')} cuando es la carta más débil de ese tipo que supera a los dos materiales.`
+      : 'Con sus etiquetas ninguna regla genérica la produce (ve "Reglas" en el editor de fusiones).';
+
+    // Recetas exactas
+    const rows = recipes.map((pair, i) => {
+      const pick = (side: 0 | 1) => {
+        const sel = h('select', { 'aria-label': side === 0 ? 'Carta A' : 'Carta B' });
+        for (const m of monsters) sel.append(h('option', { value: m.id, selected: m.id === pair[side] }, `${m.name} (${m.atk}) #${m.id}`));
+        sel.addEventListener('change', () => {
+          const next = recipes.map(r => [...r] as [number, number]);
+          next[i][side] = Number(sel.value);
+          c.recipes = next;
+          changed(); paint();
+        });
+        return sel;
+      };
+      const del = h('button', { class: 'ebtn ebtn--icon ebtn--danger', type: 'button', title: 'Quitar receta' }, '✕');
+      del.addEventListener('click', () => {
+        const next = recipes.filter((_, j) => j !== i);
+        if (next.length) c.recipes = next; else delete c.recipes;
+        changed(); paint();
+      });
+      const weak = [pair[0], pair[1]].map(id => cards.find(o => o.id === id)).some(m => m && m.atk >= c.atk);
+      return h('div', { class: 'recipe-row' }, pick(0), h('b', {}, '+'), pick(1), del,
+        weak ? h('small', { class: 'recipe-warn' }, '! un material es igual o más fuerte que el resultado') : '');
+    });
+    const add = h('button', { class: 'ebtn', type: 'button', disabled: monsters.length < 1 }, '+ Agregar receta');
+    add.addEventListener('click', () => {
+      const first = monsters[0]?.id ?? 0;
+      c.recipes = [...recipes.map(r => [...r] as [number, number]), [first, monsters[1]?.id ?? first]];
+      changed(); paint();
+    });
+
+    // Choques con otras cartas y recetas viejas de fusions.json
+    const clashes = (fusion?.problems ?? []).filter(p => p.includes(c.name));
+    const oldRecipes = (fusionsJson as FusionData).recipes.filter(r => r.result === c.id);
+    const usedIn = cards.filter(o => (o.recipes ?? []).some(r => r.includes(c.id)));
+
+    box.replaceChildren(
+      h('legend', {}, '⚗ Cómo surge esta carta'),
+      h('label', { class: 'nofusion-toggle', style: 'margin-top:0' }, chk, ' Sale por combinación genérica (por etiquetas)'),
+      h('p', { class: 'hint', style: 'margin:4px 0 10px' }, genericNote),
+      h('p', { class: 'hint', style: 'margin:0 0 6px;color:var(--ink)' }, h('b', {}, 'Por cartas específicas'), ' (receta exacta: esa pareja SIEMPRE da esta carta)'),
+      ...rows,
+      rows.length ? '' : h('p', { class: 'hint', style: 'margin:0 0 6px' }, 'Sin recetas exactas.'),
+      add,
+      ...clashes.map(p => h('p', { class: 'recipe-warn', style: 'margin:6px 0 0' }, '✕ ' + p)),
+      oldRecipes.length ? h('p', { class: 'hint', style: 'margin:8px 0 0' },
+        `En fusions.json también: ${oldRecipes.map(r => `${nameOf(r.a)} + ${nameOf(r.b)}`).join(' · ')} (si repites la pareja aquí, gana la de la carta).`) : '',
+      usedIn.length ? h('p', { class: 'hint', style: 'margin:8px 0 0' },
+        `Esta carta es material para: ${usedIn.map(o => o.name).join(', ')}.`) : '',
+    );
+  };
+  paint();
+  return box;
 }
 
 /** Ascensión: con 3 copias, esta carta se transforma en otra. */
@@ -486,6 +563,9 @@ function renderSide(): void {
     if (c.type === 'monster' && c.tags.length === 0) warns.push(`#${c.id} ${c.name}: sin etiquetas, no podrá fusionarse por reglas`);
     if (!c.description.trim()) warns.push(`#${c.id} ${c.name}: sin descripción`);
   }
+  const fusion = draftFusion();
+  for (const p of fusion?.problems ?? []) errors.push('Fusión: ' + p);
+  for (const w of fusion?.warnings ?? []) warns.push(w);
   const pending = [...arts.keys()].filter(id => cards.some(c => c.id === id));
   if (pending.length) warns.push(`${pending.length} imagen(es) nueva(s): descárgalas y ponlas en public/cards/`);
   $('validation').replaceChildren(
@@ -534,9 +614,11 @@ function renderSide(): void {
 }
 
 /**
- * Importa un archivo JSON de cartas (por ejemplo cartas-nuevas.json):
+ * Importa un archivo JSON de cartas (por ejemplo cartas-nuevas.json o un rebalance completo):
  *  - cartas con ID nuevo se agregan completas
- *  - cartas con ID que ya tienes: SOLO se copia la rareza (tus nombres, ATK, arte y efectos no se tocan)
+ *  - cartas con ID que ya tienes: tú eliges
+ *      · Aceptar  = se ACTUALIZAN (nombre, texto, stats, rareza, etiquetas, efectos, nahual, ascensión y recetas); tu ARTE se queda
+ *      · Cancelar = solo se copian la rareza, el nahual, la ascensión y las recetas que te falten
  */
 function importCards(status: HTMLElement): void {
   const input = h('input', { type: 'file', accept: '.json,application/json' });
@@ -546,21 +628,42 @@ function importCards(status: HTMLElement): void {
     try {
       const incoming = JSON.parse(await file.text()) as MutableCard[];
       if (!Array.isArray(incoming)) throw new Error('el archivo debe ser una lista de cartas');
-      let added = 0, rarities = 0;
+      const existingIds = incoming.filter(raw => cards.some(c => c.id === raw.id));
+      let replace = false;
+      if (existingIds.length) {
+        const renamed = existingIds
+          .map(raw => ({ raw, mine: cards.find(c => c.id === raw.id)! }))
+          .filter(x => x.mine.name.trim().toLowerCase() !== String(x.raw.name ?? '').trim().toLowerCase());
+        replace = confirm(
+          `El archivo trae ${existingIds.length} cartas que ya tienes.\n\n` +
+          'ACEPTAR = actualizarlas por completo (nombre, texto, ATK/DEF, rareza, etiquetas, efectos y fusiones). Tu arte se conserva.\n' +
+          'CANCELAR = no tocarlas (solo agregar las nuevas y copiar rareza/ascensión/recetas que falten).' +
+          (renamed.length ? `\n\nOjo, ${renamed.length} cambian de nombre:\n` + renamed.slice(0, 12).map(x => `#${x.raw.id} ${x.mine.name} → ${x.raw.name}`).join('\n') + (renamed.length > 12 ? '\n…' : '') : ''));
+      }
+      let added = 0, updated = 0;
       for (const raw of incoming) {
         const existing = cards.find(c => c.id === raw.id);
-        if (!existing) { cards.push({ ...raw, tags: [...(raw.tags ?? [])] }); added++; }
-        else {
-          if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; rarities++; }
-          if (raw.nahual && !existing.nahual) existing.nahual = raw.nahual;
-          if (raw.ascendsTo && !existing.ascendsTo) { existing.ascendsTo = raw.ascendsTo; rarities++; }
-          if (raw.noFusion && !existing.noFusion) existing.noFusion = true;
+        if (!existing) { cards.push({ ...raw, tags: [...(raw.tags ?? [])] }); added++; continue; }
+        if (replace) {
+          const art = existing.art;
+          for (const k of Object.keys(existing) as (keyof MutableCard)[]) delete (existing as Record<string, unknown>)[k];
+          Object.assign(existing, structuredClone(raw), { tags: [...(raw.tags ?? [])] });
+          if (art) existing.art = art; else delete existing.art;
+          updated++;
+          continue;
         }
+        let touched = false;
+        if (raw.rarity && existing.rarity !== raw.rarity) { existing.rarity = raw.rarity; touched = true; }
+        if (raw.nahual && !existing.nahual) { existing.nahual = raw.nahual; touched = true; }
+        if (raw.ascendsTo && !existing.ascendsTo) { existing.ascendsTo = raw.ascendsTo; touched = true; }
+        if (raw.noFusion && !existing.noFusion) { existing.noFusion = true; touched = true; }
+        if (raw.recipes?.length && !existing.recipes?.length) { existing.recipes = raw.recipes; touched = true; }
+        if (touched) updated++;
       }
       cards.sort((a, b) => a.id - b.id);
       saveDraft();
       renderAll();
-      alert(`Listo: ${added} cartas nuevas y ${rarities} cartas actualizadas (rareza o ascensión). Tus cambios en las demás cartas se respetaron.`);
+      alert(`Listo: ${added} cartas nuevas y ${updated} actualizadas.${replace ? ' Tu arte se conservó.' : ' Tus cambios en las demás cartas se respetaron.'}`);
     } catch (e) {
       status.textContent = `No se pudo importar: ${(e as Error).message}`;
     }
