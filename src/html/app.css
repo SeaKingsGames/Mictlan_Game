@@ -83,6 +83,9 @@ button.thumb:hover .card { transform: translateY(-3px); }
 .altar--SR { background: radial-gradient(circle, rgb(245 211 107 / .25), transparent 65%); }
 .altar--UR { background: radial-gradient(circle, rgb(194 107 245 / .32), transparent 65%); }
 .altar--missing .card { filter: grayscale(1) brightness(.5); }
+/* En la biblioteca todas las cartas se ven a color (para antojar); las que faltan llevan la etiqueta "Falta" */
+.lib .thumb--missing .card, .lib .altar--missing .card { filter: none; }
+.lib .thumb--missing .thumb__badge { border-color: #8a7c69; color: #cbbfa9; }
 .altar__label { margin: 0; text-align: center; color: var(--gold-soft); font: 700 12px 'Cinzel', Georgia, serif; letter-spacing: .14em; text-transform: uppercase; }
 .detail__name { margin: 4px 0 2px; text-align: center; font: 700 22px 'Cinzel', Georgia, serif; }
 .detail__meta { margin: 0 0 6px; text-align: center; color: var(--ink-soft); font-size: 13px; }

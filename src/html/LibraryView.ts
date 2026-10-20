@@ -78,7 +78,7 @@ export function renderLibrary(root: HTMLElement, profile: Profile, go: (hash: st
           missing: owned(profile, c.id) === 0,
           level: levelOf(profile, c.id),
           selected: c.id === selected?.id,
-          badge: owned(profile, c.id) ? `×${owned(profile, c.id)}` : undefined,
+          badge: owned(profile, c.id) ? `×${owned(profile, c.id)}` : 'Falta',
           onClick: () => { selected = c; renderDetail(); markThumb(sections, c.id); },
         }))))),
       cards.length ? '' : h('p', { class: 'empty' }, 'Ninguna carta coincide con el filtro.'));
