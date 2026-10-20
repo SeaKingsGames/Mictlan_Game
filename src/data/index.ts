@@ -19,7 +19,7 @@ export const daySigns: readonly DaySign[] = signsJson as DaySign[];
  * Versión de las REGLAS del motor. Súbela (+1) cada vez que cambies cómo funciona el duelo
  * (DuelEngine, IA, Reloj Solar…). Así el servidor detecta si tiene reglas viejas.
  */
-export const ENGINE_VERSION = 4;   // 4: efectos nuevos (control, combate, trampas de invocación)
+export const ENGINE_VERSION = 5;   // 5: equipos en la cadena de fusión, mágicas boca abajo
 
 export function getDeck(id: string): DeckDef {
   const deck = decks.find(d => d.id === id);

@@ -29,6 +29,7 @@ import { DUPLICATE_VALUE } from './game/config.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
 import { setupInstall } from './html/install.ts';
 import { versionLabel } from './version.ts';
+import { setTrack } from './html/sound.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
@@ -92,6 +93,7 @@ function route(): void {
   const [, page = '', arg = ''] = location.hash.split('/');
   leaveScreen?.(); leaveScreen = null;
   document.body.classList.toggle('in-duel', page === 'duelo' || (page === 'pvp' && !!arg));
+  setTrack(page === 'duelo' || (page === 'pvp' && !!arg) ? 'duel' : 'menu');
   window.scrollTo(0, 0);
 
   switch (page) {

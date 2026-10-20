@@ -36,13 +36,15 @@ export type Intent =
   | {
       type: 'play';
       player: PlayerIndex;
-      handIds: number[];            // en orden: cadena de fusión (1 = carta sola)
+      handIds: number[];            // en orden: cadena de fusión (1 = carta sola). Puede incluir EQUIPOS: se le ponen al monstruo final
       slot: number;                 // 0-4; si está ocupada, ese monstruo es el primer material
       position: BattlePosition;
       faceDown?: boolean;
       fusionChoices?: number[];     // IDs de carta elegidos cuando una fusión tiene varias opciones
     }
-  | { type: 'activate'; player: PlayerIndex; handId: number; targetId?: number; slot?: number }  // mágica, equipo o trampa
+  // mágica, equipo o trampa. handId = carta de tu mano, o una mágica/equipo que colocaste boca abajo.
+  // set = colocar boca abajo (las trampas siempre se colocan; las mágicas y equipos también se pueden colocar)
+  | { type: 'activate'; player: PlayerIndex; handId: number; targetId?: number; slot?: number; set?: boolean }
   | { type: 'changePosition'; player: PlayerIndex; instanceId: number }
   | { type: 'attack'; player: PlayerIndex; attackerId: number; targetId: number | null }
   | { type: 'endTurn'; player: PlayerIndex }

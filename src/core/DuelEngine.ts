@@ -1,7 +1,7 @@
 import type { CardDatabase } from '../data/cardDatabase.ts';
 import {
   HAND_SIZE, START_LIFE, isSupportCard, needsEquipTarget,
-  type EffectAction, type EffectCondition, type EffectTarget, type EffectTrigger, type CardTag,
+  type EffectAction, type EffectCondition, type EffectTarget, type EffectTrigger, type CardTag, type CardDef,
 } from '../data/types.ts';
 import { CardInstance } from './CardInstance.ts';
 import { InstanceIdCounter, buildShuffledDeck } from './deck.ts';
@@ -46,6 +46,9 @@ export function pickDaySign(seed: number, signs: readonly DaySign[] | undefined)
  * los tests y (Fase 4) la Edge Function de Supabase.
  * Regla: el estado SOLO cambia dentro de apply().
  */
+/** Cartas que pueden ir en la cadena de fusión para equipar al monstruo (equipos y mágicas de "monstruo equipado"). */
+export const isChainEquip = (def: CardDef): boolean => def.type !== 'trap' && def.type !== 'monster' && needsEquipTarget(def);
+
 export class DuelEngine {
   readonly state: DuelState;
   private readonly db: CardDatabase;
@@ -138,22 +141,33 @@ export class DuelEngine {
     if (!Number.isInteger(intent.slot) || intent.slot < 0 || intent.slot >= FIELD_SLOTS) return 'Zona inválida';
 
     const fromHand: CardInstance[] = [];
+    const equips: CardInstance[] = [];
     for (const id of intent.handIds) {
       const card = me.hand.find(c => c.instanceId === id);
       if (!card) return 'Esa carta no está en tu mano';
-      if (card.def.type !== 'monster') return 'Las mágicas, equipos y trampas van en tu fila de apoyo, no en la cadena de fusión';
-      fromHand.push(card);
+      if (card.def.type === 'monster') fromHand.push(card);
+      else if (isChainEquip(card.def)) equips.push(card);
+      else return 'Solo monstruos y equipos van en la cadena de fusión; las mágicas y trampas van en tu fila de apoyo';
     }
 
     // Como en YGOFM: si la zona tiene un monstruo, ese es el primer material.
     const occupant = me.field[intent.slot];
+    const firstHand = me.hand.find(c => c.instanceId === intent.handIds[0]);
+    if (!occupant && firstHand && firstHand.def.type !== 'monster') return 'La cadena empieza con un monstruo; los equipos van después';
+    if (!occupant && fromHand.length === 0) return 'Elige un monstruo para equiparlo';
     const chain = occupant ? [occupant, ...fromHand] : fromHand;
     const plan = planChain(this.fusion, chain.map(c => c.def), intent.fusionChoices ?? []);
     if (!plan.ok) return plan.error;
 
     // Validado: ahora sí se modifica el estado.
     s.monsterPlayedThisTurn = true;
-    me.hand = me.hand.filter(c => !fromHand.includes(c));
+    me.hand = me.hand.filter(c => !fromHand.includes(c) && !equips.includes(c));
+
+    // Solo equipos sobre el monstruo que ya está en la zona: se queda donde está, con sus equipos
+    if (occupant && fromHand.length === 0) {
+      this.equipFromChain(occupant, equips, intent.player, events);
+      return null;
+    }
     me.field[intent.slot] = null;
 
     let current = chain[0];
@@ -181,7 +195,8 @@ export class DuelEngine {
     current.zone = 'field';
     current.fieldSlot = intent.slot;
     current.position = intent.position;
-    current.faceDown = !fused && current !== occupant && (intent.faceDown ?? false);
+    // Boca abajo solo lo que bajas tal cual: las fusiones y los monstruos equipados salen boca arriba
+    current.faceDown = !fused && equips.length === 0 && current !== occupant && (intent.faceDown ?? false);
     current.summonedThisTurn = true;
     me.field[intent.slot] = current;
     events.push({
@@ -190,6 +205,7 @@ export class DuelEngine {
     });
     const fusionBonus = signTotal(s.daySign, 'fusionBonus');
     if (fused && fusionBonus) current.addModifier({ atk: fusionBonus, def: 0, sourceId: SOURCE_FUSION_SIGN, untilEndOfTurn: false });
+    this.equipFromChain(current, equips, intent.player, events);
     if (!current.faceDown) {
       if (fused) this.runEffects(current, 'onFusionSummon', events);
       this.runEffects(current, 'onSummon', events);
@@ -199,6 +215,16 @@ export class DuelEngine {
       }
     }
     return null;
+  }
+
+  /** Equipos de la cadena de fusión: se le ponen al monstruo que quedó (X + equipo + equipo). */
+  private equipFromChain(target: CardInstance, equips: readonly CardInstance[], player: PlayerIndex, events: DuelEvent[]): void {
+    for (const eq of equips) {
+      if (target.zone !== 'field' || this.state.winner !== null) { this.sendToMictlan(eq, 'used', events); continue; }
+      events.push({ type: 'activated', player, instanceId: eq.instanceId, targetId: target.instanceId });
+      this.runEffects(eq, 'onActivate', events, { equipTarget: target });
+      this.sendToMictlan(eq, 'used', events);
+    }
   }
 
   /** Activa la primera trampa boca abajo de `defender` que responda a alguno de esos disparadores. */
@@ -226,15 +252,20 @@ export class DuelEngine {
     if (s.phase !== 'main') return 'Solo puedes usar mágicas y trampas en la fase principal';
     if (s.monsterPlayedThisTurn) return 'Después de bajar un monstruo ya no puedes usar mágicas ni trampas';
     if (s.supportUsedThisTurn) return 'Ya usaste una mágica o trampa este turno';
-    const card = me.hand.find(c => c.instanceId === intent.handId);
+    // Una mágica o equipo que colocaste boca abajo antes: ahora se activa desde el campo
+    const setSlot = me.support.findIndex(c => c?.instanceId === intent.handId);
+    const fromField = setSlot >= 0 ? me.support[setSlot]! : null;
+    const card = fromField ?? me.hand.find(c => c.instanceId === intent.handId);
     if (!card) return 'Esa carta no está en tu mano';
     if (!isSupportCard(card.def)) return 'Los monstruos se invocan en tus zonas de monstruo';
+    if (fromField && fromField.def.type === 'trap') return 'Las trampas se activan solas cuando el rival hace algo';
+    if (fromField && intent.set) return 'Esa carta ya está colocada';
 
-    // Trampa: se coloca boca abajo y espera a que el rival ataque.
-    if (card.def.type === 'trap') {
+    // Trampa (o mágica que decides colocar): boca abajo en tu fila de apoyo.
+    if (!fromField && (card.def.type === 'trap' || intent.set)) {
       const slot = intent.slot ?? me.support.findIndex(c => c === null);
       if (!Number.isInteger(slot) || slot < 0 || slot >= FIELD_SLOTS) return 'No tienes zonas de apoyo libres';
-      if (me.support[slot]) return 'Esa zona ya tiene una trampa';
+      if (me.support[slot]) return 'Esa zona ya tiene una carta';
       s.supportUsedThisTurn = true;
       me.hand = me.hand.filter(c => c !== card);
       card.zone = 'field';
@@ -254,6 +285,7 @@ export class DuelEngine {
     // Validado.
     s.supportUsedThisTurn = true;
     me.hand = me.hand.filter(c => c !== card);
+    if (fromField) { me.support[setSlot] = null; card.faceDown = false; }
     events.push({ type: 'activated', player: intent.player, instanceId: card.instanceId, targetId: target?.instanceId ?? null });
     this.runEffects(card, 'onActivate', events, { equipTarget: target });
     this.sendToMictlan(card, 'used', events);

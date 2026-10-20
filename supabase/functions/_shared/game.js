@@ -84,24 +84,24 @@ var cards_default = [
   { id: 61, name: "Tezcatlipoca", description: "Espejo humeante, se\xF1or de la noche. Al ser invocado destruye todas las trampas y m\xE1gicas del rival; de noche gana +500 ATK.", type: "monster", attribute: "viento", tags: ["deidad", "jaguar", "muerte"], atk: 3700, def: 3e3, rarity: "UR", art: "/cards/61.webp", effects: [{ trigger: "onSummon", actions: [{ type: "destroySupport", who: "opponent" }] }, { trigger: "continuous", conditions: [{ type: "isNight" }], actions: [{ type: "modifyAtk", amount: 500, target: "self" }] }], noFusion: true, recipes: [[43, 53], [76, 57]] },
   { id: 62, name: "Xipe T\xF3tec", description: "Nuestro se\xF1or el desollado, dios de la renovaci\xF3n. Al empezar tu turno recuperas 500 PV; al ser destruido, regresa tu monstruo m\xE1s fuerte.", type: "monster", attribute: "tierra", tags: ["deidad", "sol"], atk: 3300, def: 2800, rarity: "UR", art: "/cards/62.webp", effects: [{ trigger: "onTurnStart", actions: [{ type: "heal", amount: 500 }] }, { trigger: "onDestroyed", actions: [{ type: "revive" }] }], noFusion: true, recipes: [[50, 46], [50, 3]] },
   { id: 63, name: "Tonatiuh", description: "El Quinto Sol. Al ser invocado hace 1000 de da\xF1o al rival; al Mediod\xEDa gana +700 ATK.", type: "monster", attribute: "sol", tags: ["deidad", "sol", "fuego"], atk: 3800, def: 3300, rarity: "UR", art: "/cards/63.webp", effects: [{ trigger: "onSummon", actions: [{ type: "damage", amount: 1e3, who: "opponent" }] }, { trigger: "continuous", conditions: [{ type: "isPhase", phase: "mediodia" }], actions: [{ type: "modifyAtk", amount: 700, target: "self" }] }], noFusion: true, recipes: [[64, 50], [5, 50]] },
-  { id: 64, name: "Xiuhtecuhtli", description: "Se\xF1or del fuego y del a\xF1o. Al ser invocado destruye al monstruo rival m\xE1s d\xE9bil; al empezar tu turno hace 300 de da\xF1o.", type: "monster", attribute: "sol", tags: ["deidad", "fuego"], atk: 3500, def: 2800, rarity: "UR", effects: [{ trigger: "onSummon", actions: [{ type: "destroy", target: "lowestAtkEnemy" }] }, { trigger: "onTurnStart", actions: [{ type: "damage", amount: 300, who: "opponent" }] }], noFusion: true, recipes: [[5, 12]] },
-  { id: 65, name: "Tlaltecuhtli", description: "Se\xF1ora de la tierra que devora a los muertos. Da\xF1o de sobra contra defensa; cada vez que destruye a un monstruo recuperas 800 PV.", type: "monster", attribute: "tierra", tags: ["deidad", "bestia"], atk: 3400, def: 3600, rarity: "UR", effects: [{ trigger: "continuous", actions: [{ type: "grantKeyword", keyword: "piercing", target: "self" }] }, { trigger: "onBattleDestroy", actions: [{ type: "heal", amount: 800 }] }], noFusion: true, recipes: [[13, 53], [53, 55]] },
-  { id: 66, name: "Ofrenda de cacao", description: "Recuperas 500 PV y robas 1 carta.", type: "spell", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "N", effects: [{ trigger: "onActivate", actions: [{ type: "heal", amount: 500 }, { type: "draw", amount: 1 }] }] },
-  { id: 67, name: "Danza del venado", description: "Tus monstruos ganan +300 ATK hasta el final del turno y robas 1 carta.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 300, target: "allAllies", untilEndOfTurn: true }, { type: "draw", amount: 1 }] }] },
-  { id: 68, name: "Ceremonia del Fuego Nuevo", description: "Hace 1000 de da\xF1o al rival y recuperas 1000 PV.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onActivate", actions: [{ type: "damage", amount: 1e3, who: "opponent" }, { type: "heal", amount: 1e3 }] }] },
-  { id: 69, name: "C\xF3dice sagrado", description: "Robas 2 cartas.", type: "spell", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onActivate", actions: [{ type: "draw", amount: 2 }] }] },
-  { id: 70, name: "Rodela de plumas", description: "El monstruo equipado gana +300 ATK y +300 DEF.", type: "equip", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "N", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 300, target: "equipTarget" }, { type: "modifyDef", amount: 300, target: "equipTarget" }] }] },
-  { id: 71, name: "\xC1tlatl", description: "Lanzadardos. El monstruo equipado gana +800 ATK y hace da\xF1o de sobra contra defensa.", type: "equip", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 800, target: "equipTarget" }, { type: "grantKeyword", keyword: "piercing", target: "equipTarget" }] }] },
-  { id: 72, name: "Penacho de quetzal", description: "El monstruo equipado gana +500 ATK y +500 DEF.", type: "equip", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 500, target: "equipTarget" }, { type: "modifyDef", amount: 500, target: "equipTarget" }] }] },
-  { id: 73, name: "Red de pescador", description: "Cuando el rival ataca, el atacante pierde 1000 ATK este turno y queda en defensa.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "modifyAtk", amount: -1e3, target: "attacker", untilEndOfTurn: true }, { type: "forceDefense", target: "attacker" }] }] },
-  { id: 74, name: "Eclipse", description: "Cuando el rival ataca, la oscuridad detiene el ataque y no podr\xE1 atacar en su siguiente turno.", type: "trap", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "negateAttack" }, { type: "preventAttack" }] }] },
-  { id: 75, name: "Furia de Tl\xE1loc", description: "Cuando el rival ataca, destruye a todos sus monstruos.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "UR", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "destroy", target: "allEnemies" }] }] },
-  { id: 76, name: "Brujo nahualli", description: "Hechicero de la sierra. De noche camina en cuatro patas.", type: "monster", attribute: "tierra", tags: ["guerrero", "jaguar"], atk: 1200, def: 1500, rarity: "SR", effects: [{ trigger: "onSummon", conditions: [{ type: "isNight" }], actions: [{ type: "draw", amount: 1 }] }], nahual: { name: "Jaguar nahual", atk: 2500, def: 1e3, description: "La forma de noche del brujo: un jaguar de ojos humanos." } },
-  { id: 77, name: "Anciana del pueblo", description: "Curandera que sabe los nombres de todas las hierbas. De noche se vuelve tecolote.", type: "monster", attribute: "viento", tags: ["ave", "muerte"], atk: 500, def: 1300, rarity: "R", effects: [{ trigger: "onSummon", actions: [{ type: "heal", amount: 500 }] }], nahual: { name: "Tecolote nahual", atk: 1800, def: 1e3, description: "Cuando canta el tecolote, alguien va a morir." } },
-  { id: 78, name: "Comerciante viajero", description: "Pochteca que recorre los caminos con su carga de cacao. De noche se vuelve coyote.", type: "monster", attribute: "tierra", tags: ["bestia"], atk: 900, def: 900, rarity: "N", nahual: { name: "Coyote nahual", atk: 1600, def: 1100, description: "Astuto y veloz: nadie lo ve llegar a la caravana." } },
-  { id: 79, name: "Ocelote cazador", description: "El cachorro creci\xF3. De noche gana +400 ATK al atacar.", type: "monster", attribute: "tierra", tags: ["jaguar", "bestia"], atk: 1600, def: 1100, rarity: "R", effects: [{ trigger: "onAttack", conditions: [{ type: "isNight" }], actions: [{ type: "modifyAtk", amount: 400, target: "self", untilEndOfTurn: true }] }] },
-  { id: 80, name: "Macehual veterano", description: "Sobrevivi\xF3 a cien batallas floridas. Tus otros guerreros ganan +200 ATK.", type: "monster", attribute: "tierra", tags: ["guerrero"], atk: 1600, def: 1300, rarity: "R", effects: [{ trigger: "continuous", actions: [{ type: "modifyAtk", amount: 200, target: "otherAlliesWithTag", tag: "guerrero" }] }] },
-  { id: 81, name: "Colibr\xED mensajero del sol", description: "Lleva noticias a Huitzilopochtli. Al ser invocado, robas 1 carta y recuperas 300 PV.", type: "monster", attribute: "viento", tags: ["ave", "sol"], atk: 1300, def: 900, rarity: "R", effects: [{ trigger: "onSummon", actions: [{ type: "draw", amount: 1 }, { type: "heal", amount: 300 }] }] },
+  { id: 64, name: "Xiuhtecuhtli", description: "Se\xF1or del fuego y del a\xF1o. Al ser invocado destruye al monstruo rival m\xE1s d\xE9bil; al empezar tu turno hace 300 de da\xF1o.", type: "monster", attribute: "sol", tags: ["deidad", "fuego"], atk: 3500, def: 2800, rarity: "UR", art: "/cards/64.webp", effects: [{ trigger: "onSummon", actions: [{ type: "destroy", target: "lowestAtkEnemy" }] }, { trigger: "onTurnStart", actions: [{ type: "damage", amount: 300, who: "opponent" }] }], noFusion: true, recipes: [[5, 12]] },
+  { id: 65, name: "Tlaltecuhtli", description: "Se\xF1ora de la tierra que devora a los muertos. Da\xF1o de sobra contra defensa; cada vez que destruye a un monstruo recuperas 800 PV.", type: "monster", attribute: "tierra", tags: ["deidad", "bestia"], atk: 3400, def: 3600, rarity: "UR", art: "/cards/65.webp", effects: [{ trigger: "continuous", actions: [{ type: "grantKeyword", keyword: "piercing", target: "self" }] }, { trigger: "onBattleDestroy", actions: [{ type: "heal", amount: 800 }] }], noFusion: true, recipes: [[13, 53], [53, 55]] },
+  { id: 66, name: "Ofrenda de cacao", description: "Recuperas 500 PV y robas 1 carta.", type: "spell", attribute: "tierra", tags: [], atk: 0, def: 0, rarity: "N", art: "/cards/66.webp", effects: [{ trigger: "onActivate", actions: [{ type: "heal", amount: 500 }, { type: "draw", amount: 1 }] }] },
+  { id: 67, name: "Danza del venado", description: "Tus monstruos ganan +300 ATK hasta el final del turno y robas 1 carta.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", art: "/cards/67.webp", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 300, target: "allAllies", untilEndOfTurn: true }, { type: "draw", amount: 1 }] }] },
+  { id: 68, name: "Ceremonia del Fuego Nuevo", description: "Hace 1000 de da\xF1o al rival y recuperas 1000 PV.", type: "spell", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "SR", art: "/cards/68.webp", effects: [{ trigger: "onActivate", actions: [{ type: "damage", amount: 1e3, who: "opponent" }, { type: "heal", amount: 1e3 }] }] },
+  { id: 69, name: "C\xF3dice sagrado", description: "Robas 2 cartas.", type: "spell", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", art: "/cards/69.webp", effects: [{ trigger: "onActivate", actions: [{ type: "draw", amount: 2 }] }] },
+  { id: 70, name: "Rodela de plumas", description: "El monstruo equipado gana +300 ATK y +300 DEF.", type: "equip", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "N", art: "/cards/70.webp", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 300, target: "equipTarget" }, { type: "modifyDef", amount: 300, target: "equipTarget" }] }] },
+  { id: 71, name: "\xC1tlatl", description: "Lanzadardos. El monstruo equipado gana +800 ATK y hace da\xF1o de sobra contra defensa.", type: "equip", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "SR", art: "/cards/71.webp", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 800, target: "equipTarget" }, { type: "grantKeyword", keyword: "piercing", target: "equipTarget" }] }] },
+  { id: 72, name: "Penacho de quetzal", description: "El monstruo equipado gana +500 ATK y +500 DEF.", type: "equip", attribute: "sol", tags: [], atk: 0, def: 0, rarity: "R", art: "/cards/72.webp", effects: [{ trigger: "onActivate", actions: [{ type: "modifyAtk", amount: 500, target: "equipTarget" }, { type: "modifyDef", amount: 500, target: "equipTarget" }] }] },
+  { id: 73, name: "Red de pescador", description: "Cuando el rival ataca, el atacante pierde 1000 ATK este turno y queda en defensa.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "R", art: "/cards/73.webp", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "modifyAtk", amount: -1e3, target: "attacker", untilEndOfTurn: true }, { type: "forceDefense", target: "attacker" }] }] },
+  { id: 74, name: "Eclipse", description: "Cuando el rival ataca, la oscuridad detiene el ataque y no podr\xE1 atacar en su siguiente turno.", type: "trap", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "R", art: "/cards/74.webp", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "negateAttack" }, { type: "preventAttack" }] }] },
+  { id: 75, name: "Furia de Tl\xE1loc", description: "Cuando el rival ataca, destruye a todos sus monstruos.", type: "trap", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "UR", art: "/cards/75.webp", effects: [{ trigger: "onOpponentAttack", actions: [{ type: "destroy", target: "allEnemies" }] }] },
+  { id: 76, name: "Brujo nahualli", description: "Hechicero de la sierra. De noche camina en cuatro patas.", type: "monster", attribute: "tierra", tags: ["guerrero", "jaguar"], atk: 1200, def: 1500, rarity: "SR", art: "/cards/76.webp", effects: [{ trigger: "onSummon", conditions: [{ type: "isNight" }], actions: [{ type: "draw", amount: 1 }] }], nahual: { name: "Jaguar nahual", atk: 2500, def: 1e3, description: "La forma de noche del brujo: un jaguar de ojos humanos." } },
+  { id: 77, name: "Anciana del pueblo", description: "Curandera que sabe los nombres de todas las hierbas. De noche se vuelve tecolote.", type: "monster", attribute: "viento", tags: ["ave", "muerte"], atk: 500, def: 1300, rarity: "R", art: "/cards/77.webp", effects: [{ trigger: "onSummon", actions: [{ type: "heal", amount: 500 }] }], nahual: { name: "Tecolote nahual", atk: 1800, def: 1e3, description: "Cuando canta el tecolote, alguien va a morir." } },
+  { id: 78, name: "Comerciante viajero", description: "Pochteca que recorre los caminos con su carga de cacao. De noche se vuelve coyote.", type: "monster", attribute: "tierra", tags: ["bestia"], atk: 900, def: 900, rarity: "N", art: "/cards/78.webp", nahual: { name: "Coyote nahual", atk: 1600, def: 1100, description: "Astuto y veloz: nadie lo ve llegar a la caravana." } },
+  { id: 79, name: "Ocelote cazador", description: "El cachorro creci\xF3. De noche gana +400 ATK al atacar.", type: "monster", attribute: "tierra", tags: ["jaguar", "bestia"], atk: 1600, def: 1100, rarity: "R", art: "/cards/79.webp", effects: [{ trigger: "onAttack", conditions: [{ type: "isNight" }], actions: [{ type: "modifyAtk", amount: 400, target: "self", untilEndOfTurn: true }] }] },
+  { id: 80, name: "Macehual veterano", description: "Sobrevivi\xF3 a cien batallas floridas. Tus otros guerreros ganan +200 ATK.", type: "monster", attribute: "tierra", tags: ["guerrero"], atk: 1600, def: 1300, rarity: "R", art: "/cards/80.webp", effects: [{ trigger: "continuous", actions: [{ type: "modifyAtk", amount: 200, target: "otherAlliesWithTag", tag: "guerrero" }] }] },
+  { id: 81, name: "Colibr\xED mensajero del sol", description: "Lleva noticias a Huitzilopochtli. Al ser invocado, robas 1 carta y recuperas 300 PV.", type: "monster", attribute: "viento", tags: ["ave", "sol"], atk: 1300, def: 900, rarity: "R", art: "/cards/81.webp", effects: [{ trigger: "onSummon", actions: [{ type: "draw", amount: 1 }, { type: "heal", amount: 300 }] }] },
   { id: 82, name: "Xoloitzcuintle guardi\xE1n", description: "Guardi\xE1n del umbral del Mictl\xE1n. Al ser destruido, recuperas 800 PV y regresa tu monstruo de muerte m\xE1s fuerte.", type: "monster", attribute: "tierra", tags: ["bestia", "muerte"], atk: 1900, def: 1600, rarity: "SR", effects: [{ trigger: "onDestroyed", actions: [{ type: "heal", amount: 800 }, { type: "revive", tag: "muerte" }] }] },
   { id: 83, name: "Tormenta de Tl\xE1loc", description: "Rayos y granizo destruyen a todos los monstruos del rival.", type: "spell", attribute: "agua", tags: [], atk: 0, def: 0, rarity: "UR", effects: [{ trigger: "onActivate", actions: [{ type: "destroy", target: "allEnemies" }] }] },
   { id: 84, name: "Soplo de Eh\xE9catl", description: "El viento barre todas las m\xE1gicas y trampas colocadas del rival.", type: "spell", attribute: "viento", tags: [], atk: 0, def: 0, rarity: "R", effects: [{ trigger: "onActivate", actions: [{ type: "destroySupport", who: "opponent" }] }] },
@@ -1369,7 +1369,7 @@ var FusionDatabase = class {
 var cardDb = new CardDatabase(cards_default);
 var fusionDb = new FusionDatabase(fusions_default, cardDb);
 var daySigns = signs_default;
-var ENGINE_VERSION = 4;
+var ENGINE_VERSION = 5;
 var DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default) + JSON.stringify(signs_default) + JSON.stringify(packs_default));
 function fnv1a(text) {
   let h = 2166136261;
@@ -1762,6 +1762,7 @@ function pickDaySign(seed, signs) {
   const rng = createRng((seed ^ 5351397) >>> 0);
   return signs[Math.floor(rng() * signs.length)] ?? null;
 }
+var isChainEquip = (def) => def.type !== "trap" && def.type !== "monster" && needsEquipTarget(def);
 var DuelEngine = class {
   state;
   db;
@@ -1860,18 +1861,27 @@ var DuelEngine = class {
     if (new Set(intent.handIds).size !== intent.handIds.length) return "Carta repetida en la cadena";
     if (!Number.isInteger(intent.slot) || intent.slot < 0 || intent.slot >= FIELD_SLOTS) return "Zona inv\xE1lida";
     const fromHand = [];
+    const equips = [];
     for (const id of intent.handIds) {
       const card = me.hand.find((c) => c.instanceId === id);
       if (!card) return "Esa carta no est\xE1 en tu mano";
-      if (card.def.type !== "monster") return "Las m\xE1gicas, equipos y trampas van en tu fila de apoyo, no en la cadena de fusi\xF3n";
-      fromHand.push(card);
+      if (card.def.type === "monster") fromHand.push(card);
+      else if (isChainEquip(card.def)) equips.push(card);
+      else return "Solo monstruos y equipos van en la cadena de fusi\xF3n; las m\xE1gicas y trampas van en tu fila de apoyo";
     }
     const occupant = me.field[intent.slot];
+    const firstHand = me.hand.find((c) => c.instanceId === intent.handIds[0]);
+    if (!occupant && firstHand && firstHand.def.type !== "monster") return "La cadena empieza con un monstruo; los equipos van despu\xE9s";
+    if (!occupant && fromHand.length === 0) return "Elige un monstruo para equiparlo";
     const chain = occupant ? [occupant, ...fromHand] : fromHand;
     const plan = planChain(this.fusion, chain.map((c) => c.def), intent.fusionChoices ?? []);
     if (!plan.ok) return plan.error;
     s.monsterPlayedThisTurn = true;
-    me.hand = me.hand.filter((c) => !fromHand.includes(c));
+    me.hand = me.hand.filter((c) => !fromHand.includes(c) && !equips.includes(c));
+    if (occupant && fromHand.length === 0) {
+      this.equipFromChain(occupant, equips, intent.player, events);
+      return null;
+    }
     me.field[intent.slot] = null;
     let current = chain[0];
     let fused = false;
@@ -1897,7 +1907,7 @@ var DuelEngine = class {
     current.zone = "field";
     current.fieldSlot = intent.slot;
     current.position = intent.position;
-    current.faceDown = !fused && current !== occupant && (intent.faceDown ?? false);
+    current.faceDown = !fused && equips.length === 0 && current !== occupant && (intent.faceDown ?? false);
     current.summonedThisTurn = true;
     me.field[intent.slot] = current;
     events.push({
@@ -1910,6 +1920,7 @@ var DuelEngine = class {
     });
     const fusionBonus = signTotal(s.daySign, "fusionBonus");
     if (fused && fusionBonus) current.addModifier({ atk: fusionBonus, def: 0, sourceId: SOURCE_FUSION_SIGN, untilEndOfTurn: false });
+    this.equipFromChain(current, equips, intent.player, events);
     if (!current.faceDown) {
       if (fused) this.runEffects(current, "onFusionSummon", events);
       this.runEffects(current, "onSummon", events);
@@ -1918,6 +1929,18 @@ var DuelEngine = class {
       }
     }
     return null;
+  }
+  /** Equipos de la cadena de fusión: se le ponen al monstruo que quedó (X + equipo + equipo). */
+  equipFromChain(target, equips, player, events) {
+    for (const eq of equips) {
+      if (target.zone !== "field" || this.state.winner !== null) {
+        this.sendToMictlan(eq, "used", events);
+        continue;
+      }
+      events.push({ type: "activated", player, instanceId: eq.instanceId, targetId: target.instanceId });
+      this.runEffects(eq, "onActivate", events, { equipTarget: target });
+      this.sendToMictlan(eq, "used", events);
+    }
   }
   /** Activa la primera trampa boca abajo de `defender` que responda a alguno de esos disparadores. */
   springTrap(defender, triggers, ctx, againstId, events) {
@@ -1942,13 +1965,17 @@ var DuelEngine = class {
     if (s.phase !== "main") return "Solo puedes usar m\xE1gicas y trampas en la fase principal";
     if (s.monsterPlayedThisTurn) return "Despu\xE9s de bajar un monstruo ya no puedes usar m\xE1gicas ni trampas";
     if (s.supportUsedThisTurn) return "Ya usaste una m\xE1gica o trampa este turno";
-    const card = me.hand.find((c) => c.instanceId === intent.handId);
+    const setSlot = me.support.findIndex((c) => c?.instanceId === intent.handId);
+    const fromField = setSlot >= 0 ? me.support[setSlot] : null;
+    const card = fromField ?? me.hand.find((c) => c.instanceId === intent.handId);
     if (!card) return "Esa carta no est\xE1 en tu mano";
     if (!isSupportCard(card.def)) return "Los monstruos se invocan en tus zonas de monstruo";
-    if (card.def.type === "trap") {
+    if (fromField && fromField.def.type === "trap") return "Las trampas se activan solas cuando el rival hace algo";
+    if (fromField && intent.set) return "Esa carta ya est\xE1 colocada";
+    if (!fromField && (card.def.type === "trap" || intent.set)) {
       const slot = intent.slot ?? me.support.findIndex((c) => c === null);
       if (!Number.isInteger(slot) || slot < 0 || slot >= FIELD_SLOTS) return "No tienes zonas de apoyo libres";
-      if (me.support[slot]) return "Esa zona ya tiene una trampa";
+      if (me.support[slot]) return "Esa zona ya tiene una carta";
       s.supportUsedThisTurn = true;
       me.hand = me.hand.filter((c) => c !== card);
       card.zone = "field";
@@ -1965,6 +1992,10 @@ var DuelEngine = class {
     }
     s.supportUsedThisTurn = true;
     me.hand = me.hand.filter((c) => c !== card);
+    if (fromField) {
+      me.support[setSlot] = null;
+      card.faceDown = false;
+    }
     events.push({ type: "activated", player: intent.player, instanceId: card.instanceId, targetId: target?.instanceId ?? null });
     this.runEffects(card, "onActivate", events, { equipTarget: target });
     this.sendToMictlan(card, "used", events);

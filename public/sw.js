@@ -5,7 +5,7 @@
 // - Supabase y todo lo de otros dominios: nunca se guarda (cuentas, duelos y premios siempre en vivo).
 // OJO: Vercel redirige /index.html → / ; por eso la página se guarda SIEMPRE como "/" y sin redirección,
 // porque Android no abre una app si el service worker le entrega una respuesta redirigida.
-const CACHE = 'quinto-sol-v3';
+const CACHE = 'quinto-sol-v4';
 const HOME = '/';
 const SHELL = [HOME, '/manifest.webmanifest', '/icono.svg', '/icon-192.png', '/icon-512.png'];
 
@@ -73,7 +73,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/cards/') || SHELL.includes(url.pathname)) {
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/cards/') || (url.pathname.startsWith('/sounds/') && !url.pathname.includes('musica')) || SHELL.includes(url.pathname)) {
     event.respondWith(
       caches.match(req).then(hit => hit || fetch(req).then(async res => {
         const ok = await clean(res);

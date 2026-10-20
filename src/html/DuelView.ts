@@ -1,5 +1,5 @@
 import type { CardInstance } from '../core/CardInstance.ts';
-import { type DuelEngine, FIRST_TURN_CAN_ATTACK } from '../core/DuelEngine.ts';
+import { type DuelEngine, FIRST_TURN_CAN_ATTACK, isChainEquip } from '../core/DuelEngine.ts';
 import { type DuelEvent, type Intent, type PlayerIndex } from '../core/DuelState.ts';
 import { describePhase, phaseOf, PHASE_INFO, TIME_PHASES, turnsLeftInPhase } from '../core/time.ts';
 import { cardDb, fusionDb } from '../data/index.ts';
@@ -9,10 +9,22 @@ import { HIDDEN_CARD, ViewEngine, type PvpStep, type PvpView } from '../game/pvp
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects, KEYWORD_TEXT } from '../data/effectText.ts';
 import { createCardElement } from './cardElement.ts';
-import { muteButton, sfx, type Sfx } from './sound.ts';
+import { DuelFx } from './duelFx.ts';
+import { muteButton, musicButton, sfx, type Sfx } from './sound.ts';
 
 const AI_STEP_MS = 750;
 const FUSION_SHOW_MS = 2200;
+const CAST_SHOW_MS = 1700;      // arte de la mágica/trampa en medio de la pantalla
+
+/** Lo que se muestra en grande en medio del tablero, uno tras otro. */
+type ShowItem =
+  | { kind: 'fusion'; player: PlayerIndex; a: CardDef; b: CardDef; r: CardDef }
+  | { kind: 'cast'; player: PlayerIndex; card: CardDef; trap: boolean; target: string | null };
+
+/** Cuánto esperar después de una jugada para que se vean sus animaciones grandes. */
+const showDelay = (events: readonly DuelEvent[]): number =>
+  events.filter(e => e.type === 'fusion').length * FUSION_SHOW_MS +
+  events.filter(e => e.type === 'activated' || e.type === 'trapActivated').length * CAST_SHOW_MS;
 
 /** Fusiones vistas en ESTE duelo (tuyas y del rival): "idA+idB>idResultado". Se reinicia cada duelo. */
 const pairKey = (a: number, b: number) => (a < b ? `${a}+${b}` : `${b}+${a}`);
@@ -86,17 +98,26 @@ export class DuelView {
   private lastLife: [number, number] = [START_LIFE, START_LIFE];
   private showLog = false;
   private showAlbum = false;
-  private fusionQueue: { player: PlayerIndex; a: CardDef; b: CardDef; r: CardDef }[] = [];
+  private fusionQueue: ShowItem[] = [];
+  private fx!: DuelFx;
+  private enterIds = new Set<number>();
+  private lunging: { id: number; until: number } | null = null;   // el atacante va volando (su copia)   // cartas que acaban de entrar al campo (animación)
   private fusionShowing = false;
   private fusionTimer = 0;
   private readonly album = new Set<string>();
   private surrenderArmed = false;
   private surrenderTimer = 0;
+  // Cómo se baja lo que elegiste (barra de arriba de la mano)
+  private placePosition: 'attack' | 'defense' = 'attack';
+  private placeFaceDown = false;
+  private setSpell = false;                 // mágica/equipo: colocar boca abajo en vez de activar
+  private armedSupport: number | null = null;   // mágica colocada que tocaste una vez (otra vez = activar)
+  private fieldSpell: number | null = null;     // equipo colocado esperando a que toques a tu monstruo
 
   private readonly el: Record<
     'inspectorCard' | 'inspectorInfo' | 'status' | 'logPanel' | 'log' | 'turn' |
     'foeHand' | 'foeSupport' | 'foeField' | 'myField' | 'mySupport' | 'hand' |
-    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast' | 'timeBox' | 'signBox', HTMLElement>;
+    'me' | 'foe' | 'deck' | 'mictlan' | 'overlay' | 'placeBar' | 'mictlanView' | 'albumPanel' | 'album' | 'albumCount' | 'chooser' | 'fusionShow' | 'emblem' | 'toast' | 'timeBox' | 'signBox', HTMLElement>;
   private readonly btn: Record<'log' | 'album' | 'end' | 'surrender' | 'exit' | 'claim', HTMLButtonElement>;
   private readonly setup: DuelSetup;
   private finished: DuelResult | null = null;
@@ -159,6 +180,7 @@ export class DuelView {
 
           <div class="zones zones--monster zones--mine" data-ref="myField"></div>
           <div class="zones zones--support zones--mine" data-ref="mySupport"></div>
+          <div class="place-bar" data-ref="placeBar" hidden></div>
           <div class="hand" data-ref="hand"></div>
 
           <aside class="right">
@@ -169,6 +191,7 @@ export class DuelView {
           </aside>
 
           <div class="chooser" data-ref="chooser" hidden></div>
+          <div class="mictlan-view" data-ref="mictlanView" hidden></div>
           <div class="toast" data-ref="toast" hidden></div>
           <div class="fusion-show" data-ref="fusionShow" hidden></div>
           <div class="overlay" data-ref="overlay" hidden></div>
@@ -179,18 +202,19 @@ export class DuelView {
         </div>
       </div>`;
 
+    this.fx = new DuelFx(root.querySelector<HTMLElement>('.stage')!);
     const ref = (name: string) => root.querySelector<HTMLElement>(`[data-ref="${name}"]`)!;
     const btn = (name: string) => root.querySelector<HTMLButtonElement>(`[data-btn="${name}"]`)!;
     this.el = {
       inspectorCard: ref('inspectorCard'), inspectorInfo: ref('inspectorInfo'), status: ref('status'),
       logPanel: ref('logPanel'), log: ref('log'), turn: ref('turn'),
       foeHand: ref('foeHand'), foeSupport: ref('foeSupport'), foeField: ref('foeField'),
-      myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'),
+      myField: ref('myField'), mySupport: ref('mySupport'), hand: ref('hand'), placeBar: ref('placeBar'), mictlanView: ref('mictlanView'),
       me: ref('me'), foe: ref('foe'), deck: ref('deck'), mictlan: ref('mictlan'), overlay: ref('overlay'),
       albumPanel: ref('albumPanel'), album: ref('album'), chooser: ref('chooser'), fusionShow: ref('fusionShow'), albumCount: ref('albumCount'), emblem: ref('emblem'), toast: ref('toast'), timeBox: ref('timeBox'), signBox: ref('signBox'),
     };
     this.btn = { log: btn('log'), album: btn('album'), end: btn('end'), surrender: btn('surrender'), exit: btn('exit'), claim: btn('claim') };
-    root.querySelector('.side-buttons')!.append(muteButton('tag-btn'));
+    root.querySelector('.side-buttons')!.append(muteButton('tag-btn'), musicButton('tag-btn'));
     this.btn.claim.addEventListener('click', () => {
       this.btn.claim.disabled = true;
       this.setup.remote?.claim().catch(e => { this.message = e instanceof Error ? e.message : String(e); this.render(); })
@@ -209,11 +233,8 @@ export class DuelView {
     this.btn.end.addEventListener('click', () => this.submit({ type: 'endTurn', player: this.me }));
     this.btn.surrender.addEventListener('click', () => this.onSurrender());
     this.el.foe.addEventListener('click', () => this.onDirectAttack());
-    this.el.mictlan.addEventListener('click', () => {
-      if (!this.engine) return;
-      const top = this.engine.state.players[this.me].mictlan.at(-1);
-      if (top) { this.inspected = top; this.render(); }
-    });
+    // Tocar el Mictlán (cementerio) abre la lista de cartas que ya se usaron, tuyas y del rival
+    this.el.mictlan.addEventListener('click', () => { if (this.engine) void this.openMictlan(this.me); });
 
     void this.newDuel();
     // Solo en desarrollo (npm run dev): window.__duel para probar desde la consola
@@ -227,12 +248,14 @@ export class DuelView {
     for (const e of events) {
       switch (e.type) {
         case 'cardsDrawn': if (e.player === this.me && this.engine?.state.turn > 1) play('draw'); break;
-        case 'cardPlayed': case 'trapSet': case 'specialSummoned': play('play'); break;
+        case 'cardPlayed': case 'specialSummoned': play('play'); break;
+        case 'trapSet': play('setCard'); break;
+        case 'positionChanged': if (!e.flipped) play('position'); break;
         case 'fusion': play('fusion'); break;
         case 'fusionFailed': play('fusionFail'); break;
         case 'activated': play('spell'); break;
         case 'trapActivated': play('trap'); break;
-        case 'attackDeclared': play('attack'); break;
+        case 'attackDeclared': play(e.targetId === null ? 'direct' : 'attack'); break;
         case 'sentToMictlan': if (e.reason === 'battle' || e.reason === 'effect') play('destroy'); break;
         case 'damage': play(e.amount >= 1000 ? 'hit' : 'damage'); break;
         case 'healed': play('heal'); break;
@@ -308,6 +331,7 @@ export class DuelView {
     if (intent.player === this.me) this.intents.push(intent);
     this.message = '';
     this.selectedHand = [];
+    this.resetPlacement();
     if (intent.type !== 'changePosition') this.selectedAttacker = null;   // tras cambiar posición sigue elegido
     this.record(result.events);
     this.render();
@@ -355,6 +379,7 @@ export class DuelView {
     try {
       const snap = await remote.send(intent, this.applied);
       this.selectedHand = [];
+      this.resetPlacement();
       if (intent.type !== 'changePosition') this.selectedAttacker = null;
       this.remoteBusy = false;
       await this.playSteps(snap);
@@ -395,8 +420,7 @@ export class DuelView {
       engine.load(step.view);
       this.record(step.events);
       this.render();
-      const fusions = step.events.filter(e => e.type === 'fusion').length;
-      if (i < snap.steps.length - 1) await new Promise(r => setTimeout(r, AI_STEP_MS + fusions * FUSION_SHOW_MS));
+      if (i < snap.steps.length - 1) await new Promise(r => setTimeout(r, AI_STEP_MS + showDelay(step.events)));
     }
     engine.load(snap.view);
     this.applied = snap.index;
@@ -434,8 +458,7 @@ export class DuelView {
       if (result.ok) this.record(result.events);
       this.render();
       // Si el rival fusionó, espera a que se vea la fusión antes de seguir.
-      const fusions = result.ok ? result.events.filter(e => e.type === 'fusion').length : 0;
-      setTimeout(step, AI_STEP_MS + fusions * FUSION_SHOW_MS);
+      setTimeout(step, AI_STEP_MS + (result.ok ? showDelay(result.events) : 0));
     };
     setTimeout(step, AI_STEP_MS);
   }
@@ -446,12 +469,17 @@ export class DuelView {
     this.inspected = card;
     if (!this.isMyTurn()) { this.render(); return; }
     const i = this.selectedHand.indexOf(card.instanceId);
-    const isSpell = card.def.type !== 'monster';
-    const hadSpell = this.selectedHand.some(id => this.handCard(id)?.def.type !== 'monster');
+    const defs = this.selectedHand.map(id => this.handCard(id)?.def);
+    const hasMonster = defs.some(d => d?.type === 'monster');
+    const loneSpell = defs.length === 1 && defs[0]?.type !== 'monster';
     if (i >= 0) this.selectedHand.splice(i, 1);
-    else if (isSpell || hadSpell) this.selectedHand = [card.instanceId];   // mágicas y equipos van solas
-    else this.selectedHand.push(card.instanceId);
+    else if (card.def.type === 'monster') this.selectedHand = loneSpell ? [card.instanceId] : [...this.selectedHand, card.instanceId];
+    // Equipos: si ya elegiste un monstruo, entran a la cadena (monstruo + equipo + equipo)
+    else if (isChainEquip(card.def) && hasMonster) this.selectedHand.push(card.instanceId);
+    else this.selectedHand = [card.instanceId];   // otras mágicas y trampas van solas
     this.selectedAttacker = null;
+    this.armedSupport = null;
+    this.fieldSpell = null;
     this.message = '';
     this.render();
   }
@@ -470,9 +498,28 @@ export class DuelView {
     const own = this.engine.state.players[this.me].support[slot];
     if (own) { this.inspected = own; this.render(); }
     const spell = this.selectedSpell();
-    if (!this.isMyTurn() || !spell) return;
-    if (spell.def.type === 'trap') {
-      this.submit({ type: 'activate', player: this.me, handId: spell.instanceId, slot });
+    if (!this.isMyTurn()) return;
+    // Mágica o equipo que colocaste antes: tócala dos veces para activarla
+    if (!spell && own && own.def.type !== 'trap' && this.selectedHand.length === 0) {
+      if (this.armedSupport !== own.instanceId) {
+        this.armedSupport = own.instanceId;
+        this.message = `Toca otra vez ${own.def.name} para activarla.`;
+        this.render();
+        return;
+      }
+      this.armedSupport = null;
+      if (needsEquipTarget(own.def)) {
+        this.fieldSpell = own.instanceId;
+        this.message = `Toca uno de tus monstruos para equiparle ${own.def.name}.`;
+        this.render();
+        return;
+      }
+      this.submit({ type: 'activate', player: this.me, handId: own.instanceId });
+      return;
+    }
+    if (!spell) return;
+    if (spell.def.type === 'trap' || this.setSpell) {
+      this.submit({ type: 'activate', player: this.me, handId: spell.instanceId, slot, set: spell.def.type !== 'trap' });
       return;
     }
     if (needsEquipTarget(spell.def)) {
@@ -487,6 +534,12 @@ export class DuelView {
     const card = this.engine.state.players[this.me].field[slot];
     if (card) this.inspected = card;
     if (!this.isMyTurn()) { this.render(); return; }
+    if (this.fieldSpell !== null && card) {
+      const id = this.fieldSpell;
+      this.fieldSpell = null;
+      this.submit({ type: 'activate', player: this.me, handId: id, targetId: card.instanceId });
+      return;
+    }
     const spell = this.selectedSpell();
     if (spell) {
       if (needsEquipTarget(spell.def) && card) {
@@ -599,6 +652,8 @@ export class DuelView {
     this.el.turn.textContent = `Turno ${s.turn}`;
     this.renderTimer();
 
+    this.renderPlaceBar(myTurn);
+    this.enterIds.clear();
     this.el.status.textContent = this.message || this.statusMessage();
     this.el.status.classList.toggle('status--error', !!this.message);
 
@@ -684,6 +739,8 @@ export class DuelView {
     });
     if (!hidden) el.addEventListener('mouseenter', () => this.inspect(card));
     zone.append(el);
+    if (this.enterIds.has(card.instanceId)) zone.classList.add('zone--enter');
+    if (this.lunging && this.lunging.id === card.instanceId && Date.now() < this.lunging.until) el.classList.add('card--lunging');
     if (mine && card.instanceId === this.selectedAttacker && this.canChangePosition(card)) {
       const bubble = document.createElement('span');
       bubble.className = 'pos-bubble';
@@ -903,9 +960,13 @@ export class DuelView {
   /** Texto de la cadena elegida. Solo revela resultados ya descubiertos, como en YGOFM. */
   private chainPreview(): string {
     const hand = this.engine.state.players[this.me].hand;
-    const defs = this.selectedHand
+    const all = this.selectedHand
       .map(id => hand.find(c => c.instanceId === id)?.def)
       .filter((d): d is CardDef => d !== undefined);
+    const defs = all.filter(d => d.type === 'monster');
+    const eq = all.filter(d => d.type !== 'monster');
+    const eqText = eq.length ? ` + equipo${eq.length > 1 ? 's' : ''}: ${eq.map(d => d.name).join(', ')}` : '';
+    if (defs.length === 1) return `${defs[0].name}${eqText}. Toca una zona para jugarla con sus equipos puestos.`;
     let current = defs[0];
     const parts = [current.name];
     for (const next of defs.slice(1)) {
@@ -917,7 +978,63 @@ export class DuelView {
       if (!known) return parts.join(' ') + '. Juégala para descubrir el resultado.';
       current = result;
     }
-    return `${parts.join(' ')} (ATK ${current.atk}). Toca una zona para jugarla.`;
+    return `${parts.join(' ')} (ATK ${current.atk})${eqText}. Toca una zona para jugarla.`;
+  }
+
+  /**
+   * Ventana del Mictlán: todas las cartas que ya se usaron o fueron destruidas, de la más reciente a la más vieja.
+   * Con `pick` sirve para ELEGIR una (para cartas que resucitan); sin `pick`, solo para ver.
+   */
+  openMictlan(player: PlayerIndex, pick?: { title: string; filter?: (c: CardInstance) => boolean }): Promise<CardInstance | null> {
+    return new Promise(resolve => {
+      const box = this.el.mictlanView;
+      let side = player;
+      const finish = (c: CardInstance | null) => { box.hidden = true; box.replaceChildren(); resolve(c); };
+      const paint = () => {
+        const list = [...this.engine.state.players[side].mictlan].reverse();
+        const tab = (p: PlayerIndex, label: string) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = `tag-btn${side === p ? ' tag-btn--on' : ''}`;
+          b.textContent = `${label} (${this.engine.state.players[p].mictlan.length})`;
+          b.addEventListener('click', () => { sfx('click'); side = p; paint(); });
+          return b;
+        };
+        const head = document.createElement('div');
+        head.className = 'mictlan-view__head';
+        const title = document.createElement('h2');
+        title.textContent = pick?.title ?? '☠ Mictlán';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'tag-btn';
+        close.textContent = pick ? 'Cancelar' : 'Cerrar';
+        close.addEventListener('click', () => { sfx('click'); finish(null); });
+        head.append(title, ...(pick ? [] : [tab(this.me, 'Tuyo'), tab(this.foe, 'Del rival')]), close);
+        const grid = document.createElement('div');
+        grid.className = 'mictlan-view__grid';
+        for (const c of list) {
+          const usable = !pick || (pick.filter?.(c) ?? true);
+          const el = createCardElement(c);
+          if (!usable) el.classList.add('card--dim');
+          el.addEventListener('mouseenter', () => this.inspect(c));
+          el.addEventListener('click', () => {
+            this.inspected = c;
+            if (pick && usable) { finish(c); this.render(); return; }
+            this.render();
+          });
+          grid.append(el);
+        }
+        if (!list.length) {
+          const p = document.createElement('p');
+          p.className = 'mictlan-view__empty';
+          p.textContent = 'Todavía no hay cartas en este Mictlán.';
+          grid.append(p);
+        }
+        box.replaceChildren(head, grid);
+      };
+      paint();
+      box.hidden = false;
+    });
   }
 
   /** Muestra las opciones de una fusión y espera a que el jugador elija (null = cancelar). */
@@ -951,7 +1068,7 @@ export class DuelView {
   private async playSelected(slot: number): Promise<void> {
     const me = this.engine.state.players[this.me];
     const handIds = [...this.selectedHand];
-    const fromHand = handIds.map(id => me.hand.find(c => c.instanceId === id)!.def);
+    const fromHand = handIds.map(id => me.hand.find(c => c.instanceId === id)!.def).filter(d => d.type === 'monster');   // los equipos no fusionan
     const occupant = me.field[slot];
     const chain = occupant ? [occupant.def, ...fromHand] : fromHand;
     const choices: number[] = [];
@@ -967,7 +1084,49 @@ export class DuelView {
       }
       current = result ?? next;
     }
-    this.submit({ type: 'play', player: this.me, handIds, slot, position: 'attack', fusionChoices: choices });
+    this.submit({ type: 'play', player: this.me, handIds, slot, position: this.placePosition, faceDown: this.placeFaceDown, fusionChoices: choices });
+  }
+
+  private resetPlacement(): void {
+    this.placePosition = 'attack';
+    this.placeFaceDown = false;
+    this.setSpell = false;
+    this.armedSupport = null;
+    this.fieldSpell = null;
+  }
+
+  /** Barra arriba de tu mano: ataque/defensa y boca arriba/abajo (o activar/colocar para mágicas). */
+  private renderPlaceBar(myTurn: boolean): void {
+    const bar = this.el.placeBar;
+    const defs = this.selectedHand.map(id => this.handCard(id)?.def).filter((d): d is CardDef => !!d);
+    if (!myTurn || !defs.length) { bar.hidden = true; bar.replaceChildren(); return; }
+    const opt = (label: string, on: boolean, title: string, fn: () => void, disabled = false) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `place-opt${on ? ' place-opt--on' : ''}`;
+      b.textContent = label;
+      b.title = title;
+      b.disabled = disabled;
+      b.addEventListener('click', ev => { ev.stopPropagation(); sfx('click'); fn(); this.render(); });
+      return b;
+    };
+    const spell = this.selectedSpell();
+    if (spell) {
+      if (spell.def.type === 'trap') { bar.hidden = true; bar.replaceChildren(); return; }
+      bar.replaceChildren(
+        opt('✦ Activar', !this.setSpell, 'Usarla ahora', () => { this.setSpell = false; }),
+        opt('▼ Colocar boca abajo', this.setSpell, 'Dejarla boca abajo y activarla en otro turno', () => { this.setSpell = true; }));
+      bar.hidden = false;
+      return;
+    }
+    const monsters = defs.filter(d => d.type === 'monster').length;
+    const forcedUp = monsters > 1 || defs.length > monsters;   // fusión o equipada: sale boca arriba
+    bar.replaceChildren(
+      opt('⚔ Ataque', this.placePosition === 'attack', 'Bajarla en posición de ataque', () => { this.placePosition = 'attack'; }),
+      opt('⛨ Defensa', this.placePosition === 'defense', 'Bajarla en posición de defensa', () => { this.placePosition = 'defense'; }),
+      opt('▲ Boca arriba', !this.placeFaceDown || forcedUp, 'El rival la ve', () => { this.placeFaceDown = false; }),
+      opt('▼ Boca abajo', this.placeFaceDown && !forcedUp, forcedUp ? 'Las fusiones y los monstruos equipados salen boca arriba' : 'El rival no la ve hasta que se voltee', () => { this.placeFaceDown = true; }, forcedUp));
+    bar.hidden = false;
   }
 
   private statusMessage(): string {
@@ -980,7 +1139,7 @@ export class DuelView {
     if (spell) {
       if (s.monsterPlayedThisTurn) return 'Ya bajaste monstruo: las mágicas y trampas van antes del monstruo.';
       if (s.supportUsedThisTurn) return 'Ya usaste una mágica o trampa este turno.';
-      if (spell.def.type === 'trap') return `Toca una de tus zonas de abajo (◈) para colocar ${spell.def.name} boca abajo.`;
+      if (spell.def.type === 'trap' || this.setSpell) return `Toca una de tus zonas de abajo (◈) para colocar ${spell.def.name} boca abajo.`;
       return needsEquipTarget(spell.def)
         ? `Toca uno de tus monstruos para equiparle ${spell.def.name}.`
         : `Toca una de tus zonas de abajo (◈) para activar ${spell.def.name}.`;
@@ -1022,6 +1181,35 @@ export class DuelView {
     const box = this.el.fusionShow;
     if (!next) { box.hidden = true; box.replaceChildren(); return; }
     this.fusionShowing = true;
+    const done = () => {
+      clearTimeout(this.fusionTimer);
+      box.onclick = null;
+      this.fusionShowing = false;
+      this.showNextFusion();
+    };
+    box.onclick = done;
+
+    if (next.kind === 'cast') {
+      // Mágica, equipo o trampa: su arte en grande unos segundos
+      const t = document.createElement('p');
+      t.className = 'fusion-show__title cast-show__title';
+      const kind = next.trap ? '¡Trampa!' : next.card.type === 'equip' ? 'Equipo' : 'Mágica';
+      t.textContent = `${next.player === this.me ? '' : 'Rival · '}${kind}`;
+      const c = createCardElement(next.card);
+      c.classList.add('cast-card');
+      const sub = document.createElement('p');
+      sub.className = 'cast-show__sub';
+      sub.textContent = next.target ? `${next.card.name} → ${next.target}` : next.card.name;
+      box.replaceChildren(t, c, sub);
+      box.classList.toggle('fusion-show--foe', next.player === this.foe);
+      box.dataset.kind = next.trap ? 'trap' : next.card.type;
+      box.classList.add('cast-show');
+      box.hidden = false;
+      this.fusionTimer = window.setTimeout(done, CAST_SHOW_MS - 100);
+      return;
+    }
+    box.classList.remove('cast-show');
+    delete box.dataset.kind;
 
     const title = document.createElement('p');
     title.className = 'fusion-show__title';
@@ -1036,14 +1224,6 @@ export class DuelView {
     box.replaceChildren(title, row);
     box.classList.toggle('fusion-show--foe', next.player === this.foe);
     box.hidden = false;
-
-    const done = () => {
-      clearTimeout(this.fusionTimer);
-      box.onclick = null;
-      this.fusionShowing = false;
-      this.showNextFusion();
-    };
-    box.onclick = done;
     this.fusionTimer = window.setTimeout(done, FUSION_SHOW_MS - 100);
   }
 
@@ -1051,14 +1231,23 @@ export class DuelView {
 
   private record(events: DuelEvent[]): void {
     this.playSounds(events);
+    this.animate(events);
     for (const e of events) {
+      if (e.type === 'activated' || e.type === 'trapActivated') {
+        const card = this.engine.getCard(e.instanceId);
+        const targetId = e.type === 'activated' ? e.targetId : null;
+        if (card && card.def.id !== 0) {
+          this.fusionQueue.push({ kind: 'cast', player: e.player, card: card.def, trap: e.type === 'trapActivated', target: targetId !== null ? this.engine.getCard(targetId)?.name ?? null : null });
+          this.showNextFusion();
+        }
+      }
       if (e.type === 'fusion') {
         // Se aprende de TODAS las fusiones que se ven, tuyas y del rival.
         const [a, b] = e.materialIds.map(id => this.engine.getCard(id)?.def ?? HIDDEN_CARD);
         const result = this.engine.getCard(e.resultId);
         if (!result) continue;
         if (result.def.id !== 0) { this.album.add(albumKey(a.id, b.id, result.def.id)); this.inspected = result; }
-        this.fusionQueue.push({ player: e.player, a, b, r: result.def });
+        this.fusionQueue.push({ kind: 'fusion', player: e.player, a, b, r: result.def });
         this.showNextFusion();
       }
       if (e.type === 'effect') this.toast(`Efecto: ${this.engine.getCard(e.instanceId)?.def.name ?? ''}`);
@@ -1073,6 +1262,46 @@ export class DuelView {
       if (e.type === 'battleSaved') this.toast(`${this.engine.getCard(e.instanceId)?.name ?? ''} resiste el golpe`);
       const line = this.describe(e);
       if (line) this.log.push(line);
+    }
+  }
+
+  private stageEl(): HTMLElement | null { return this.el.hand.closest('.stage'); }
+
+  /** Animaciones sobre el tablero que todavía muestra el momento ANTES de la jugada. */
+  private animate(events: DuelEvent[]): void {
+    if (!this.fx) return;
+    let t = 0;
+    const bar = (p: PlayerIndex) => this.fx.rect(p === this.me ? this.el.me : this.el.foe);
+    for (const e of events) {
+      switch (e.type) {
+        case 'attackDeclared': {
+          const attacker = this.fx.cardEl(e.attackerId);
+          const targetEl = e.targetId !== null ? this.fx.cardEl(e.targetId) : null;
+          const attackerSide = this.engine.state.turnPlayer;
+          const r = targetEl ? this.fx.rect(targetEl) : bar(attackerSide === this.me ? this.foe : this.me);
+          if (attacker) {
+            this.fx.lunge(attacker, r);
+            this.lunging = { id: e.attackerId, until: Date.now() + 520 };
+            setTimeout(() => {
+              this.stageEl()?.querySelector(`.zones [data-instance-id="${e.attackerId}"]`)?.classList.remove('card--lunging');
+            }, 540);
+          }
+          this.fx.slash(r, 200);
+          t = 380;
+          break;
+        }
+        case 'sentToMictlan':
+          if (e.reason === 'battle' || e.reason === 'effect') {
+            const el = this.fx.cardEl(e.instanceId);
+            if (el) this.fx.shatter(el, t);
+          }
+          break;
+        case 'damage': this.fx.float(bar(e.player), `−${e.amount}`, 'damage', t); break;
+        case 'healed': this.fx.float(bar(e.player), `+${e.amount}`, 'heal', t); break;
+        case 'cardPlayed': case 'specialSummoned': case 'revived': this.enterIds.add(e.instanceId); break;
+        case 'controlChanged': this.enterIds.add(e.instanceId); break;
+        default: break;
+      }
     }
   }
 

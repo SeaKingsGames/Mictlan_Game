@@ -4,7 +4,7 @@ import { duelists } from '../game/duelists.ts';
 import { resetProfile, saveProfile, type Profile } from '../game/profile.ts';
 import { h } from './dom.ts';
 import { canPromptInstall, installHelpText, isInstalled, onInstallChange, promptInstall } from './install.ts';
-import { muteButton, sfx } from './sound.ts';
+import { muteButton, musicButton, sfx } from './sound.ts';
 import { wallets } from './shell.ts';
 
 /** Pantalla de inicio. */
@@ -60,7 +60,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
         item('Ruleta de premios', '#/ruleta', `${CURRENCY.gold.icon} Gira con tickets oro`),
         item('Editor de mazo', '#/mazo', 'Arma tu mazo de 40'),
         item('Biblioteca', '#/biblioteca', 'Todas las cartas del juego')),
-      h('div', { class: 'menu__install' }, installButton(), muteButton()),
+      h('div', { class: 'menu__install' }, installButton(), muteButton(), musicButton()),
       // Editores: solo en tu compu (npm run dev), no en la página pública
       !import.meta.env.DEV ? '' : h('details', { class: 'menu__tools' },
         h('summary', {}, 'Herramientas'),

@@ -162,7 +162,7 @@ export function renderShop(root: HTMLElement, profile: Profile, go: (hash: strin
     const tear = () => {
       if (opened) return;
       opened = true;
-      sfx('fusion');
+      sfx('pack');
       art.classList.add('pack--tear');
       hint.remove();
       setTimeout(() => {
