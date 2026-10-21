@@ -13,6 +13,7 @@ import type { PlayerIndex } from '../core/DuelState.ts';
 import { checkAscend, checkLevelUp, clampLevel, type UpgradeCheck } from '../core/progression.ts';
 import { rollRewards } from '../game/rewards.ts';
 import { getPack, openPacks, PACK_COUNTS } from '../game/packs.ts';
+import { CURRENCY_CODE, FIRST_PURCHASE_MULTIPLIER, getJadePackage, JADE_PACKAGES, newGiftCode, normalizeCode, isPlausibleCode, pickUrs, type Grant } from '../game/jadeStore.ts';
 import { idMask, pvpSnapshotFor, unmaskIntent, type PvpSnapshot } from '../game/pvpView.ts';
 
 /**
@@ -241,4 +242,32 @@ export function planShop(seed: number): ShopSlot[] {
  */
 export function pvpView(m: PvpMatchData, player: PlayerIndex, since: number): PvpSnapshot {
   return pvpSnapshotFor(setupOf(m), m.intents as Intent[], player, since, cardDb, fusionDb);
+}
+
+// ---------------------------------------------------------------- tienda de jade (dinero real)
+
+export { CURRENCY_CODE, FIRST_PURCHASE_MULTIPLIER, JADE_PACKAGES, newGiftCode, normalizeCode, isPlausibleCode };
+
+export interface GrantPlan {
+  jade: number;
+  gold: number;
+  /** UR de regalo y lo que valen si ya tienes 3. */
+  cards: { id: number; cacao: number; jade: number }[];
+}
+
+/** Paquete por id (precio en MXN). */
+export function jadePackage(id: string): { id: string; name: string; price: number; jade: number; ur: number; gold: number } | null {
+  const p = getJadePackage(id);
+  return p ? { id: p.id, name: p.name, price: p.price, jade: p.jade, ur: p.ur, gold: p.gold } : null;
+}
+
+/** Qué UR entrega un paquete o código, según lo que ya tiene el jugador. */
+export function planGrant(grant: Grant, seed: number, collection: Record<string, number>): GrantPlan {
+  const ur = Math.max(0, Math.min(10, Math.floor(grant.ur) || 0));
+  const ids = pickUrs(cardDb, id => collection[id] ?? 0, ur, createRng((seed ^ 0x7ade) >>> 0));
+  return {
+    jade: Math.max(0, Math.floor(grant.jade) || 0),
+    gold: Math.max(0, Math.floor(grant.gold) || 0),
+    cards: ids.map(id => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] })),
+  };
 }

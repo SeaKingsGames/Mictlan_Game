@@ -200,3 +200,79 @@ Las recetas viejas de `fusions.json` siguen funcionando; si una pareja está en 
 **Mercado de cartas** (`#/mercado`): 6 cartas al azar que se compran con cacao (N 300 · R 800 · SR 2000 · UR 10000), cada una una sola vez. Cada lugar tiene 3% de ser UR, así que no siempre hay. Se renueva gratis cada día (medianoche de México) o cuando quieras por 25 tickets. Se cambia en `src/game/cardShop.ts`.
 
 **Multijugador seguro**: el navegador ya no recibe la semilla, el mazo del rival ni la lista de jugadas. La función `pvp` repite la partida y le manda a cada jugador solo lo que vería en la mesa. Los números de las cartas van disfrazados. Ahora sí se puede pensar en emparejamiento con desconocidos o ranking.
+
+## Tienda de Jade con dinero real (Mercado Pago)
+
+Los jugadores pagan en Mercado Pago (tarjeta, saldo o efectivo en OXXO) y el servidor entrega el jade **solo cuando Mercado Pago confirma el pago**. Los paquetes y precios están en `src/data/jade.json` (precio en pesos). La primera compra de cada paquete da doble jade. Las UR de regalo son al azar entre las que salen en sobres (nunca las cimas 96–100), primero las que el jugador no tiene.
+
+### 1. Base de datos
+SQL Editor → pega TODO `supabase/migrations/20261021000000_tienda_jade.sql` → **Run** (una sola vez).
+
+### 2. Aplicación en Mercado Pago
+1. [Mercado Pago Developers](https://www.mercadopago.com.mx/developers) → **Tus integraciones → Crear aplicación** (una solo para el juego). Elige **Pagos online → Checkout Pro**, sin plataforma de e‑commerce.
+2. En la aplicación, copia el **Access Token de prueba** (empieza con `TEST-`).
+3. Ponlo como secreto de Supabase (en la carpeta del juego). **Nunca** en Vercel, en el código ni en un chat:
+   ```bash
+   npx supabase secrets set MP_ACCESS_TOKEN=TEST-tu-token
+   npx supabase secrets set SITE_URL=https://cartas.seakingsstudios.com
+   ```
+
+### 3. Funciones
+```bash
+npm run build:server
+npx supabase functions deploy payments --use-api
+npx supabase functions deploy mp-webhook --use-api --no-verify-jwt
+npx supabase functions deploy duel-start --use-api
+npx supabase functions deploy duel-finish --use-api
+npx supabase functions deploy pvp --use-api
+npx supabase functions deploy card-upgrade --use-api
+npx supabase functions deploy pack-open --use-api
+npx supabase functions deploy market --use-api
+npm test
+```
+`mp-webhook` va con `--no-verify-jwt` porque quien la llama es Mercado Pago, no un jugador. Es seguro: con el aviso, la función vuelve a preguntar a Mercado Pago por el pago usando tu token, así que un aviso falso no entrega nada.
+
+### 4. Webhooks (avisos de pago)
+En tu aplicación de Mercado Pago → **Webhooks → Configurar notificaciones**:
+- URL (modo prueba y modo productivo): `https://TU_REF.supabase.co/functions/v1/mp-webhook`
+- Evento: **Pagos**.
+- Guarda y copia la **clave secreta** que te da. Ponla en Supabase:
+  ```bash
+  npx supabase secrets set MP_WEBHOOK_SECRET=la-clave-secreta
+  ```
+
+### 5. Probar sin dinero real
+1. Mercado Pago Developers → **Cuentas de prueba**: crea una de **vendedor** y una de **comprador**.
+2. Entra al juego con una cuenta con correo → Tienda de Jade → compra cualquier paquete.
+3. En Mercado Pago inicia sesión con la cuenta de **comprador de prueba** y paga con una [tarjeta de prueba](https://www.mercadopago.com.mx/developers/es/docs/checkout-pro/additional-content/your-integrations/test/cards) (titular `APRO` = aprobado, `OTHE` = rechazado).
+4. Al regresar, el juego dice "Confirmando tu pago…" y te muestra lo que llegó. En Supabase → Table Editor → `jade_orders` ves el pedido como `paid`.
+5. Si algo no llega: Supabase → Edge Functions → `mp-webhook` / `payments` → **Logs**.
+
+### 6. Cobrar de verdad
+Cuando todo funcione: cambia el secreto por el **Access Token de producción** (empieza con `APP_USR-`) y activa las credenciales de producción en Mercado Pago:
+```bash
+npx supabase secrets set MP_ACCESS_TOKEN=APP_USR-tu-token
+```
+No hay que volver a subir funciones: leen el secreto en cada pago.
+
+### Códigos de promoción (TikTok, sorteos)
+SQL Editor:
+```sql
+-- 500 jade + 1 ticket oro, para las primeras 100 cuentas, durante 7 días
+select public.create_promo_code('QUINTOSOL50', 500, 0, 1, 100, now() + interval '7 days', 'Live de TikTok');
+-- 1 UR para una sola persona (premio de sorteo)
+select public.create_promo_code('SORTEO-UR-01', 0, 1, 0, 1, null, 'Sorteo');
+```
+Cada cuenta puede canjear un código una sola vez. Para desactivar uno: `update public.redeem_codes set active = false where code = 'QUINTOSOL50';`
+
+### Reembolsos
+Si devuelves un pago desde Mercado Pago (o el banco lo desconoce), el aviso llega solo: se quita el jade y los tickets oro de esa compra que el jugador todavía tenga, y si era un regalo sin canjear, el código deja de servir.
+
+### Qué hay en cada archivo
+- `src/data/jade.json` — paquetes, precios (MXN), jade, UR, tickets oro.
+- `src/game/jadeStore.ts` — reglas: doble primera compra, qué UR se regalan, formato de códigos.
+- `src/html/JadeStoreView.ts` — la pantalla `#/jade`.
+- `supabase/functions/payments` — crear cobro, revisar pedido, mis compras, canjear código.
+- `supabase/functions/mp-webhook` — avisos de Mercado Pago.
+- `supabase/functions/_shared/mp.ts` — habla con la API de Mercado Pago.
+- `public/terminos.html` — términos de compra (borrador; revísalo).

@@ -56,6 +56,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
         item('Duelo libre', '#/libre', 'Reta a quien ya desbloqueaste'),
         item('⚔ Contra otro jugador', '#/pvp', 'Sala con código'),
         item('Tienda de sobres', '#/tienda', `${CURRENCY.premium.icon} Sobres temáticos de 5 cartas`),
+        item('Tienda de Jade', '#/jade', `${CURRENCY.premium.icon} Paquetes de jade, UR y códigos`),
         item('Mercado de cartas', '#/mercado', `${CURRENCY.common.icon} 6 cartas al azar cada día`),
         item('Ruleta de premios', '#/ruleta', `${CURRENCY.gold.icon} Gira con tickets oro`),
         item('Editor de mazo', '#/mazo', 'Arma tu mazo de 40'),

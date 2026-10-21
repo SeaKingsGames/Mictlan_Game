@@ -27,6 +27,8 @@ import { rollShop, shopDay } from './game/cardShop.ts';
 import { MAX_COPIES, rarityOf } from './data/types.ts';
 import { DUPLICATE_VALUE } from './game/config.ts';
 import { renderPvpLobby } from './html/PvpLobbyView.ts';
+import { renderJadeStore } from './html/JadeStoreView.ts';
+import { takeReturnFromCheckout } from './net/payments.ts';
 import { setupInstall } from './html/install.ts';
 import { versionLabel } from './version.ts';
 import { setTrack } from './html/sound.ts';
@@ -47,6 +49,8 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  *   #/biblioteca  todas las cartas del juego
  *   #/ruleta      ruleta de premios (tickets oro)
  *   #/mercado     mercado de cartas (6 cartas al azar por cacao)
+ *   #/jade        tienda de jade con dinero real (Mercado Pago) y canjear códigos
+ *   #/jade/<id>   regreso de Mercado Pago: confirma ese pedido
  *   #/duelo/<id>  duelo contra ese duelista
  *   #/cuenta      (invitado) guardar cuenta con correo
  *   #/pvp         multijugador: crear sala o unirse con código
@@ -104,6 +108,7 @@ function route(): void {
     case 'biblioteca': renderLibrary(app, p, go); return;
     case 'ruleta': renderRoulette(app, p, go, marketFor(p)); return;
     case 'mercado': renderCardMarket(app, p, go, marketFor(p)); return;
+    case 'jade': leaveScreen = renderJadeStore(app, p, go, cloudEnabled, arg || undefined); return;
     case 'duelo': startDuel(p, arg); return;
     case 'pvp':
       if (arg) void startPvp(p, arg);
@@ -345,4 +350,6 @@ supabase?.auth.onAuthStateChange(event => {
 });
 
 window.addEventListener('hashchange', route);
+// Regreso de Mercado Pago (?pedido=<id>) → #/jade/<id>
+takeReturnFromCheckout();
 void boot();

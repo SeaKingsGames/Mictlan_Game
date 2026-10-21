@@ -43,3 +43,13 @@ export declare function planSpin(seed: number, featured: number): Check<SpinPlan
 export declare function planShop(seed: number): ShopSlot[];
 export type PvpSnapshot = { ok: true; view: unknown; steps: { events: unknown[]; view: unknown }[]; index: number } | { ok: false; error: string; at: number };
 export declare function pvpView(m: PvpMatchData, player: 0 | 1, since: number): PvpSnapshot;
+export declare const CURRENCY_CODE: string;
+export declare const FIRST_PURCHASE_MULTIPLIER: number;
+export declare const JADE_PACKAGES: readonly { id: string; name: string; price: number; jade: number; ur: number; gold: number; glyph: string; color: string }[];
+export declare function newGiftCode(random: () => number): string;
+export declare function normalizeCode(input: string): string;
+export declare function isPlausibleCode(code: string): boolean;
+export interface Grant { jade: number; ur: number; gold: number }
+export interface GrantPlan { jade: number; gold: number; cards: { id: number; cacao: number; jade: number }[] }
+export declare function jadePackage(id: string): { id: string; name: string; price: number; jade: number; ur: number; gold: number } | null;
+export declare function planGrant(grant: Grant, seed: number, collection: Record<string, number>): GrantPlan;

@@ -4,6 +4,7 @@ import duelistsJson from './duelists.json';
 import fusionsJson from './fusions.json';
 import signsJson from './signs.json';
 import packsJson from './packs.json';
+import jadeJson from './jade.json';
 import type { DaySign } from '../core/daySign.ts';
 import { CardDatabase } from './cardDatabase.ts';
 import { FusionDatabase, type FusionData } from './fusionDatabase.ts';
@@ -31,7 +32,7 @@ export function getDeck(id: string): DeckDef {
  * Huella de los datos del juego (cartas + fusiones + duelistas). El servidor la compara con la del
  * cliente: si cambias cards.json y no vuelves a desplegar las funciones, el servidor lo detecta.
  */
-export const DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cardsJson) + JSON.stringify(fusionsJson) + JSON.stringify(duelistsJson) + JSON.stringify(signsJson) + JSON.stringify(packsJson));
+export const DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cardsJson) + JSON.stringify(fusionsJson) + JSON.stringify(duelistsJson) + JSON.stringify(signsJson) + JSON.stringify(packsJson) + JSON.stringify(jadeJson));
 
 function fnv1a(text: string): string {
   let h = 0x811c9dc5;

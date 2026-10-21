@@ -1,0 +1,10 @@
+[
+  { "id": "punado",       "name": "Puñado de Jade",          "price": 29,   "jade": 300,   "ur": 0, "gold": 0,  "glyph": "◆", "color": "#3f9a6b" },
+  { "id": "bolsa",        "name": "Bolsa de Jade",           "price": 59,   "jade": 650,   "ur": 0, "gold": 0,  "glyph": "❖", "color": "#2f8f8a" },
+  { "id": "cofre",        "name": "Cofre de Jade",           "price": 99,   "jade": 1150,  "ur": 0, "gold": 0,  "glyph": "▣", "color": "#c9862e" },
+  { "id": "tlaloc",       "name": "Ofrenda de Tláloc",       "price": 199,  "jade": 2400,  "ur": 1, "gold": 1,  "glyph": "≈", "color": "#2f7fc0" },
+  { "id": "quetzalcoatl", "name": "Ofrenda de Quetzalcóatl", "price": 349,  "jade": 4400,  "ur": 2, "gold": 3,  "glyph": "∿", "color": "#2fa36b" },
+  { "id": "moctezuma",    "name": "Tributo de Moctezuma",    "price": 499,  "jade": 6500,  "ur": 3, "gold": 5,  "glyph": "♛", "color": "#8a55c9" },
+  { "id": "tenochtitlan", "name": "Tesoro de Tenochtitlan",  "price": 799,  "jade": 11000, "ur": 4, "gold": 7,  "glyph": "▲", "color": "#c94a4a" },
+  { "id": "quinto-sol",   "name": "Trono del Quinto Sol",    "price": 1499, "jade": 22000, "ur": 5, "gold": 10, "glyph": "☀", "color": "#d9a520" }
+]

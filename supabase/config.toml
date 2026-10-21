@@ -18,3 +18,10 @@ verify_jwt = true
 
 [functions.market]
 verify_jwt = true
+
+[functions.payments]
+verify_jwt = true
+
+# Mercado Pago avisa aquí cuando cambia un pago: no trae sesión de jugador.
+[functions.mp-webhook]
+verify_jwt = false

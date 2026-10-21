@@ -1044,6 +1044,18 @@ var packs_default = [
   }
 ];
 
+// src/data/jade.json
+var jade_default = [
+  { id: "punado", name: "Pu\xF1ado de Jade", price: 29, jade: 300, ur: 0, gold: 0, glyph: "\u25C6", color: "#3f9a6b" },
+  { id: "bolsa", name: "Bolsa de Jade", price: 59, jade: 650, ur: 0, gold: 0, glyph: "\u2756", color: "#2f8f8a" },
+  { id: "cofre", name: "Cofre de Jade", price: 99, jade: 1150, ur: 0, gold: 0, glyph: "\u25A3", color: "#c9862e" },
+  { id: "tlaloc", name: "Ofrenda de Tl\xE1loc", price: 199, jade: 2400, ur: 1, gold: 1, glyph: "\u2248", color: "#2f7fc0" },
+  { id: "quetzalcoatl", name: "Ofrenda de Quetzalc\xF3atl", price: 349, jade: 4400, ur: 2, gold: 3, glyph: "\u223F", color: "#2fa36b" },
+  { id: "moctezuma", name: "Tributo de Moctezuma", price: 499, jade: 6500, ur: 3, gold: 5, glyph: "\u265B", color: "#8a55c9" },
+  { id: "tenochtitlan", name: "Tesoro de Tenochtitlan", price: 799, jade: 11e3, ur: 4, gold: 7, glyph: "\u25B2", color: "#c94a4a" },
+  { id: "quinto-sol", name: "Trono del Quinto Sol", price: 1499, jade: 22e3, ur: 5, gold: 10, glyph: "\u2600", color: "#d9a520" }
+];
+
 // src/data/types.ts
 var CARD_TAGS = [
   "jaguar",
@@ -1370,7 +1382,7 @@ var cardDb = new CardDatabase(cards_default);
 var fusionDb = new FusionDatabase(fusions_default, cardDb);
 var daySigns = signs_default;
 var ENGINE_VERSION = 5;
-var DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default) + JSON.stringify(signs_default) + JSON.stringify(packs_default));
+var DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default) + JSON.stringify(signs_default) + JSON.stringify(packs_default) + JSON.stringify(jade_default));
 function fnv1a(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -2699,6 +2711,36 @@ function rollRewards(duelist, firstWin, rng) {
   return firstWin ? [card, duelist.signature] : [card];
 }
 
+// src/game/jadeStore.ts
+var JADE_PACKAGES = jade_default;
+var getJadePackage = (id) => JADE_PACKAGES.find((p) => p.id === id);
+var FIRST_PURCHASE_MULTIPLIER = 2;
+var CURRENCY_CODE = "MXN";
+function giftableUrs(db) {
+  const ids = /* @__PURE__ */ new Set();
+  for (const pack of packs) for (const c of packPool(pack, db).UR) ids.add(c.id);
+  return [...ids].sort((a, b) => a - b);
+}
+function pickUrs(db, owned2, count, rng) {
+  const pool = giftableUrs(db).filter((id) => rarityOf(db.get(id)) === "UR");
+  const out = [];
+  const tiers = [pool.filter((id) => owned2(id) === 0), pool.filter((id) => owned2(id) > 0 && owned2(id) < 3), pool.filter((id) => owned2(id) >= 3)];
+  for (const tier of tiers) {
+    const left = [...tier];
+    while (out.length < count && left.length) out.push(left.splice(Math.floor(rng() * left.length), 1)[0]);
+  }
+  return out;
+}
+var CODE_ABC = "ABCDEFGHJKMNPQRTUVWXYZ2346789";
+function newGiftCode(random) {
+  const part = () => Array.from({ length: 4 }, () => CODE_ABC[Math.floor(random() * CODE_ABC.length)]).join("");
+  return `QS-${part()}-${part()}`;
+}
+function normalizeCode(input) {
+  return input.trim().toUpperCase().replace(/[\s_]+/g, "").replace(/[—–]/g, "-");
+}
+var isPlausibleCode = (code) => /^[A-Z0-9-]{4,24}$/.test(code);
+
 // src/game/pvpView.ts
 var MASK_RANGE = 1024;
 function idMask(seed) {
@@ -2955,10 +2997,26 @@ function planShop(seed) {
 function pvpView(m, player, since) {
   return pvpSnapshotFor(setupOf(m), m.intents, player, since, cardDb, fusionDb);
 }
+function jadePackage(id) {
+  const p = getJadePackage(id);
+  return p ? { id: p.id, name: p.name, price: p.price, jade: p.jade, ur: p.ur, gold: p.gold } : null;
+}
+function planGrant(grant, seed, collection) {
+  const ur = Math.max(0, Math.min(10, Math.floor(grant.ur) || 0));
+  const ids = pickUrs(cardDb, (id) => collection[id] ?? 0, ur, createRng((seed ^ 31454) >>> 0));
+  return {
+    jade: Math.max(0, Math.floor(grant.jade) || 0),
+    gold: Math.max(0, Math.floor(grant.gold) || 0),
+    cards: ids.map((id) => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] }))
+  };
+}
 export {
+  CURRENCY_CODE,
   DATA_VERSION,
+  FIRST_PURCHASE_MULTIPLIER,
   GOLD_BUY_COUNTS,
   GOLD_TICKET_PRICE,
+  JADE_PACKAGES,
   MAX_INTENTS,
   PACK_PITY,
   PACK_SIZE,
@@ -2973,9 +3031,14 @@ export {
   checkPvpDeck,
   cleanLevels,
   deckLevels,
+  isPlausibleCode,
+  jadePackage,
+  newGiftCode,
   newSeed,
+  normalizeCode,
   planAscend,
   planFeatured,
+  planGrant,
   planLevelUp,
   planPacks,
   planRewards,
