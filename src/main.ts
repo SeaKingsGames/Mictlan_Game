@@ -35,7 +35,7 @@ import { setTrack } from './html/sound.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
 import type { Intent } from './core/DuelState.ts';
 import {
-  ascendCloud, finishCloudDuel, openPacksCloud, flushDeck, hasSession, levelUpCloud, loadCloudProfile, queueDeckSave, signOut, startCloudDuel,
+  ascendCloud, finishCloudDuel, openPacksCloud, flushDeck, hasSession, levelUpCloud, loadCloudProfile, queueDeckSave, setUsername, signOut, startCloudDuel,
 } from './net/cloud.ts';
 import { cloudEnabled, supabase } from './net/supabase.ts';
 
@@ -122,6 +122,7 @@ function route(): void {
         onReset: fresh => { profile = fresh; route(); },
         onSignOut: cloudEnabled ? () => { void signOut().then(() => { profile = null; go('#/'); void boot(); }); } : undefined,
         onUpgrade: cloudEnabled ? () => go('#/cuenta') : undefined,
+        onRename: cloudEnabled ? setUsername : undefined,
       });
   }
 }

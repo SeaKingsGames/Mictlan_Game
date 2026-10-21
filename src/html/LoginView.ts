@@ -1,5 +1,5 @@
 import { GAME_SUBTITLE, GAME_TITLE } from '../game/config.ts';
-import { signIn, signInGuest, signUp, upgradeGuest } from '../net/cloud.ts';
+import { setUsername, signIn, signInGuest, signUp, upgradeGuest, usernameError } from '../net/cloud.ts';
 import { h } from './dom.ts';
 
 type Mode = 'login' | 'register' | 'upgrade';
@@ -28,7 +28,7 @@ export function renderLogin(root: HTMLElement, onDone: () => void, mode: Mode = 
   };
 
   const form = h('form', { class: 'login__form' },
-    mode === 'register' ? username : '',
+    mode !== 'login' ? username : '',
     email, password, submit, status);
   form.addEventListener('submit', async ev => {
     ev.preventDefault();
@@ -38,13 +38,16 @@ export function renderLogin(root: HTMLElement, onDone: () => void, mode: Mode = 
         await signIn(email.value.trim(), password.value);
       } else if (mode === 'register') {
         const name = username.value.trim();
-        if (name && (name.length < 3 || name.length > 20)) throw new Error('El nombre debe tener de 3 a 20 letras');
+        if (name && usernameError(name)) throw new Error(usernameError(name)!);
         const mustConfirm = await signUp(email.value.trim(), password.value, name);
         if (mustConfirm) {
           busy(false, 'Te enviamos un correo. Confírmalo y luego inicia sesión.');
           return;
         }
       } else {
+        const name = username.value.trim();
+        if (name && usernameError(name)) throw new Error(usernameError(name)!);
+        if (name) await setUsername(name);
         await upgradeGuest(email.value.trim(), password.value);
         busy(false, 'Listo. Si te llega un correo de confirmación, ábrelo para terminar.');
         setTimeout(onDone, 1500);

@@ -601,3 +601,15 @@ button.thumb:hover .card { transform: translateY(-3px); }
   .jreward__card .altar { --card-w: 84px; }
 }
 @media (prefers-reduced-motion: reduce) { .jade-spin, .jreward__coins, .jreward__card { animation: none; } }
+
+/* Nombre de jugador en el panel del menú */
+.menu-profile__who { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.menu-profile__name { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.menu-profile__edit { background: none; border: 1px solid var(--line); border-radius: 6px; color: var(--gold); font: 700 13px/1 system-ui; padding: 3px 6px; cursor: pointer; }
+.menu-profile__edit:hover { border-color: var(--gold); }
+.menu-profile__setname { justify-self: start; margin-top: 4px; background: #2a1f14; border: 1px dashed var(--gold); border-radius: 8px; color: #ffe7a8; font: 700 12px system-ui; padding: 5px 9px; cursor: pointer; }
+.menu-profile__rename { display: grid; gap: 6px; }
+.menu-profile__input { font-size: 14px; padding: 6px 9px; }
+.menu-profile__rename-btns { display: flex; gap: 6px; }
+.menu-profile__rename-btns .big-btn { padding: 6px 10px; font-size: 13px; min-width: 0; flex: 1; }
+.menu-profile__err { color: #ffb3a3; min-height: 1em; }

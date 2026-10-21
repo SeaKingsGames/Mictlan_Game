@@ -12,6 +12,7 @@ export interface MenuActions {
   onReset: (p: Profile) => void;     // modo local: reiniciar progreso
   onSignOut?: () => void;            // con cuenta: cerrar sesión
   onUpgrade?: () => void;            // invitado: guardar con correo
+  onRename?: (name: string) => Promise<string>;   // con cuenta: cambiar nombre de jugador
 }
 
 export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: string) => void, actions: MenuActions): void {
@@ -20,13 +21,39 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
   const total = cardDb.all().length;
   const beaten = duelists.filter(d => profile.defeated.includes(d.id)).length;
 
-  const name = acc ? (acc.guest ? 'Invitado' : (acc.username ?? acc.email ?? 'Jugador')) : 'Jugador local';
+  const name = acc ? (acc.username ?? (acc.guest ? 'Invitado' : 'Jugador')) : 'Jugador local';
+  const canRename = !!acc && !!actions.onRename;
+  const nameBox = h('div', { class: 'menu-profile__who' });
+  const paintName = () => nameBox.replaceChildren(
+    h('b', { class: 'menu-profile__name' }, acc?.username ?? name,
+      canRename ? h('button', { class: 'menu-profile__edit', title: 'Cambiar nombre', 'aria-label': 'Cambiar nombre', onclick: editName }, '✎') : ''),
+    h('small', {}, acc ? (acc.guest ? 'Cuenta de invitado' : 'Cuenta guardada') : 'Modo local (este navegador)'),
+    canRename && !acc?.username ? h('button', { class: 'menu-profile__setname', onclick: editName }, '✎ Ponte un nombre de jugador') : '');
+  function editName(): void {
+    sfx('click');
+    const input = h('input', { class: 'field menu-profile__input', value: acc?.username ?? '', placeholder: 'Nombre de jugador', maxlength: 20, autocomplete: 'nickname' });
+    const msg = h('small', { class: 'menu-profile__err', role: 'status' });
+    const save = h('button', { class: 'big-btn big-btn--main', type: 'submit' }, 'Guardar');
+    const form = h('form', { class: 'menu-profile__rename' }, input,
+      h('div', { class: 'menu-profile__rename-btns' }, save, h('button', { class: 'big-btn', type: 'button', onclick: paintName }, 'Cancelar')), msg);
+    form.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      save.disabled = true; msg.textContent = 'Guardando…';
+      try {
+        const n = await actions.onRename!(input.value);
+        if (acc) acc.username = n;
+        sfx('coin');
+        paintName();
+      } catch (e) { sfx('error'); msg.textContent = e instanceof Error ? e.message : String(e); save.disabled = false; }
+    });
+    nameBox.replaceChildren(form);
+    input.focus(); input.select();
+  }
+  paintName();
   const profileCard = h('section', { class: 'menu-profile panel' },
     h('div', { class: 'menu-profile__top' },
       h('span', { class: 'menu-profile__avatar', 'aria-hidden': 'true' }, '✺'),
-      h('div', {},
-        h('b', { class: 'menu-profile__name' }, name),
-        h('small', {}, acc ? (acc.guest ? 'Cuenta de invitado' : 'Cuenta guardada') : 'Modo local (este navegador)'))),
+      nameBox),
     acc ? h('div', { class: 'menu-profile__wallets' }, ...wallets(profile)) : '',
     h('dl', { class: 'menu-profile__stats' },
       h('dt', {}, 'Victorias'), h('dd', { class: 'win' }, String(profile.wins)),

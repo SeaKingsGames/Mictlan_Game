@@ -56,6 +56,31 @@ export async function upgradeGuest(email: string, password: string): Promise<voi
   if (error) throw authError(error.message);
 }
 
+/** Revisa un nombre de jugador. Devuelve el error o null si está bien. */
+export function usernameError(name: string): string | null {
+  const n = name.trim();
+  if (n.length < 3 || n.length > 20) return 'El nombre debe tener de 3 a 20 letras';
+  if (!/^[\p{L}\p{N} _.-]+$/u.test(n)) return 'Usa solo letras, números, espacios, punto, guion o guion bajo';
+  if (n.includes('@')) return 'No uses tu correo como nombre';
+  return null;
+}
+
+/** Cambia tu nombre de jugador (es lo que ve tu rival en las salas). */
+export async function setUsername(name: string): Promise<string> {
+  const n = name.trim().replace(/\s+/g, ' ');
+  const bad = usernameError(n);
+  if (bad) throw new Error(bad);
+  const sb = db();
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user) throw new Error('Sin sesión');
+  const { error } = await sb.from('profiles').update({ username: n }).eq('id', auth.user.id);
+  if (error) {
+    if (error.code === '23505') throw new Error('Ese nombre ya lo usa otro jugador');
+    throw new Error(error.message);
+  }
+  return n;
+}
+
 export async function signOut(): Promise<void> {
   await db().auth.signOut();
 }
