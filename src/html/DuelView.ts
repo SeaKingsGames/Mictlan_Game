@@ -36,7 +36,12 @@ export interface DuelResult {
   rewards: number[];      // cartas nuevas para mostrar
   notes: string[];        // avisos (cacao ganado, desbloqueos…)
   error?: string;         // si no se pudo guardar el resultado
+  retry?: boolean;        // se puede volver a intentar guardar (falló la conexión)
 }
+
+/** Tiempo máximo para guardar el resultado antes de ofrecer "Reintentar". */
+const SAVE_TIMEOUT_MS = 25_000;
+const NO_RETRY = ['rejected', 'stale_data', 'already_settled'];
 
 /** Lo que manda el servidor en multijugador: tu vista y, si hubo jugadas nuevas, cada una con sus eventos. */
 export interface RemoteSnapshot {
@@ -807,10 +812,24 @@ export class DuelView {
     if (!this.finishing) {                                          // una sola vez por duelo
       this.finishing = true;
       const engine = this.engine;
-      Promise.resolve()
-        .then(() => this.setup.onFinish(won, [...this.intents]))
-        .catch((e: unknown) => ({ rewards: [], notes: [], error: e instanceof Error ? e.message : String(e) }))
+      // Si tarda, avisa; si se pasa del tiempo, ofrece reintentar (el servidor no paga dos veces).
+      const slow = setTimeout(() => {
+        const note = this.el.overlay.querySelector('.overlay__note');
+        if (!this.finished && note) note.textContent = 'Guardando resultado… tarda más de lo normal, revisa tu conexión.';
+      }, 8000);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error('No se pudo guardar: sin conexión o el servidor no respondió.'), { code: 'timeout' })), SAVE_TIMEOUT_MS);
+      });
+      Promise.race([Promise.resolve().then(() => this.setup.onFinish(won, [...this.intents])), timeout])
+        .catch((e: unknown): DuelResult => {
+          const code = (e as { code?: string })?.code;
+          const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+          const msg = offline ? 'No hay internet: no se pudo guardar el resultado.' : e instanceof Error ? e.message : String(e);
+          return { rewards: [], notes: [], error: msg, retry: !NO_RETRY.includes(code ?? '') };
+        })
         .then(result => {
+          clearTimeout(slow); clearTimeout(timer);
           if (engine !== this.engine) return;                        // ya empezó otro duelo
           this.finished = result;
           this.el.overlay.replaceChildren();
@@ -868,6 +887,15 @@ export class DuelView {
     back.textContent = 'Continuar';
     back.addEventListener('click', () => this.setup.onExit());
     if (this.setup.remote) { this.unwatch?.(); this.unwatch = null; clearInterval(this.clock); }
+    const retry = document.createElement('button');
+    retry.className = 'end-btn';
+    retry.textContent = 'Reintentar guardar';
+    retry.addEventListener('click', () => {
+      this.finishing = false; this.finished = null;
+      this.el.overlay.replaceChildren();
+      this.render();
+    });
+    if (this.finished.retry) buttons.append(retry);
     buttons.append(...(this.setup.remote ? [back] : [again, back]));
     box.append(buttons);
     this.el.overlay.replaceChildren(box);

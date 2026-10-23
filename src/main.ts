@@ -302,7 +302,17 @@ function unlockNote(rival: Duelist): string {
 
 /** Modo nube: el servidor repite el duelo y decide el premio. Aquí solo se refleja. */
 async function finishInCloud(p: Profile, rival: Duelist, duelId: string, intents: readonly Intent[]): Promise<DuelResult> {
-  const r = await finishCloudDuel(duelId, intents);
+  let r: Awaited<ReturnType<typeof finishCloudDuel>>;
+  try {
+    r = await finishCloudDuel(duelId, intents);
+  } catch (e) {
+    // Un reintento después de que el primero sí llegó: ya estaba guardado. Se vuelve a bajar el perfil.
+    if ((e as { code?: string }).code === 'already_settled') {
+      try { profile = await loadCloudProfile(); } catch { /* se baja al volver al menú */ }
+      return { rewards: [], notes: ['El resultado ya estaba guardado.'] };
+    }
+    throw e;
+  }
   if (p.account) {
     p.account.cacao = r.balance.cacao; p.account.jade = r.balance.jade;
     if (r.balance.tickets !== undefined) p.account.tickets = r.balance.tickets;
