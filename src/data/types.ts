@@ -8,7 +8,7 @@ export type CardAttribute = 'sol' | 'viento' | 'agua' | 'tierra';
 
 export const CARD_TAGS = [
   'jaguar', 'guerrero', 'bestia', 'serpiente', 'deidad', 'ave',
-  'agua', 'muerte', 'sol', 'fuego', 'viento',
+  'agua', 'muerte', 'sol', 'fuego', 'viento', 'sacerdote',
 ] as const;
 export type CardTag = (typeof CARD_TAGS)[number];
 
@@ -40,6 +40,8 @@ export interface CardDef {
    * Se editan en el editor de cartas ("Cómo surge esta carta").
    */
   readonly recipes?: readonly (readonly [number, number])[];
+  /** Expansión a la que pertenece (ej. "guerra-florida"). Sin esto = cartas base. */
+  readonly set?: string;
 }
 
 export interface NahualForm {

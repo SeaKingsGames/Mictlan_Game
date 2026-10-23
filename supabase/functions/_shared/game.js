@@ -1056,6 +1056,4250 @@ var jade_default = [
   { id: "quinto-sol", name: "Trono del Quinto Sol", price: 1499, jade: 22e3, ur: 5, gold: 10, glyph: "\u2600", color: "#d9a520" }
 ];
 
+// src/data/sets/guerra-florida.json
+var guerra_florida_default = {
+  id: "guerra-florida",
+  name: "La Guerra Florida",
+  chapter: 2,
+  cards: [
+    {
+      id: 101,
+      name: "Telpochtli aprendiz",
+      description: "Joven de la casa de la juventud. Sue\xF1a con vestir la piel del jaguar.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 900,
+      def: 700,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 102,
+      name: "Ocelote de la maleza",
+      description: "Caza entre las sombras. De noche gana +300 ATK al atacar.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "jaguar",
+        "bestia"
+      ],
+      atk: 1e3,
+      def: 600,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onAttack",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "self",
+              untilEndOfTurn: true
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 103,
+      name: "Explorador de la selva",
+      description: "Abre camino con el machete de obsidiana.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "bestia"
+      ],
+      atk: 1100,
+      def: 800,
+      rarity: "N",
+      set: "guerra-florida",
+      noFusion: true
+    },
+    {
+      id: 104,
+      name: "Cachorro de jaguar negro",
+      description: "Hijo de la noche. Cuando es destruido, robas 1 carta.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "jaguar",
+        "bestia",
+        "muerte"
+      ],
+      atk: 800,
+      def: 700,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 105,
+      name: "Tamborilero del teponaztli",
+      description: "Su tambor marca el paso de la orden. Tus otros jaguares ganan +200 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "guerrero"
+      ],
+      atk: 600,
+      def: 900,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "otherAlliesWithTag",
+              tag: "jaguar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 106,
+      name: "Mono aullador",
+      description: "Su grito anuncia a los guerreros que se acercan.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "bestia",
+        "viento"
+      ],
+      atk: 900,
+      def: 500,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 107,
+      name: "Vig\xEDa nocturno",
+      description: "Nunca duerme. De noche gana +200 ATK.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "muerte"
+      ],
+      atk: 1200,
+      def: 900,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 108,
+      name: "Tapir de la selva",
+      description: "Pesado y tranquilo, dif\xEDcil de derribar.",
+      type: "monster",
+      attribute: "agua",
+      tags: [
+        "bestia",
+        "agua"
+      ],
+      atk: 700,
+      def: 1500,
+      rarity: "N",
+      set: "guerra-florida",
+      noFusion: true
+    },
+    {
+      id: 109,
+      name: "Guerrero con tepoztopilli",
+      description: "Su lanza de hojas de obsidiana alcanza lejos.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 1300,
+      def: 800,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 110,
+      name: "Murci\xE9lago de la cueva sagrada",
+      description: "Vuela de la cueva al Mictl\xE1n. Cuando hace da\xF1o directo, recuperas 300 PV.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "muerte",
+        "viento"
+      ],
+      atk: 1e3,
+      def: 600,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDirectDamage",
+          actions: [
+            {
+              type: "heal",
+              amount: 300
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 111,
+      name: "Rugido en la noche",
+      description: "Tus jaguares ganan +500 ATK hasta el final del turno.",
+      type: "spell",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 500,
+              target: "alliesWithTag",
+              tag: "jaguar",
+              untilEndOfTurn: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 112,
+      name: "Piel de jaguar",
+      description: "El monstruo equipado gana +400 ATK y +200 DEF.",
+      type: "equip",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "equipTarget"
+            },
+            {
+              type: "modifyDef",
+              amount: 200,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 113,
+      name: "Emboscada en la selva",
+      description: "Cuando el rival ataca, su atacante pierde 600 ATK este turno.",
+      type: "trap",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: -600,
+              target: "attacker",
+              untilEndOfTurn: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 114,
+      name: "Copal de la selva",
+      description: "Humo que cura las heridas. Recuperas 800 PV.",
+      type: "spell",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "heal",
+              amount: 800
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 115,
+      name: "Guerrero Ocelotl",
+      description: "Caballero jaguar de pleno derecho. De noche gana +400 ATK al atacar.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "jaguar"
+      ],
+      atk: 1900,
+      def: 1400,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onAttack",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "self",
+              untilEndOfTurn: true
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          101,
+          102
+        ]
+      ]
+    },
+    {
+      id: 116,
+      name: "Jaguar de la luna",
+      description: "Su pelaje refleja la luna. De noche gana +500 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "jaguar",
+        "bestia",
+        "viento"
+      ],
+      atk: 1700,
+      def: 1200,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 500,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          102,
+          104
+        ]
+      ]
+    },
+    {
+      id: 117,
+      name: "Captor de prisioneros",
+      description: "En la Guerra Florida no se mata: se captura. Cuando destruye a un monstruo en batalla, robas 1 carta.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "muerte"
+      ],
+      atk: 1800,
+      def: 1300,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onBattleDestroy",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 118,
+      name: "Ocelote acechador",
+      description: "De noche salta sobre la l\xEDnea enemiga: puede atacar directo.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "jaguar",
+        "bestia"
+      ],
+      atk: 1600,
+      def: 900,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "directAttack",
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 119,
+      name: "Cuachic de la noche",
+      description: "Los rapados no retroceden. Cuando es destruido, hace 500 de da\xF1o al rival.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 2e3,
+      def: 1e3,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "damage",
+              amount: 500,
+              who: "opponent"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          109,
+          105
+        ]
+      ]
+    },
+    {
+      id: 120,
+      name: "Cham\xE1n del espejo negro",
+      description: "Mira el futuro en la obsidiana. De noche, al ser invocado, pone en defensa al monstruo m\xE1s fuerte del rival.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "muerte",
+        "viento"
+      ],
+      atk: 1300,
+      def: 1700,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "forceDefense",
+              target: "highestAtkEnemy"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 121,
+      name: "Serpiente de la selva oscura",
+      description: "Silenciosa entre las ra\xEDces. De noche gana +300 ATK.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "serpiente",
+        "muerte"
+      ],
+      atk: 1500,
+      def: 1100,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 122,
+      name: "Jaguar del cenote",
+      description: "Nada en las aguas sagradas sin hacer ruido.",
+      type: "monster",
+      attribute: "agua",
+      tags: [
+        "jaguar",
+        "bestia",
+        "agua"
+      ],
+      atk: 1700,
+      def: 1500,
+      rarity: "R",
+      set: "guerra-florida",
+      noFusion: true
+    },
+    {
+      id: 123,
+      name: "Escudero de la orden jaguar",
+      description: "Cuando lo atacan, gana +500 DEF este turno.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 1400,
+      def: 2e3,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onAttacked",
+          actions: [
+            {
+              type: "modifyDef",
+              amount: 500,
+              target: "self",
+              untilEndOfTurn: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 124,
+      name: "Tecolote de Tezcatlipoca",
+      description: "Mensajero del espejo humeante. De noche, al ser invocado, destruye las m\xE1gicas y trampas colocadas del rival.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "muerte",
+        "viento"
+      ],
+      atk: 1600,
+      def: 1e3,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "destroySupport",
+              who: "opponent"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 125,
+      name: "Tlahuiztli de jaguar",
+      description: "El traje de la orden. El monstruo equipado gana +700 ATK y +300 DEF.",
+      type: "equip",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 700,
+              target: "equipTarget"
+            },
+            {
+              type: "modifyDef",
+              amount: 300,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 126,
+      name: "Noche de cacer\xEDa",
+      description: "Tus jaguares ganan +700 ATK hasta el final del turno y robas 1 carta.",
+      type: "spell",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 700,
+              target: "alliesWithTag",
+              tag: "jaguar",
+              untilEndOfTurn: true
+            },
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 127,
+      name: "Garras en la oscuridad",
+      description: "De noche, cuando el rival ataca, su atacante es destruido.",
+      type: "trap",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "destroy",
+              target: "attacker"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 128,
+      name: "Capit\xE1n Ocelotl",
+      description: "Gu\xEDa de la casa de los jaguares. Tus otros jaguares ganan +300 ATK; de noche \xE9l gana +400.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "jaguar"
+      ],
+      atk: 2600,
+      def: 1900,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "otherAlliesWithTag",
+              tag: "jaguar"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          115,
+          116
+        ]
+      ]
+    },
+    {
+      id: 129,
+      name: "Jaguar de Tezcatlipoca",
+      description: "La forma animal del dios. Hace da\xF1o de sobra a los monstruos en defensa; de noche gana +500 ATK.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "jaguar",
+        "bestia",
+        "muerte"
+      ],
+      atk: 2500,
+      def: 1800,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "piercing",
+              target: "self"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 500,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          116,
+          121
+        ]
+      ]
+    },
+    {
+      id: 130,
+      name: "Nahual del jaguar negro",
+      description: "Hechicero de la orden. De noche se vuelve jaguar y, al ser invocado, robas 1 carta.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "jaguar"
+      ],
+      atk: 1500,
+      def: 1500,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      nahual: {
+        name: "Jaguar de la noche eterna",
+        atk: 2800,
+        def: 1600,
+        description: "El hechicero ya no es hombre: es la noche con colmillos."
+      }
+    },
+    {
+      id: 131,
+      name: "Cuachicqueh, los rapados",
+      description: "Juraron no dar un paso atr\xE1s. Una vez por duelo sobreviven a un golpe que los destruir\xEDa.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 2700,
+      def: 1600,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "battleImmune",
+              target: "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 132,
+      name: "Se\xF1or de la cueva",
+      description: "Guardi\xE1n de la entrada a la tierra. Cuando destruye a un monstruo en batalla, recuperas 500 PV.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "jaguar",
+        "bestia"
+      ],
+      atk: 2400,
+      def: 2400,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onBattleDestroy",
+          actions: [
+            {
+              type: "heal",
+              amount: 500
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 133,
+      name: "Hechicera de la luna negra",
+      description: "De noche, al ser invocada, regresa a la mano del rival su monstruo m\xE1s fuerte.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "muerte",
+        "viento"
+      ],
+      atk: 2e3,
+      def: 2600,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "returnToHand",
+              target: "highestAtkEnemy"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          117,
+          120
+        ]
+      ]
+    },
+    {
+      id: 134,
+      name: "Espejo de obsidiana",
+      description: "Tezcatlipoca muestra su destino: destruye al monstruo m\xE1s fuerte del rival.",
+      type: "spell",
+      attribute: "viento",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "destroy",
+              target: "highestAtkEnemy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 135,
+      name: "Cacer\xEDa nocturna",
+      description: "De noche, cuando el rival invoca un monstruo boca arriba, lo destruye.",
+      type: "trap",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentSummon",
+          actions: [
+            {
+              type: "destroy",
+              target: "summoned"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 136,
+      name: "Macuahuitl del capit\xE1n",
+      description: "La espada de obsidiana de la orden. El monstruo equipado gana +1000 ATK.",
+      type: "equip",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 1e3,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 137,
+      name: "Tepey\xF3llotl, coraz\xF3n del monte",
+      description: "El jaguar que hace temblar los cerros. Al ser invocado destruye a un monstruo rival al azar; de noche gana +600 ATK.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "deidad",
+        "jaguar",
+        "bestia"
+      ],
+      atk: 3600,
+      def: 3200,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "destroy",
+              target: "randomEnemy"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 600,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 138,
+      name: "Ocelotl Tecuhtli, se\xF1or jaguar",
+      description: "El m\xE1s grande de la orden. Tus otros jaguares ganan +500 ATK; de noche ataca dos veces.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "jaguar"
+      ],
+      atk: 3400,
+      def: 2600,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 500,
+              target: "otherAlliesWithTag",
+              tag: "jaguar"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "doubleAttack",
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 139,
+      name: "Yohualli, el viento nocturno",
+      description: "Tezcatlipoca como viento de la noche. Puede atacar directo; de noche gana +300 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "deidad",
+        "muerte",
+        "viento"
+      ],
+      atk: 3300,
+      def: 2900,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "directAttack",
+              target: "self"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 140,
+      name: "Noche de Tezcatlipoca",
+      description: "La oscuridad se lo traga todo: todos los monstruos del rival regresan a su mano.",
+      type: "spell",
+      attribute: "viento",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "returnToHand",
+              target: "allEnemies"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 141,
+      name: "Telpochtli del sol",
+      description: "Joven guerrero que saluda al sol cada ma\xF1ana.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "sol"
+      ],
+      atk: 900,
+      def: 700,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 142,
+      name: "Aguilucho",
+      description: "Todav\xEDa no vuela alto. De d\xEDa gana +200 ATK.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "ave",
+        "sol"
+      ],
+      atk: 800,
+      def: 600,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 143,
+      name: "Halc\xF3n de Huitzilopochtli",
+      description: "Cuando hace da\xF1o directo, hace 300 de da\xF1o extra.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "viento"
+      ],
+      atk: 1e3,
+      def: 500,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDirectDamage",
+          actions: [
+            {
+              type: "damage",
+              amount: 300,
+              who: "opponent"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 144,
+      name: "Arquero del amanecer",
+      description: "Dispara con la primera luz. En el Alba gana +400 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "guerrero",
+        "viento"
+      ],
+      atk: 1200,
+      def: 700,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isPhase",
+              phase: "alba"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 145,
+      name: "Portaestandarte \xE1guila",
+      description: "Lleva el estandarte de plumas. Tus otras aves ganan +200 ATK.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "ave"
+      ],
+      atk: 700,
+      def: 1e3,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "otherAlliesWithTag",
+              tag: "ave"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 146,
+      name: "Colibr\xED de fuego",
+      description: "Alma de guerrero ca\xEDdo. Cuando es destruido, hace 400 de da\xF1o al rival.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "ave",
+        "fuego",
+        "sol"
+      ],
+      atk: 600,
+      def: 400,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "damage",
+              amount: 400,
+              who: "opponent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 147,
+      name: "Paynani, corredor",
+      description: "Lleva noticias de la batalla. Si se usa como material de fusi\xF3n, robas 1 carta.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "guerrero"
+      ],
+      atk: 1100,
+      def: 600,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onFusionMaterial",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 148,
+      name: "Zopilote del campo de batalla",
+      description: "Limpia el campo. Cuando destruye a un monstruo en batalla, recuperas 300 PV.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "muerte"
+      ],
+      atk: 1e3,
+      def: 800,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onBattleDestroy",
+          actions: [
+            {
+              type: "heal",
+              amount: 300
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 149,
+      name: "Hondero tlatelolca",
+      description: "Sus piedras zumban como avispas.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 1300,
+      def: 600,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 150,
+      name: "Venado del sol",
+      description: "Corre con el sol en los cuernos.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "bestia",
+        "sol"
+      ],
+      atk: 1e3,
+      def: 1e3,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 151,
+      name: "Rodela del sol",
+      description: "Escudo de plumas doradas. El monstruo equipado gana +200 ATK y +500 DEF.",
+      type: "equip",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "equipTarget"
+            },
+            {
+              type: "modifyDef",
+              amount: 500,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 152,
+      name: "Grito de guerra",
+      description: "Todos tus monstruos ganan +300 ATK hasta el final del turno.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "allAllies",
+              untilEndOfTurn: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 153,
+      name: "Lluvia de dardos",
+      description: "Cuando el rival ataca, su atacante pierde 700 ATK este turno.",
+      type: "trap",
+      attribute: "viento",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: -700,
+              target: "attacker",
+              untilEndOfTurn: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 154,
+      name: "Agua de ch\xEDa",
+      description: "Bebida de los guerreros. Recuperas 700 PV.",
+      type: "spell",
+      attribute: "agua",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "heal",
+              amount: 700
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 155,
+      name: "Guerrero Cuauhtli",
+      description: "Caballero \xE1guila de pleno derecho. De d\xEDa gana +300 ATK.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "ave",
+        "sol"
+      ],
+      atk: 1900,
+      def: 1500,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          141,
+          142
+        ]
+      ]
+    },
+    {
+      id: 156,
+      name: "\xC1guila del Templo",
+      description: "Anida en lo alto del Templo Mayor. De d\xEDa, al ser invocada, robas 1 carta.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "ave",
+        "sol"
+      ],
+      atk: 1700,
+      def: 1100,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          143,
+          146
+        ]
+      ]
+    },
+    {
+      id: 157,
+      name: "Noble cuauhpilli",
+      description: "Gan\xF3 su rango en el campo. Hace da\xF1o de sobra a los monstruos en defensa.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "ave"
+      ],
+      atk: 1800,
+      def: 1300,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "piercing",
+              target: "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 158,
+      name: "Otomitl, guerrero otom\xED",
+      description: "Orden de los otom\xEDes. Cuando es destruido, invoca de tu mazo un guerrero con ATK de 1500 o menos.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "guerrero",
+        "viento"
+      ],
+      atk: 2e3,
+      def: 1200,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "summonFromDeck",
+              maxAtk: 1500,
+              tag: "guerrero"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 159,
+      name: "Sacerdotisa del sol naciente",
+      description: "Canta para que el sol vuelva a salir. Al ser invocada, recuperas 800 PV.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "sol"
+      ],
+      atk: 1200,
+      def: 1800,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "heal",
+              amount: 800
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 160,
+      name: "Quetzal sagrado",
+      description: "Sus plumas valen m\xE1s que el oro. Tus otras aves ganan +300 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "viento"
+      ],
+      atk: 1500,
+      def: 1300,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "otherAlliesWithTag",
+              tag: "ave"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 161,
+      name: "Halc\xF3n peregrino",
+      description: "De d\xEDa cae en picada: puede atacar directo.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "viento"
+      ],
+      atk: 1800,
+      def: 700,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "directAttack",
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 162,
+      name: "Guerrero de la Triple Alianza",
+      description: "M\xE9xico, Texcoco y Tlacopan pelean juntos.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 1700,
+      def: 1700,
+      rarity: "R",
+      set: "guerra-florida",
+      recipes: [
+        [
+          149,
+          144
+        ]
+      ]
+    },
+    {
+      id: 163,
+      name: "Serpiente solar",
+      description: "Cuando hace da\xF1o directo, hace 300 de da\xF1o extra.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "serpiente",
+        "fuego",
+        "sol"
+      ],
+      atk: 1600,
+      def: 1200,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDirectDamage",
+          actions: [
+            {
+              type: "damage",
+              amount: 300,
+              who: "opponent"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 164,
+      name: "Cihuateteo del ocaso",
+      description: "Acompa\xF1a al sol cuando baja. En el Ocaso gana +600 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "guerrero",
+        "muerte",
+        "viento"
+      ],
+      atk: 1600,
+      def: 1400,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 600,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isPhase",
+              phase: "ocaso"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 165,
+      name: "Plumaje de \xE1guila",
+      description: "El monstruo equipado gana +400 ATK y puede atacar directo.",
+      type: "equip",
+      attribute: "viento",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "equipTarget"
+            },
+            {
+              type: "grantKeyword",
+              keyword: "directAttack",
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 166,
+      name: "Sol en el cenit",
+      description: "Tus monstruos de sol ganan +600 ATK hasta el final del turno.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 600,
+              target: "alliesWithTag",
+              tag: "sol",
+              untilEndOfTurn: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 167,
+      name: "Vuelo en picada",
+      description: "Cuando el rival invoca un monstruo boca arriba, regresa a su mano.",
+      type: "trap",
+      attribute: "viento",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentSummon",
+          actions: [
+            {
+              type: "returnToHand",
+              target: "summoned"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 168,
+      name: "Capit\xE1n Cuauhtli",
+      description: "Gu\xEDa de la casa de las \xE1guilas. Tus otras aves ganan +300 ATK; de d\xEDa \xE9l gana +300.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "ave",
+        "sol"
+      ],
+      atk: 2600,
+      def: 2e3,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "otherAlliesWithTag",
+              tag: "ave"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          155,
+          156
+        ]
+      ]
+    },
+    {
+      id: 169,
+      name: "\xC1guila de fuego",
+      description: "Baja del sol envuelta en llamas. Al ser invocada hace 600 de da\xF1o al rival.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "ave",
+        "fuego",
+        "sol"
+      ],
+      atk: 2500,
+      def: 1500,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "damage",
+              amount: 600,
+              who: "opponent"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          156,
+          146
+        ]
+      ]
+    },
+    {
+      id: 170,
+      name: "Guerrero del Quinto Sol",
+      description: "Pelea para que el sol no se apague. Hace da\xF1o de sobra contra defensa; de d\xEDa gana +300 ATK.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "sol"
+      ],
+      atk: 2700,
+      def: 2100,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "piercing",
+              target: "self"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 171,
+      name: "Tlacochc\xE1lcatl, general",
+      description: "Se\xF1or de la casa de los dardos. Cuando destruye a un monstruo en batalla, invoca de tu mazo un guerrero con ATK de 2000 o menos.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 2400,
+      def: 2400,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onBattleDestroy",
+          actions: [
+            {
+              type: "summonFromDeck",
+              maxAtk: 2e3,
+              tag: "guerrero"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 172,
+      name: "Guerrera del mediod\xEDa",
+      description: "Vuela con el sol en lo m\xE1s alto. Al Mediod\xEDa ataca dos veces.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "guerrero",
+        "ave",
+        "viento"
+      ],
+      atk: 2300,
+      def: 1800,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "doubleAttack",
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isPhase",
+              phase: "mediodia"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          157,
+          161
+        ]
+      ]
+    },
+    {
+      id: 173,
+      name: "Gran quetzal de Tamoanchan",
+      description: "Ave del para\xEDso de los dioses. Al ser invocado destruye las m\xE1gicas y trampas colocadas del rival.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "viento"
+      ],
+      atk: 2200,
+      def: 2500,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "destroySupport",
+              who: "opponent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 174,
+      name: "Flechas del sol",
+      description: "Destruye al monstruo m\xE1s d\xE9bil del rival y le hace 500 de da\xF1o.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "destroy",
+              target: "lowestAtkEnemy"
+            },
+            {
+              type: "damage",
+              amount: 500,
+              who: "opponent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 175,
+      name: "Escudo del sol",
+      description: "Cuando el rival ataca, el ataque no sucede y recuperas 1000 PV.",
+      type: "trap",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "negateAttack"
+            },
+            {
+              type: "heal",
+              amount: 1e3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 176,
+      name: "Lanza de Huitzilopochtli",
+      description: "El monstruo equipado gana +600 ATK y ataca dos veces.",
+      type: "equip",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 600,
+              target: "equipTarget"
+            },
+            {
+              type: "grantKeyword",
+              keyword: "doubleAttack",
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 177,
+      name: "Cuauht\xE9moc, \xE1guila que desciende",
+      description: "El \xFAltimo tlatoani, que nunca se rindi\xF3. Al ser invocado destruye al monstruo m\xE1s fuerte del rival.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "ave",
+        "sol"
+      ],
+      atk: 3500,
+      def: 2700,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "destroy",
+              target: "highestAtkEnemy"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 178,
+      name: "Cuauhtli Tonatiuh, \xE1guila del sol",
+      description: "El sol con alas de \xE1guila. Tus otros guerreros ganan +400 ATK; de d\xEDa hace da\xF1o de sobra contra defensa.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "deidad",
+        "ave",
+        "sol"
+      ],
+      atk: 3700,
+      def: 3e3,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "otherAlliesWithTag",
+              tag: "guerrero"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "piercing",
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 179,
+      name: "Painal, mensajero de la guerra",
+      description: "El veloz de Huitzilopochtli. Puede atacar directo; cuando hace da\xF1o directo, robas 1 carta.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "deidad",
+        "guerrero",
+        "viento"
+      ],
+      atk: 3300,
+      def: 2600,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "directAttack",
+              target: "self"
+            }
+          ]
+        },
+        {
+          trigger: "onDirectDamage",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 180,
+      name: "Amanecer del Quinto Sol",
+      description: "El sol vuelve a nacer: todos tus monstruos ganan +1000 ATK este turno, recuperas 1500 PV y robas 1 carta.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 1e3,
+              target: "allAllies",
+              untilEndOfTurn: true
+            },
+            {
+              type: "heal",
+              amount: 1500
+            },
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 181,
+      name: "Novicio del calm\xE9cac",
+      description: "Aprende los cantos y el calendario. Al ser invocado, recuperas 300 PV.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote"
+      ],
+      atk: 600,
+      def: 1e3,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "heal",
+              amount: 300
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 182,
+      name: "Portador de copal",
+      description: "Su incensario nunca se apaga. Cuando es destruido, recuperas 500 PV.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "fuego"
+      ],
+      atk: 700,
+      def: 900,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "heal",
+              amount: 500
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 183,
+      name: "Serpiente de la escalinata",
+      description: "Cabeza de piedra que cobra vida al pie del templo.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "serpiente"
+      ],
+      atk: 1e3,
+      def: 1100,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 184,
+      name: "Guardi\xE1n del tzompantli",
+      description: "Vigila el muro de los cr\xE1neos.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "muerte"
+      ],
+      atk: 1200,
+      def: 900,
+      rarity: "N",
+      set: "guerra-florida",
+      noFusion: true
+    },
+    {
+      id: 185,
+      name: "M\xFAsico de la caracola",
+      description: "Su caracola llama a los dioses. Tus otros sacerdotes ganan +200 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "sacerdote",
+        "viento"
+      ],
+      atk: 500,
+      def: 800,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "otherAlliesWithTag",
+              tag: "sacerdote"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 186,
+      name: "Coyote de brasas",
+      description: "Ronda el fuego del altar.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "bestia",
+        "fuego"
+      ],
+      atk: 1100,
+      def: 600,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 187,
+      name: "Lagarto del altar",
+      description: "Duerme sobre las piedras calientes.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "serpiente",
+        "fuego"
+      ],
+      atk: 900,
+      def: 900,
+      rarity: "N",
+      set: "guerra-florida",
+      noFusion: true
+    },
+    {
+      id: 188,
+      name: "Escultor de piedra",
+      description: "Talla a los dioses en basalto. Duro como su obra.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "sacerdote"
+      ],
+      atk: 400,
+      def: 1600,
+      rarity: "N",
+      set: "guerra-florida"
+    },
+    {
+      id: 189,
+      name: "Lechuza del templo",
+      description: "Canta cuando alguien va a morir. De noche gana +200 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "ave",
+        "muerte"
+      ],
+      atk: 1e3,
+      def: 700,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 200,
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isNight"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 190,
+      name: "Cautivo de guerra",
+      description: "Capturado en la Guerra Florida. Cuando es destruido, robas 1 carta.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero"
+      ],
+      atk: 800,
+      def: 800,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 191,
+      name: "Humo de copal",
+      description: "Hace 500 de da\xF1o al rival y recuperas 500 PV.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "damage",
+              amount: 500,
+              who: "opponent"
+            },
+            {
+              type: "heal",
+              amount: 500
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 192,
+      name: "T\xE9cpatl, cuchillo de pedernal",
+      description: "El monstruo equipado gana +500 ATK.",
+      type: "equip",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 500,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 193,
+      name: "Coatepantli, muro de serpientes",
+      description: "Cuando el rival ataca, su atacante pierde 500 ATK este turno y queda en defensa.",
+      type: "trap",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: -500,
+              target: "attacker",
+              untilEndOfTurn: true
+            },
+            {
+              type: "forceDefense",
+              target: "attacker"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 194,
+      name: "Danza ritual",
+      description: "Todos tus monstruos ganan +300 ATK este turno y recuperas 300 PV.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "N",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "allAllies",
+              untilEndOfTurn: true
+            },
+            {
+              type: "heal",
+              amount: 300
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 195,
+      name: "Tlamacazqui del fuego",
+      description: "Guarda el fuego del templo. Al ser invocado hace 400 de da\xF1o al rival.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "fuego"
+      ],
+      atk: 1500,
+      def: 1600,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "damage",
+              amount: 400,
+              who: "opponent"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          181,
+          182
+        ]
+      ]
+    },
+    {
+      id: 196,
+      name: "Sacerdote serpiente",
+      description: "Habla con Cihuac\xF3atl. Al ser invocado pone en defensa al monstruo m\xE1s fuerte del rival.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "sacerdote",
+        "serpiente"
+      ],
+      atk: 1600,
+      def: 1400,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "forceDefense",
+              target: "highestAtkEnemy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 197,
+      name: "Guardi\xE1n de la piedra lunar",
+      description: "Cuida la piedra de Coyolxauhqui. Cuando es destruido, hace 500 de da\xF1o al rival.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "guerrero",
+        "muerte"
+      ],
+      atk: 1800,
+      def: 1500,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "damage",
+              amount: 500,
+              who: "opponent"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          184,
+          190
+        ]
+      ],
+      noFusion: true
+    },
+    {
+      id: 198,
+      name: "Xiuhc\xF3atl menor",
+      description: "Cr\xEDa de la serpiente de fuego. Hace da\xF1o de sobra a los monstruos en defensa.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "serpiente",
+        "fuego"
+      ],
+      atk: 1900,
+      def: 1100,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "piercing",
+              target: "self"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          183,
+          187
+        ]
+      ],
+      noFusion: true
+    },
+    {
+      id: 199,
+      name: "Sacerdotisa de Cihuac\xF3atl",
+      description: "Cuando es destruida, el guerrero m\xE1s fuerte de tu Mictl\xE1n vuelve al campo.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "sacerdote",
+        "muerte"
+      ],
+      atk: 1400,
+      def: 1800,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "revive",
+              tag: "guerrero"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 200,
+      name: "Guardi\xE1n del fuego eterno",
+      description: "Al empezar tu turno, recuperas 300 PV.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "fuego",
+        "sol"
+      ],
+      atk: 1700,
+      def: 1300,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onTurnStart",
+          actions: [
+            {
+              type: "heal",
+              amount: 300
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 201,
+      name: "Cipactli de piedra",
+      description: "El monstruo de la tierra tallado en la base del templo.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "bestia",
+        "muerte"
+      ],
+      atk: 1900,
+      def: 1600,
+      rarity: "R",
+      set: "guerra-florida",
+      noFusion: true
+    },
+    {
+      id: 202,
+      name: "Serpiente de obsidiana",
+      description: "Corta como navaja. Cuando destruye a un monstruo en batalla, robas 1 carta.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "serpiente",
+        "muerte"
+      ],
+      atk: 1700,
+      def: 1e3,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onBattleDestroy",
+          actions: [
+            {
+              type: "draw",
+              amount: 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 203,
+      name: "Danzante del fuego",
+      description: "Baila sobre las brasas. A Medianoche ataca dos veces.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "fuego"
+      ],
+      atk: 1600,
+      def: 900,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "doubleAttack",
+              target: "self"
+            }
+          ],
+          conditions: [
+            {
+              type: "isPhase",
+              phase: "medianoche"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 204,
+      name: "Mujer de la ofrenda",
+      description: "Lleva flores y ma\xEDz al altar. Al ser invocada, recuperas 1000 PV.",
+      type: "monster",
+      attribute: "agua",
+      tags: [
+        "sacerdote",
+        "agua"
+      ],
+      atk: 1200,
+      def: 2e3,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "heal",
+              amount: 1e3
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 205,
+      name: "Ofrenda al Sol",
+      description: "Hace 1200 de da\xF1o al rival, pero pierdes 500 PV.",
+      type: "spell",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "damage",
+              amount: 1200,
+              who: "opponent"
+            },
+            {
+              type: "damage",
+              amount: 500,
+              who: "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 206,
+      name: "M\xE1scara de turquesa",
+      description: "El monstruo equipado gana +600 ATK y +400 DEF.",
+      type: "equip",
+      attribute: "agua",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 600,
+              target: "equipTarget"
+            },
+            {
+              type: "modifyDef",
+              amount: 400,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 207,
+      name: "Fuego del altar",
+      description: "Cuando el rival invoca un monstruo boca arriba, ese monstruo pierde 700 ATK.",
+      type: "trap",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "R",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentSummon",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: -700,
+              target: "summoned"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 208,
+      name: "Huey Tlamacazqui, sumo sacerdote",
+      description: "Habla en nombre de los dioses. Tus otros sacerdotes ganan +400 ATK.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "fuego",
+        "sol"
+      ],
+      atk: 2400,
+      def: 2600,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "otherAlliesWithTag",
+              tag: "sacerdote"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          195,
+          196
+        ]
+      ]
+    },
+    {
+      id: 209,
+      name: "Xiuhc\xF3atl del Templo",
+      description: "La serpiente de fuego que guarda a Huitzilopochtli. Al ser invocada destruye al monstruo m\xE1s d\xE9bil del rival.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "serpiente",
+        "fuego",
+        "sol"
+      ],
+      atk: 2700,
+      def: 1800,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "destroy",
+              target: "lowestAtkEnemy"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          198,
+          202
+        ]
+      ]
+    },
+    {
+      id: 210,
+      name: "Guerrero de la Piedra del Sol",
+      description: "Su escudo es el calendario. De d\xEDa gana +500 ATK al atacar.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "guerrero",
+        "sol"
+      ],
+      atk: 2600,
+      def: 2e3,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onAttack",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 500,
+              target: "self",
+              untilEndOfTurn: true
+            }
+          ],
+          conditions: [
+            {
+              type: "isDay"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 211,
+      name: "Sacerdote de Mictlantecuhtli",
+      description: "Abre la puerta del Mictl\xE1n. Al ser invocado, el monstruo de muerte m\xE1s fuerte de tu Mictl\xE1n vuelve al campo.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "sacerdote",
+        "muerte"
+      ],
+      atk: 2200,
+      def: 2300,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "revive",
+              tag: "muerte"
+            }
+          ]
+        }
+      ],
+      recipes: [
+        [
+          199,
+          189
+        ]
+      ]
+    },
+    {
+      id: 212,
+      name: "Serpiente de Coatepec",
+      description: "Del cerro donde naci\xF3 Huitzilopochtli. Una vez por duelo sobrevive a un golpe que la destruir\xEDa.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "serpiente",
+        "muerte"
+      ],
+      atk: 2500,
+      def: 2200,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "battleImmune",
+              target: "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 213,
+      name: "Guardiana de las brasas",
+      description: "Cuando es destruida, hace 1000 de da\xF1o al rival.",
+      type: "monster",
+      attribute: "sol",
+      tags: [
+        "sacerdote",
+        "fuego"
+      ],
+      atk: 2300,
+      def: 1700,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onDestroyed",
+          actions: [
+            {
+              type: "damage",
+              amount: 1e3,
+              who: "opponent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 214,
+      name: "T\xE9chcatl, piedra del sacrificio",
+      description: "Destruye al monstruo m\xE1s fuerte del rival, pero pierdes 500 PV.",
+      type: "spell",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "destroy",
+              target: "highestAtkEnemy"
+            },
+            {
+              type: "damage",
+              amount: 500,
+              who: "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 215,
+      name: "Ira de Coatlicue",
+      description: "Cuando el rival ataca, su atacante es destruido y el rival recibe 500 de da\xF1o.",
+      type: "trap",
+      attribute: "tierra",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "destroy",
+              target: "attacker"
+            },
+            {
+              type: "damage",
+              amount: 500,
+              who: "opponent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 216,
+      name: "Collar de jade del sacerdote",
+      description: "El monstruo equipado gana +700 ATK y +700 DEF.",
+      type: "equip",
+      attribute: "agua",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "SR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onActivate",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 700,
+              target: "equipTarget"
+            },
+            {
+              type: "modifyDef",
+              amount: 700,
+              target: "equipTarget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 217,
+      name: "Coatlicue, madre de los dioses",
+      description: "La de la falda de serpientes. Al ser invocada, el monstruo m\xE1s fuerte de tu Mictl\xE1n vuelve al campo; tus otras serpientes ganan +400 ATK.",
+      type: "monster",
+      attribute: "tierra",
+      tags: [
+        "deidad",
+        "serpiente",
+        "muerte"
+      ],
+      atk: 3600,
+      def: 3400,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "revive"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 400,
+              target: "otherAlliesWithTag",
+              tag: "serpiente"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 218,
+      name: "Quetzalc\xF3atl Tlamacazqui",
+      description: "El sacerdote supremo lleva el nombre del dios. Al ser invocado robas 2 cartas; tus otros sacerdotes ganan +300 ATK.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "sacerdote",
+        "serpiente",
+        "fuego"
+      ],
+      atk: 3300,
+      def: 3e3,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "draw",
+              amount: 2
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "modifyAtk",
+              amount: 300,
+              target: "otherAlliesWithTag",
+              tag: "sacerdote"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 219,
+      name: "Itztlacoliuhqui, obsidiana curva",
+      description: "El dios de la helada y del castigo. Al ser invocado pone en defensa a todos los monstruos del rival; hace da\xF1o de sobra contra defensa.",
+      type: "monster",
+      attribute: "viento",
+      tags: [
+        "deidad",
+        "muerte",
+        "viento"
+      ],
+      atk: 3500,
+      def: 2800,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onSummon",
+          actions: [
+            {
+              type: "forceDefense",
+              target: "allEnemies"
+            }
+          ]
+        },
+        {
+          trigger: "continuous",
+          actions: [
+            {
+              type: "grantKeyword",
+              keyword: "piercing",
+              target: "self"
+            }
+          ]
+        }
+      ],
+      noFusion: true
+    },
+    {
+      id: 220,
+      name: "Atadura de los a\xF1os",
+      description: "Termina el ciclo de 52 a\xF1os: cuando el rival ataca, el ataque no sucede, todos sus monstruos regresan a su mano y no puede atacar en su siguiente turno.",
+      type: "trap",
+      attribute: "sol",
+      tags: [],
+      atk: 0,
+      def: 0,
+      rarity: "UR",
+      set: "guerra-florida",
+      effects: [
+        {
+          trigger: "onOpponentAttack",
+          actions: [
+            {
+              type: "negateAttack"
+            },
+            {
+              type: "returnToHand",
+              target: "allEnemies"
+            },
+            {
+              type: "preventAttack"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  duelists: [
+    {
+      id: "ocelotl",
+      name: "Ocelotl, capit\xE1n jaguar",
+      title: "Ocelocalli, casa de los jaguares",
+      level: 3,
+      glyph: "\u263E",
+      intro: "Abre la Guerra Florida bajo la luna. Sus jaguares son el doble de peligrosos de noche.",
+      deck: [
+        101,
+        101,
+        102,
+        102,
+        102,
+        104,
+        105,
+        105,
+        107,
+        109,
+        111,
+        112,
+        113,
+        115,
+        115,
+        115,
+        116,
+        116,
+        117,
+        117,
+        118,
+        118,
+        119,
+        120,
+        121,
+        124,
+        125,
+        126,
+        127,
+        128,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        136,
+        137,
+        138
+      ],
+      signature: 128,
+      rewards: [
+        {
+          card: 101,
+          weight: 6
+        },
+        {
+          card: 102,
+          weight: 6
+        },
+        {
+          card: 103,
+          weight: 6
+        },
+        {
+          card: 104,
+          weight: 6
+        },
+        {
+          card: 105,
+          weight: 6
+        },
+        {
+          card: 106,
+          weight: 6
+        },
+        {
+          card: 107,
+          weight: 6
+        },
+        {
+          card: 108,
+          weight: 6
+        },
+        {
+          card: 109,
+          weight: 6
+        },
+        {
+          card: 110,
+          weight: 6
+        },
+        {
+          card: 111,
+          weight: 6
+        },
+        {
+          card: 112,
+          weight: 6
+        },
+        {
+          card: 113,
+          weight: 6
+        },
+        {
+          card: 114,
+          weight: 6
+        },
+        {
+          card: 115,
+          weight: 3
+        },
+        {
+          card: 116,
+          weight: 3
+        },
+        {
+          card: 117,
+          weight: 3
+        },
+        {
+          card: 118,
+          weight: 3
+        },
+        {
+          card: 119,
+          weight: 3
+        },
+        {
+          card: 120,
+          weight: 3
+        },
+        {
+          card: 121,
+          weight: 3
+        },
+        {
+          card: 122,
+          weight: 3
+        },
+        {
+          card: 123,
+          weight: 3
+        },
+        {
+          card: 124,
+          weight: 3
+        },
+        {
+          card: 125,
+          weight: 3
+        },
+        {
+          card: 126,
+          weight: 3
+        },
+        {
+          card: 127,
+          weight: 3
+        },
+        {
+          card: 128,
+          weight: 1
+        },
+        {
+          card: 130,
+          weight: 1
+        },
+        {
+          card: 131,
+          weight: 1
+        },
+        {
+          card: 132,
+          weight: 1
+        },
+        {
+          card: 133,
+          weight: 1
+        },
+        {
+          card: 135,
+          weight: 1
+        },
+        {
+          card: 136,
+          weight: 1
+        }
+      ]
+    },
+    {
+      id: "cuauhtli",
+      name: "Cuauhtli, se\xF1or de las \xE1guilas",
+      title: "Cuauhcalli, casa de las \xE1guilas",
+      level: 3,
+      glyph: "\u2736",
+      intro: "Baja del cielo con el sol a la espalda. Sus \xE1guilas atacan directo y queman de d\xEDa.",
+      deck: [
+        141,
+        141,
+        142,
+        142,
+        142,
+        143,
+        145,
+        146,
+        146,
+        149,
+        152,
+        153,
+        155,
+        155,
+        155,
+        156,
+        156,
+        157,
+        157,
+        158,
+        160,
+        161,
+        161,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        175,
+        176,
+        177,
+        178
+      ],
+      signature: 168,
+      rewards: [
+        {
+          card: 141,
+          weight: 6
+        },
+        {
+          card: 142,
+          weight: 6
+        },
+        {
+          card: 143,
+          weight: 6
+        },
+        {
+          card: 144,
+          weight: 6
+        },
+        {
+          card: 145,
+          weight: 6
+        },
+        {
+          card: 146,
+          weight: 6
+        },
+        {
+          card: 147,
+          weight: 6
+        },
+        {
+          card: 148,
+          weight: 6
+        },
+        {
+          card: 149,
+          weight: 6
+        },
+        {
+          card: 150,
+          weight: 6
+        },
+        {
+          card: 151,
+          weight: 6
+        },
+        {
+          card: 152,
+          weight: 6
+        },
+        {
+          card: 153,
+          weight: 6
+        },
+        {
+          card: 154,
+          weight: 6
+        },
+        {
+          card: 155,
+          weight: 3
+        },
+        {
+          card: 156,
+          weight: 3
+        },
+        {
+          card: 157,
+          weight: 3
+        },
+        {
+          card: 158,
+          weight: 3
+        },
+        {
+          card: 159,
+          weight: 3
+        },
+        {
+          card: 160,
+          weight: 3
+        },
+        {
+          card: 161,
+          weight: 3
+        },
+        {
+          card: 162,
+          weight: 3
+        },
+        {
+          card: 163,
+          weight: 3
+        },
+        {
+          card: 164,
+          weight: 3
+        },
+        {
+          card: 165,
+          weight: 3
+        },
+        {
+          card: 166,
+          weight: 3
+        },
+        {
+          card: 167,
+          weight: 3
+        },
+        {
+          card: 168,
+          weight: 1
+        },
+        {
+          card: 169,
+          weight: 1
+        },
+        {
+          card: 171,
+          weight: 1
+        },
+        {
+          card: 172,
+          weight: 1
+        },
+        {
+          card: 173,
+          weight: 1
+        },
+        {
+          card: 174,
+          weight: 1
+        },
+        {
+          card: 175,
+          weight: 1
+        }
+      ]
+    },
+    {
+      id: "tlamacazqui",
+      name: "Tlamacazqui, gran sacerdote",
+      title: "Huey Teocalli, Templo Mayor",
+      level: 3,
+      glyph: "\u25B2",
+      intro: "En lo alto del Templo Mayor espera el fin de la Guerra Florida. Sus sacerdotes vuelven del Mictl\xE1n.",
+      deck: [
+        181,
+        181,
+        182,
+        182,
+        183,
+        185,
+        185,
+        187,
+        190,
+        191,
+        193,
+        195,
+        195,
+        195,
+        196,
+        196,
+        197,
+        198,
+        198,
+        199,
+        199,
+        202,
+        203,
+        205,
+        206,
+        207,
+        208,
+        208,
+        209,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219
+      ],
+      signature: 208,
+      rewards: [
+        {
+          card: 181,
+          weight: 6
+        },
+        {
+          card: 182,
+          weight: 6
+        },
+        {
+          card: 183,
+          weight: 6
+        },
+        {
+          card: 184,
+          weight: 6
+        },
+        {
+          card: 185,
+          weight: 6
+        },
+        {
+          card: 186,
+          weight: 6
+        },
+        {
+          card: 187,
+          weight: 6
+        },
+        {
+          card: 188,
+          weight: 6
+        },
+        {
+          card: 189,
+          weight: 6
+        },
+        {
+          card: 190,
+          weight: 6
+        },
+        {
+          card: 191,
+          weight: 6
+        },
+        {
+          card: 192,
+          weight: 6
+        },
+        {
+          card: 193,
+          weight: 6
+        },
+        {
+          card: 194,
+          weight: 6
+        },
+        {
+          card: 195,
+          weight: 3
+        },
+        {
+          card: 196,
+          weight: 3
+        },
+        {
+          card: 197,
+          weight: 3
+        },
+        {
+          card: 198,
+          weight: 3
+        },
+        {
+          card: 199,
+          weight: 3
+        },
+        {
+          card: 200,
+          weight: 3
+        },
+        {
+          card: 201,
+          weight: 3
+        },
+        {
+          card: 202,
+          weight: 3
+        },
+        {
+          card: 203,
+          weight: 3
+        },
+        {
+          card: 204,
+          weight: 3
+        },
+        {
+          card: 205,
+          weight: 3
+        },
+        {
+          card: 206,
+          weight: 3
+        },
+        {
+          card: 207,
+          weight: 3
+        },
+        {
+          card: 208,
+          weight: 1
+        },
+        {
+          card: 209,
+          weight: 1
+        },
+        {
+          card: 210,
+          weight: 1
+        },
+        {
+          card: 212,
+          weight: 1
+        },
+        {
+          card: 213,
+          weight: 1
+        },
+        {
+          card: 215,
+          weight: 1
+        },
+        {
+          card: 216,
+          weight: 1
+        }
+      ]
+    }
+  ],
+  packs: [
+    {
+      id: "ocelomeh",
+      name: "Sobre de los Guerreros Jaguar",
+      glyph: "\u263E",
+      color: "#8a6a2e",
+      description: "Guerra Florida \xB7 La orden jaguar y la noche de Tezcatlipoca.",
+      price: 150,
+      monsters: {
+        tags: [],
+        attributes: []
+      },
+      support: [],
+      include: [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140
+      ],
+      exclude: [],
+      set: "guerra-florida"
+    },
+    {
+      id: "cuauhmeh",
+      name: "Sobre de los Guerreros \xC1guila",
+      glyph: "\u2736",
+      color: "#d97a1e",
+      description: "Guerra Florida \xB7 La orden \xE1guila y el sol de Huitzilopochtli.",
+      price: 150,
+      monsters: {
+        tags: [],
+        attributes: []
+      },
+      support: [],
+      include: [
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180
+      ],
+      exclude: [],
+      set: "guerra-florida"
+    },
+    {
+      id: "templo-mayor",
+      name: "Sobre del Templo Mayor",
+      glyph: "\u25B2",
+      color: "#a33a2a",
+      description: "Guerra Florida \xB7 Sacerdotes, serpientes de fuego y el poder del Mictl\xE1n.",
+      price: 150,
+      monsters: {
+        tags: [],
+        attributes: []
+      },
+      support: [],
+      include: [
+        181,
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        193,
+        194,
+        195,
+        196,
+        197,
+        198,
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219,
+        220
+      ],
+      exclude: [],
+      set: "guerra-florida"
+    }
+  ],
+  rules: [
+    {
+      a: "sacerdote",
+      b: "fuego",
+      result: [
+        "sacerdote",
+        "fuego"
+      ]
+    },
+    {
+      a: "sacerdote",
+      b: "serpiente",
+      result: [
+        "sacerdote",
+        "serpiente"
+      ]
+    },
+    {
+      a: "sacerdote",
+      b: "muerte",
+      result: [
+        "sacerdote",
+        "muerte"
+      ]
+    }
+  ]
+};
+
+// src/data/sets/index.ts
+var SETS = [guerra_florida_default];
+function withSetCards(base) {
+  const have = new Set(base.map((c) => c.id));
+  const out = [...base];
+  for (const s of SETS) for (const c of s.cards) if (!have.has(c.id)) {
+    out.push(c);
+    have.add(c.id);
+  }
+  return out;
+}
+function withSetRules(data) {
+  return { ...data, rules: [...data.rules, ...SETS.flatMap((s) => s.rules)] };
+}
+
 // src/data/types.ts
 var CARD_TAGS = [
   "jaguar",
@@ -1068,7 +5312,8 @@ var CARD_TAGS = [
   "muerte",
   "sol",
   "fuego",
-  "viento"
+  "viento",
+  "sacerdote"
 ];
 var RARITIES = ["N", "R", "SR", "UR"];
 var EFFECT_TRIGGERS = [
@@ -1378,11 +5623,11 @@ var FusionDatabase = class {
 };
 
 // src/data/index.ts
-var cardDb = new CardDatabase(cards_default);
-var fusionDb = new FusionDatabase(fusions_default, cardDb);
+var cardDb = new CardDatabase(withSetCards(cards_default));
+var fusionDb = new FusionDatabase(withSetRules(fusions_default), cardDb);
 var daySigns = signs_default;
 var ENGINE_VERSION = 5;
-var DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default) + JSON.stringify(signs_default) + JSON.stringify(packs_default) + JSON.stringify(jade_default));
+var DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cards_default) + JSON.stringify(fusions_default) + JSON.stringify(duelists_default) + JSON.stringify(signs_default) + JSON.stringify(packs_default) + JSON.stringify(jade_default) + JSON.stringify(SETS));
 function fnv1a(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -1401,7 +5646,7 @@ var DUPLICATE_VALUE = {
 };
 
 // src/game/duelists.ts
-var duelists = duelists_default;
+var duelists = [...duelists_default, ...SETS.flatMap((s) => s.duelists)];
 function getDuelist(id) {
   return duelists.find((d) => d.id === id);
 }
@@ -1416,7 +5661,7 @@ var WIN_CACAO = { 1: 10, 2: 10, 3: 10 };
 var WIN_TICKETS = 1;
 
 // src/game/packs.ts
-var packs = packs_default;
+var packs = [...packs_default, ...SETS.flatMap((s) => s.packs)];
 var getPack = (id) => packs.find((p) => p.id === id);
 var PACK_SIZE = 5;
 var PACK_ODDS = { N: 60, R: 28, SR: 10, UR: 2 };
@@ -1428,7 +5673,8 @@ function packPool(pack, db) {
   const pool = { N: [], R: [], SR: [], UR: [] };
   for (const c of db.all()) {
     if (ascensionOnly.has(c.id) || pack.exclude.includes(c.id)) continue;
-    const fits = pack.include.includes(c.id) || (c.type === "monster" ? c.tags.some((t) => pack.monsters.tags.includes(t)) || pack.monsters.attributes.includes(c.attribute) : pack.support.includes(c.attribute));
+    const sameSet = (c.set ?? "") === (pack.set ?? "");
+    const fits = pack.include.includes(c.id) || sameSet && (c.type === "monster" ? c.tags.some((t) => pack.monsters.tags.includes(t)) || pack.monsters.attributes.includes(c.attribute) : pack.support.includes(c.attribute));
     if (fits) pool[rarityOf(c)].push(c);
   }
   return pool;

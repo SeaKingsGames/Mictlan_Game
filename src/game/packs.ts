@@ -1,4 +1,5 @@
 import packsJson from '../data/packs.json';
+import { SETS } from '../data/sets/index.ts';
 import type { CardDatabase } from '../data/cardDatabase.ts';
 import { RARITIES, rarityOf, type CardAttribute, type CardDef, type CardRarity, type CardTag } from '../data/types.ts';
 import type { Rng } from '../core/rng.ts';
@@ -22,9 +23,11 @@ export interface PackDef {
   support: CardAttribute[];
   include: number[];
   exclude: number[];
+  /** Expansión del sobre. Los filtros por etiqueta/atributo solo toman cartas de la misma expansión (sin esto = base). */
+  set?: string;
 }
 
-export const packs: readonly PackDef[] = packsJson as PackDef[];
+export const packs: readonly PackDef[] = [...(packsJson as PackDef[]), ...SETS.flatMap(s => s.packs as PackDef[])];
 export const getPack = (id: string): PackDef | undefined => packs.find(p => p.id === id);
 
 export const PACK_SIZE = 5;
@@ -43,7 +46,8 @@ export function packPool(pack: PackDef, db: CardDatabase): Record<CardRarity, Ca
   const pool: Record<CardRarity, CardDef[]> = { N: [], R: [], SR: [], UR: [] };
   for (const c of db.all()) {
     if (ascensionOnly.has(c.id) || pack.exclude.includes(c.id)) continue;
-    const fits = pack.include.includes(c.id) || (c.type === 'monster'
+    const sameSet = (c.set ?? '') === (pack.set ?? '');
+    const fits = pack.include.includes(c.id) || sameSet && (c.type === 'monster'
       ? c.tags.some(t => pack.monsters.tags.includes(t)) || pack.monsters.attributes.includes(c.attribute)
       : pack.support.includes(c.attribute));
     if (fits) pool[rarityOf(c)].push(c);

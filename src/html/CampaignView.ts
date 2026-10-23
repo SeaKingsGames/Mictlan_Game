@@ -2,6 +2,7 @@ import { cardDb } from '../data/index.ts';
 import { duelists, isUnlocked, type Duelist } from '../game/duelists.ts';
 import { validatePlayerDeck, type Profile } from '../game/profile.ts';
 import { h } from './dom.ts';
+import { chapterOf } from '../data/sets/index.ts';
 
 /** Lista de rivales en orden. Se desbloquean al vencer al anterior. */
 export function renderCampaign(root: HTMLElement, profile: Profile, go: (hash: string) => void, freeMode = false): void {
@@ -23,11 +24,17 @@ export function renderCampaign(root: HTMLElement, profile: Profile, go: (hash: s
           h('button', { class: 'link-btn', onclick: () => go('#/mazo') }, 'Arreglar mazo →'))
       : '',
     h('ol', { class: 'campaign' },
-      ...duelists.map((d, i) => {
+      ...duelists.flatMap((d, i) => {
+        // Separador al empezar un capítulo nuevo (expansión)
+        const ch = chapterOf(d.id);
+        const prev = i > 0 ? chapterOf(duelists[i - 1].id) : null;
+        const head = ch && ch.chapter !== prev?.chapter
+          ? [h('li', { class: 'chapter' }, h('span', { class: 'chapter__num' }, `Capítulo ${ch.chapter}`), h('b', { class: 'chapter__name' }, ch.name))]
+          : [];
         const unlocked = isUnlocked(d.id, profile.defeated);
         const beaten = profile.defeated.includes(d.id);
         const signature = cardDb.tryGet(d.signature);
-        return h('li', { class: `duelist${unlocked ? '' : ' duelist--locked'}${beaten ? ' duelist--beaten' : ''}` },
+        return [...head, h('li', { class: `duelist${unlocked ? '' : ' duelist--locked'}${beaten ? ' duelist--beaten' : ''}` },
           h('div', { class: 'duelist__portrait' }, unlocked ? d.glyph : '🔒'),
           h('div', { class: 'duelist__body' },
             h('p', { class: 'duelist__step' }, `${i + 1} · ${d.title}`),
@@ -41,7 +48,7 @@ export function renderCampaign(root: HTMLElement, profile: Profile, go: (hash: s
             disabled: !unlocked || deckErrors.length > 0,
             onclick: () => go(`#/duelo/${d.id}`),
           }, beaten ? 'Revancha' : 'Retar'),
-        );
+        )];
       })),
   ));
 }

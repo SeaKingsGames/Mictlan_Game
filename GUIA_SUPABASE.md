@@ -276,3 +276,17 @@ Si devuelves un pago desde Mercado Pago (o el banco lo desconoce), el aviso lleg
 - `supabase/functions/mp-webhook` — avisos de Mercado Pago.
 - `supabase/functions/_shared/mp.ts` — habla con la API de Mercado Pago.
 - `public/terminos.html` — términos de compra (borrador; revísalo).
+
+## Expansiones (capítulos nuevos)
+
+Cada expansión vive en `src/data/sets/<nombre>.json` con sus cartas, duelistas, sobres y reglas de fusión. No toca tu `cards.json`, `duelists.json` ni `fusions.json`: el juego los junta solo.
+
+**Expansión 1 — La Guerra Florida** (`guerra-florida.json`, cartas 101–220):
+- 3 sobres de 40 cartas (14 N · 13 R · 9 SR · 4 UR): Guerreros Jaguar (101–140), Guerreros Águila (141–180), Templo Mayor (181–220).
+- 3 duelistas = Capítulo 2 de la campaña, después de Mictlantecuhtli: Ocelotl, Cuauhtli y Tlamacazqui. Cada uno suelta 34 cartas de su sobre; las 4 UR y 2 SR de cada sobre solo salen en sobres.
+- Etiqueta nueva `sacerdote` con fusiones sacerdote + fuego / serpiente / muerte, y 18 recetas exactas entre cartas de la expansión.
+- Las cartas nuevas no empeoran ninguna fusión de las cartas base (lo revisa `npm test`).
+
+**Arte**: abre el editor de cartas, busca el número (101–220), sube la imagen y descarga `cards.json` + la imagen como siempre. Cuando una carta de la expansión ya está en tu `cards.json`, gana la de `cards.json` (así se guarda tu arte).
+
+**Al subir una expansión**: `npm run build:server`, sube todas las funciones (cambia la huella de datos), `npm test` y push.

@@ -3,6 +3,7 @@ import './editor.css';
 import cardsJson from '../data/cards.json';
 import decksJson from '../data/decks.json';
 import fusionsJson from '../data/fusions.json';
+import { withSetCards, withSetRules } from '../data/sets/index.ts';
 import { CardDatabase } from '../data/cardDatabase.ts';
 import { FusionDatabase, type FusionData } from '../data/fusionDatabase.ts';
 import { CARD_TAGS, RARITIES, RARITY_LABEL, type CardAttribute, type CardDef, type CardRarity, type CardTag, type CardType } from '../data/types.ts';
@@ -34,7 +35,7 @@ const TYPES: { value: CardType; label: string }[] = [
 ];
 
 let draftNotice = '';   // aviso si el borrador se combinó con cartas nuevas
-const original = (cardsJson as CardDef[]).map(c => ({ ...c, tags: [...c.tags] }) as MutableCard);
+const original = withSetCards(cardsJson as CardDef[]).map(c => ({ ...c, tags: [...c.tags] }) as MutableCard);
 let cards: MutableCard[] = loadDraft() ?? structuredClone(original);
 const arts = new Map<number, Art>();
 for (const c of cards) {
@@ -134,6 +135,7 @@ function formatCards(list: MutableCard[]): string {
     if (c.ascendsTo) o.ascendsTo = c.ascendsTo;
     if (c.type === 'monster' && c.noFusion) o.noFusion = true;
     if (c.type === 'monster' && c.recipes && c.recipes.length) o.recipes = c.recipes;
+    if (c.set) o.set = c.set;
     return '  ' + JSON.stringify(o);
   });
   return '[\n' + ordered.join(',\n') + '\n]\n';
@@ -274,7 +276,7 @@ function renderForm(): void {
 
 /** Base de fusiones con las cartas del borrador (para mostrar recetas, reglas y choques). null si hay errores. */
 function draftFusion(): FusionDatabase | null {
-  try { return new FusionDatabase(fusionsJson as FusionData, new CardDatabase(cards), false); } catch { return null; }
+  try { return new FusionDatabase(withSetRules(fusionsJson as FusionData), new CardDatabase(cards), false); } catch { return null; }
 }
 
 /**

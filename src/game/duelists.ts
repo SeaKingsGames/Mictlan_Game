@@ -1,4 +1,5 @@
 import duelistsJson from '../data/duelists.json';
+import { SETS } from '../data/sets/index.ts';
 
 /** Un rival de la campaña. Los datos viven en src/data/duelists.json. */
 export interface Duelist {
@@ -13,7 +14,8 @@ export interface Duelist {
   rewards: { card: number; weight: number }[];   // botín al ganar (más peso = más común)
 }
 
-export const duelists: readonly Duelist[] = duelistsJson as Duelist[];
+/** Campaña base + los capítulos de las expansiones (en orden: cada uno se desbloquea al vencer al anterior). */
+export const duelists: readonly Duelist[] = [...(duelistsJson as Duelist[]), ...SETS.flatMap(s => s.duelists as Duelist[])];
 
 export function getDuelist(id: string): Duelist | undefined {
   return duelists.find(d => d.id === id);

@@ -5,13 +5,15 @@ import fusionsJson from './fusions.json';
 import signsJson from './signs.json';
 import packsJson from './packs.json';
 import jadeJson from './jade.json';
+import { SETS, withSetCards, withSetRules } from './sets/index.ts';
 import type { DaySign } from '../core/daySign.ts';
 import { CardDatabase } from './cardDatabase.ts';
 import { FusionDatabase, type FusionData } from './fusionDatabase.ts';
 import type { CardDef, DeckDef } from './types.ts';
 
-export const cardDb = new CardDatabase(cardsJson as CardDef[]);
-export const fusionDb = new FusionDatabase(fusionsJson as FusionData, cardDb);
+/** Tus cartas (cards.json) + las de las expansiones (src/data/sets/). */
+export const cardDb = new CardDatabase(withSetCards(cardsJson as CardDef[]));
+export const fusionDb = new FusionDatabase(withSetRules(fusionsJson as FusionData), cardDb);
 export const decks: readonly DeckDef[] = decksJson as DeckDef[];
 /** Los 20 signos del día (Tonalpohualli). */
 export const daySigns: readonly DaySign[] = signsJson as DaySign[];
@@ -32,7 +34,7 @@ export function getDeck(id: string): DeckDef {
  * Huella de los datos del juego (cartas + fusiones + duelistas). El servidor la compara con la del
  * cliente: si cambias cards.json y no vuelves a desplegar las funciones, el servidor lo detecta.
  */
-export const DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cardsJson) + JSON.stringify(fusionsJson) + JSON.stringify(duelistsJson) + JSON.stringify(signsJson) + JSON.stringify(packsJson) + JSON.stringify(jadeJson));
+export const DATA_VERSION = fnv1a(`v${ENGINE_VERSION}` + JSON.stringify(cardsJson) + JSON.stringify(fusionsJson) + JSON.stringify(duelistsJson) + JSON.stringify(signsJson) + JSON.stringify(packsJson) + JSON.stringify(jadeJson) + JSON.stringify(SETS));
 
 function fnv1a(text: string): string {
   let h = 0x811c9dc5;

@@ -6,6 +6,7 @@ import { duelists, isUnlocked } from '../game/duelists.ts';
 import { packsWithCard } from '../game/packs.ts';
 import { levelOf, owned, type Profile } from '../game/profile.ts';
 import { createCardElement } from './cardElement.ts';
+import { SETS, setName } from '../data/sets/index.ts';
 import { h } from './dom.ts';
 import { dropTable } from './FreeDuelView.ts';
 import { appScreen, markThumb, pct, rarityChip, tabs, thumb, TYPE_TABS, type TypeTab } from './shell.ts';
@@ -18,7 +19,7 @@ const TYPE_NAME: Record<CardDef['type'], string> = { monster: 'Monstruo', spell:
  * Al tocar una ves su efecto y cómo conseguirla (rivales, sobres, recetas, ascensión).
  */
 export function renderLibrary(root: HTMLElement, profile: Profile, go: (hash: string) => void): void {
-  const f = { type: '' as TypeTab, rarity: '' as '' | CardRarity, attr: '' as '' | CardAttribute, have: '' as '' | 'yes' | 'no', text: '', sort: 'atk' };
+  const f = { type: '' as TypeTab, rarity: '' as '' | CardRarity, attr: '' as '' | CardAttribute, have: '' as '' | 'yes' | 'no', set: '', text: '', sort: 'atk' };
   let selected: CardDef | undefined;
 
   const detail = h('aside', { class: 'lib__detail panel', 'aria-live': 'polite' });
@@ -41,6 +42,7 @@ export function renderLibrary(root: HTMLElement, profile: Profile, go: (hash: st
         search,
         sel('Rareza', [['', 'Rareza: todas'], ...[...RARITIES].reverse().map(r => [r, `${r} · ${RARITY_LABEL[r]}`] as [string, string])], v => { f.rarity = v as CardRarity | ''; renderGrid(); }),
         sel('Atributo', [['', 'Atributo: todos'], ...Object.entries(ATTR_LABEL)], v => { f.attr = v as CardAttribute | ''; renderGrid(); }),
+        sel('Expansión', [['', 'Expansión: todas'], ['base', 'Base'], ...SETS.map(x => [x.id, x.name] as [string, string])], v => { f.set = v; renderGrid(); }),
         sel('Colección', [['', 'Todas'], ['yes', 'Las que tengo'], ['no', 'Me faltan']], v => { f.have = v as typeof f.have; renderGrid(); }),
         sel('Orden', [['atk', 'Orden: ATK'], ['def', 'Orden: DEF'], ['name', 'Orden: nombre'], ['id', 'Orden: número']], v => { f.sort = v; renderGrid(); })),
       progress,
@@ -52,6 +54,7 @@ export function renderLibrary(root: HTMLElement, profile: Profile, go: (hash: st
       .filter(c => !f.type || c.type === f.type)
       .filter(c => !f.rarity || rarityOf(c) === f.rarity)
       .filter(c => !f.attr || c.attribute === f.attr)
+      .filter(c => !f.set || (c.set ?? 'base') === f.set)
       .filter(c => !f.have || (f.have === 'yes') === owned(profile, c.id) > 0)
       .filter(c => !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || describeEffects(c.effects).toLowerCase().includes(q))
       .sort((a, b) => f.sort === 'name' ? a.name.localeCompare(b.name) : f.sort === 'id' ? a.id - b.id
@@ -93,7 +96,7 @@ export function renderLibrary(root: HTMLElement, profile: Profile, go: (hash: st
     detail.replaceChildren(
       h('div', { class: `altar altar--${rarityOf(c)}${have ? '' : ' altar--missing'}` }, createCardElement(c, { level: levelOf(profile, c.id) })),
       h('h2', { class: 'detail__name' }, c.name),
-      h('p', { class: 'detail__meta' }, rarityChip(rarityOf(c)), ` ${TYPE_NAME[c.type]} · ${ATTR_LABEL[c.attribute]}`),
+      h('p', { class: 'detail__meta' }, rarityChip(rarityOf(c)), ` ${TYPE_NAME[c.type]} · ${ATTR_LABEL[c.attribute]}${c.set ? ` · ${setName(c.set)}` : ''}`),
       c.type === 'monster' ? h('div', { class: 'detail__stats' }, h('span', {}, `ATK ${c.atk}`), h('span', {}, `DEF ${c.def}`)) : '',
       c.tags.length ? h('p', { class: 'detail__tags' }, c.tags.join(' · ')) : '',
       h('p', { class: 'detail__desc' }, c.description),

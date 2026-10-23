@@ -1,3 +1,4 @@
+import CARD_ARTS from 'virtual:card-arts';
 import { CardInstance } from '../core/CardInstance.ts';
 import { clampLevel, levelBonus, MAX_LEVEL } from '../core/progression.ts';
 import { rarityOf, type CardAttribute, type CardDef } from '../data/types.ts';
@@ -97,10 +98,11 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
   // textContent (no innerHTML) para los datos: así un nombre raro nunca rompe la página.
   el.querySelector('.card__name')!.textContent = name;
   el.querySelector('.card__glyph')!.textContent = name.charAt(0);
-  if (def.art) {
-    // Arte de la carta: archivo en public/cards/ (ej. "art": "/cards/3.webp" en cards.json)
+  const art = def.art ?? CARD_ARTS[def.id];
+  if (art) {
+    // Arte de la carta: "art" en cards.json, o un archivo public/cards/<número>.webp|jpg|png
     const img = document.createElement('img');
-    img.src = def.art;
+    img.src = art;
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
