@@ -1,3 +1,4 @@
+import { applyUpdate, watchForUpdates } from './update.ts';
 /**
  * Instalar el juego (PWA): en Android y PC Chrome/Edge sale el botón "Instalar";
  * en iPhone se explica cómo agregarlo a la pantalla de inicio.
@@ -24,6 +25,8 @@ export function setupInstall(): void {
     // El juego abre con la versión guardada; si el service worker bajó una nueva, se ofrece actualizar
     navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'update-ready') showUpdateBanner(); });
   }
+  // Revisa si hay versión nueva al abrir y al volver a la app (no depende del service worker)
+  watchForUpdates(() => showUpdateBanner());
   // Si falta un archivo de una versión vieja, recargar trae la nueva
   window.addEventListener('vite:preloadError', () => location.reload());
 }
@@ -38,7 +41,7 @@ export function showUpdateBanner(required = false): void {
   text.textContent = required ? 'El juego se actualizó. Toca para cargar la versión nueva.' : 'Hay una versión nueva del juego.';
   const btn = document.createElement('button');
   btn.textContent = 'Actualizar';
-  btn.addEventListener('click', () => location.reload());
+  btn.addEventListener('click', () => { btn.disabled = true; btn.textContent = 'Actualizando…'; void applyUpdate(); });
   bar.append(text, btn);
   if (!required) {
     const later = document.createElement('button');

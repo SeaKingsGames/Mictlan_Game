@@ -45,13 +45,27 @@ function artFolder(name: string, folder: string, key: RegExp): Plugin {
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 const commit = (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7);
 const built = new Date().toISOString().slice(0, 10);
+// Huella única de cada build (el commit en Vercel; en tu compu, la hora). El juego la compara con /version.json.
+const buildId = commit || new Date().toISOString();
+
+/** Escribe dist/version.json: el botón "Buscar actualización" lo consulta para saber si hay versión nueva. */
+function versionFile(): Plugin {
+  return {
+    name: 'version-file',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: pkg.version, build: buildId }) });
+    },
+  };
+}
 
 // Páginas: el juego (index.html), la galería de cartas (cartas.html) el editor de fusiones (fusiones.html) y el de cartas (editor-cartas.html).
 export default defineConfig({
-  plugins: [artFolder('card-arts', 'cards', /^\d+$/), artFolder('duelist-arts', 'duelists', /^[a-z0-9-]+$/)],
+  plugins: [versionFile(), artFolder('card-arts', 'cards', /^\d+$/), artFolder('duelist-arts', 'duelists', /^[a-z0-9-]+$/)],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_BUILD__: JSON.stringify(commit ? `${built} · ${commit}` : built),
+    __APP_BUILD_ID__: JSON.stringify(buildId),
   },
   build: {
     rolldownOptions: {

@@ -5,6 +5,7 @@ import { resetProfile, saveProfile, type Profile } from '../game/profile.ts';
 import { h } from './dom.ts';
 import { canPromptInstall, installHelpText, isInstalled, onInstallChange, promptInstall } from './install.ts';
 import { muteButton, musicButton, sfx } from './sound.ts';
+import { applyUpdate, checkForUpdate } from './update.ts';
 import { wallets } from './shell.ts';
 
 /** Pantalla de inicio. */
@@ -74,6 +75,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
 
   root.replaceChildren(h('main', { class: 'menu2' },
     h('div', { class: 'menu2__sky', 'aria-hidden': 'true' }, h('span', { class: 'menu2__sun' }, '✺')),
+    updateButton(),
     profileCard,
     h('div', { class: 'menu2__center' },
       h('h1', { class: 'menu__title' }, GAME_TITLE),
@@ -118,4 +120,29 @@ function installButton(): HTMLElement | string {
   const wrap = h('div', { class: 'install-wrap' }, btn, help);
   const off = onInstallChange(() => { if (isInstalled()) { wrap.remove(); off(); } });
   return wrap;
+}
+
+/** Botón redondo (esquina de arriba): busca una versión nueva y, si la hay, actualiza. */
+function updateButton(): HTMLElement {
+  const tip = h('span', { class: 'update-btn__tip', role: 'status' });
+  const btn = h('button', { class: 'update-btn', title: 'Buscar actualización', 'aria-label': 'Buscar actualización' }, '⟳');
+  let busy = false;
+  const say = (text: string, ms = 2600) => {
+    tip.textContent = text;
+    tip.classList.add('update-btn__tip--on');
+    if (ms) setTimeout(() => tip.classList.remove('update-btn__tip--on'), ms);
+  };
+  btn.addEventListener('click', async () => {
+    if (busy) return;
+    busy = true;
+    sfx('click');
+    btn.classList.add('update-btn--spin');
+    say('Buscando actualización…', 0);
+    const state = await checkForUpdate();
+    if (state === 'new') { say('¡Hay versión nueva! Actualizando…', 0); await applyUpdate(); return; }
+    btn.classList.remove('update-btn--spin');
+    busy = false;
+    say(state === 'same' ? '✓ Ya tienes la última versión' : 'Sin conexión: intenta más tarde');
+  });
+  return h('div', { class: 'update-btn__wrap' }, btn, tip);
 }

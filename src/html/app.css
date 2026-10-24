@@ -630,3 +630,19 @@ button.thumb:hover .card { transform: translateY(-3px); }
 .has-portrait { overflow: hidden; padding: 0; }
 .duelist__portrait.has-portrait, .free__glyph.has-portrait, .pl__avatar.has-portrait { overflow: hidden; }
 .free__portrait.has-portrait { background: #0b0807; }
+
+/* Botón redondo de "Buscar actualización" (esquina del menú) */
+.update-btn__wrap { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); z-index: 5;
+  display: flex; flex-direction: row-reverse; align-items: center; gap: 8px; }
+.update-btn { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--gold); background: radial-gradient(circle at 40% 35%, #3a2a18, #140f0c);
+  color: #ffe7a8; font: 700 22px/1 system-ui; cursor: pointer; display: grid; place-items: center; box-shadow: 0 3px 10px rgb(0 0 0 / .5); }
+.update-btn:hover { box-shadow: 0 0 0 3px rgb(242 193 46 / .25), 0 3px 10px rgb(0 0 0 / .5); }
+.update-btn--spin { animation: update-spin 1s linear infinite; }
+@keyframes update-spin { to { transform: rotate(360deg); } }
+.update-btn__tip { max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0; transition: max-width .3s, opacity .3s; background: #140f0c; border: 1px solid var(--line);
+  border-radius: 99px; padding: 5px 0; font: 600 12px system-ui; color: var(--ink); }
+.update-btn__tip--on { max-width: 320px; opacity: 1; padding: 5px 12px; }
+@media (orientation: landscape) and (max-height: 540px) {
+  .update-btn__wrap { top: 8px; right: 8px; }
+  .update-btn { width: 34px; height: 34px; font-size: 18px; }
+}
