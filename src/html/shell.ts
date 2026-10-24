@@ -28,15 +28,23 @@ export function appScreen(o: ScreenOptions, ...body: (Node | string)[]): HTMLEle
     h('div', { class: 'app-body' }, ...body));
 }
 
-/** Cacao y jade (en modo local no hay monedas). */
+/** Número corto para monedas: 98,034 · 999.9 k · 1.3 M (el número completo sale al tocar/pasar el mouse). */
+const compact = new Intl.NumberFormat('es-MX', { notation: 'compact', maximumFractionDigits: 1 });
+export function money(n: number): string {
+  return n >= 100_000 ? compact.format(n).replace(/\s+/g, '') : n.toLocaleString('es-MX');
+}
+
+/** Cacao, jade y tickets (en modo local no hay monedas). */
 export function wallets(p: Profile): HTMLElement[] {
   const acc = p.account;
   if (!acc) return [h('span', { class: 'wallet wallet--local', title: 'Sin cuenta: todo se guarda en este navegador' }, 'Modo local')];
+  const chip = (cls: string, name: string, icon: string, n: number) =>
+    h('span', { class: `wallet${cls}`, title: `${name}: ${n.toLocaleString('es-MX')}` }, `${icon} ${money(n)}`);
   return [
-    h('span', { class: 'wallet', title: CURRENCY.common.name }, `${CURRENCY.common.icon} ${acc.cacao.toLocaleString('es-MX')}`),
-    h('span', { class: 'wallet wallet--jade', title: CURRENCY.premium.name }, `${CURRENCY.premium.icon} ${acc.jade.toLocaleString('es-MX')}`),
-    h('span', { class: 'wallet wallet--ticket', title: 'Tickets estándar' }, `${CURRENCY.ticket.icon} ${acc.tickets.toLocaleString('es-MX')}`),
-    h('span', { class: 'wallet wallet--gold', title: CURRENCY.gold.name }, `${CURRENCY.gold.icon} ${acc.gold.toLocaleString('es-MX')}`),
+    chip('', CURRENCY.common.name, CURRENCY.common.icon, acc.cacao),
+    chip(' wallet--jade', CURRENCY.premium.name, CURRENCY.premium.icon, acc.jade),
+    chip(' wallet--ticket', 'Tickets estándar', CURRENCY.ticket.icon, acc.tickets),
+    chip(' wallet--gold', CURRENCY.gold.name, CURRENCY.gold.icon, acc.gold),
   ];
 }
 

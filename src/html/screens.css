@@ -303,3 +303,6 @@ html, body { -webkit-tap-highlight-color: transparent; }
 .chapter__num { font: 700 12px system-ui; letter-spacing: .14em; text-transform: uppercase; color: #b8873a; }
 .chapter__name { font: 700 20px 'Cinzel', Georgia, serif; color: #ffe7a8; }
 @media (orientation: landscape) and (max-height: 540px) { .chapter { flex: 0 0 140px; scroll-snap-align: start; } }
+
+/* En el duelo no se muestra la versión (tapaba la mano del rival) */
+body.in-duel .app-version { display: none; }
