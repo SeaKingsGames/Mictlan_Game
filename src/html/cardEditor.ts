@@ -9,6 +9,8 @@ import { FusionDatabase, type FusionData } from '../data/fusionDatabase.ts';
 import { CARD_TAGS, RARITIES, RARITY_LABEL, type CardAttribute, type CardDef, type CardRarity, type CardTag, type CardType } from '../data/types.ts';
 import { CardInstance } from '../core/CardInstance.ts';
 import { createCardElement } from './cardElement.ts';
+import CARD_ARTS from 'virtual:card-arts';
+import { dataUrlBytes, makeZip, type ZipFile } from './zip.ts';
 import { renderEffectEditor, type EditableEffect } from './effectEditor.ts';
 
 /**
@@ -38,10 +40,6 @@ let draftNotice = '';   // aviso si el borrador se combinó con cartas nuevas
 const original = withSetCards(cardsJson as CardDef[]).map(c => ({ ...c, tags: [...c.tags] }) as MutableCard);
 let cards: MutableCard[] = loadDraft() ?? structuredClone(original);
 const arts = new Map<number, Art>();
-for (const c of cards) {
-  const saved = loadImage(c.id);
-  if (saved) arts.set(c.id, saved);
-}
 let selectedId = cards[0]?.id ?? 0;
 let search = '';
 
@@ -80,16 +78,52 @@ function loadDraft(): MutableCard[] | null {
 function saveDraft(): void {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 2, cards })); } catch { /* sin almacenamiento */ }
 }
-function loadImage(id: number): Art | null {
-  try { const raw = localStorage.getItem(IMG_KEY(id)); return raw ? JSON.parse(raw) as Art : null; }
-  catch { return null; }
+// Las imágenes van en IndexedDB (cabe muchísimo más que en localStorage, que solo aguanta ~5 MB).
+const IDB_NAME = 'cartas-editor';
+const IDB_STORE = 'imagenes';
+let idb: Promise<IDBDatabase | null> | null = null;
+function openIdb(): Promise<IDBDatabase | null> {
+  return idb ??= new Promise(resolve => {
+    try {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch { resolve(null); }
+  });
 }
-function saveImage(id: number, art: Art | null): boolean {
-  try {
-    if (art) localStorage.setItem(IMG_KEY(id), JSON.stringify(art));
-    else localStorage.removeItem(IMG_KEY(id));
-    return true;
-  } catch { return false; }   // sin espacio: la imagen sigue en memoria hasta que cierres
+function idbDo<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T | null> {
+  return openIdb().then(db => new Promise(resolve => {
+    if (!db) { resolve(null); return; }
+    try {
+      const tx = db.transaction(IDB_STORE, mode);
+      const req = fn(tx.objectStore(IDB_STORE));
+      tx.oncomplete = () => resolve(req.result);
+      tx.onerror = tx.onabort = () => resolve(null);
+    } catch { resolve(null); }
+  }));
+}
+
+/** Carga tus imágenes guardadas. Las que estaban en localStorage (versiones viejas) se pasan a IndexedDB y se liberan. */
+async function loadImages(): Promise<void> {
+  for (const c of cards) {
+    try {
+      const raw = localStorage.getItem(IMG_KEY(c.id));
+      if (!raw) continue;
+      const art = JSON.parse(raw) as Art;
+      if (await saveImage(c.id, art)) localStorage.removeItem(IMG_KEY(c.id));
+      else arts.set(c.id, art);
+    } catch { /* imagen dañada: se ignora */ }
+  }
+  const ids = await idbDo('readonly', s => s.getAllKeys());
+  for (const key of ids ?? []) {
+    const art = await idbDo('readonly', s => s.get(key) as IDBRequest<Art>);
+    if (art && cards.some(c => c.id === Number(key))) arts.set(Number(key), art);
+  }
+}
+async function saveImage(id: number, art: Art | null): Promise<boolean> {
+  const r = await idbDo('readwrite', s => (art ? s.put(art, id) : s.delete(id)) as IDBRequest<unknown>);
+  return r !== null || !art;
 }
 
 // ---------------------------------------------------------------- utilidades
@@ -119,6 +153,53 @@ function previewDef(card: MutableCard): CardDef {
 
 function download(name: string, href: string): void {
   h('a', { href, download: name }).click();
+}
+function downloadBlob(name: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  download(name, url);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/**
+ * Toma el arte que pusiste en public/cards/ (aunque sean JPG/PNG de varios MB), lo deja como en el editor
+ * (cuadrado de ART_SIZE px, webp) y te lo da en un ZIP: <número>.webp. Las que ya son ligeras se saltan.
+ */
+async function optimizeFolderArt(status: HTMLElement): Promise<void> {
+  const LIGHT = 250 * 1024;
+  const files: ZipFile[] = [];
+  let saved = 0, skipped = 0, failed = 0, fixedPaths = 0;
+  const list = cards.filter(c => !arts.has(c.id) && (c.art || CARD_ARTS[c.id]));
+  for (const [i, c] of list.entries()) {
+    status.textContent = `Aligerando ${i + 1}/${list.length}…`;
+    const url = (c.art && !c.art.startsWith('data:') ? c.art : null) ?? CARD_ARTS[c.id];
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) { failed++; continue; }
+      const blob = await res.blob();
+      if (blob.size <= LIGHT && /\.webp$/i.test(url)) { skipped++; continue; }
+      const bmp = await createImageBitmap(blob);
+      const side = Math.min(bmp.width, bmp.height);
+      const out = h('canvas', { width: ART_SIZE, height: ART_SIZE });
+      const ctx = out.getContext('2d')!;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, ART_SIZE, ART_SIZE);
+      bmp.close();
+      let dataUrl = out.toDataURL('image/webp', 0.85);
+      let ext = 'webp';
+      if (!dataUrl.startsWith('data:image/webp')) { dataUrl = out.toDataURL('image/jpeg', 0.88); ext = 'jpg'; }
+      const data = dataUrlBytes(dataUrl);
+      saved += Math.max(0, blob.size - data.length);
+      files.push({ name: `${c.id}.${ext}`, data });
+      if (c.art && c.art !== `/cards/${c.id}.${ext}`) { c.art = `/cards/${c.id}.${ext}`; fixedPaths++; }
+    } catch { failed++; }
+  }
+  if (fixedPaths) { saveDraft(); renderAll(); }
+  if (!files.length) { status.textContent = `Nada que aligerar (${skipped} ya eran ligeras${failed ? `, ${failed} no se pudieron leer` : ''}).`; return; }
+  downloadBlob(`arte-ligero-${files.length}.zip`, makeZip(files));
+  status.textContent = `ZIP con ${files.length} imágenes ligeras (ahorro ≈ ${(saved / 1048576).toFixed(1)} MB). ` +
+    'Descomprímelo en public/cards/ y BORRA las versiones .jpg/.png pesadas de esas cartas.' +
+    (fixedPaths ? ` Cambió la ruta de ${fixedPaths} carta(s): descarga también cards.json.` : '') +
+    (failed ? ` ${failed} no se pudieron leer.` : '');
 }
 
 /** Mismo formato que el cards.json del proyecto: una carta por línea. */
@@ -422,7 +503,7 @@ function deleteCard(): void {
   if (!confirm(`¿Borrar "${c.name}" (#${c.id})?${warn}`)) return;
   cards = cards.filter(x => x !== c);
   arts.delete(c.id);
-  saveImage(c.id, null);
+  void saveImage(c.id, null);
   selectedId = cards[0]?.id ?? 0;
   saveDraft();
   renderAll();
@@ -511,11 +592,12 @@ function renderArt(): void {
           const art: Art = { dataUrl, ext };
           arts.set(c.id, art);
           c.art = `/cards/${c.id}.${ext}`;
-          const kept = saveImage(c.id, art);
           cropImage = null;
           changed();
           renderArt();
-          if (!kept) alert('La imagen no cupo en el borrador del navegador. Descárgala antes de cerrar la página.');
+          void saveImage(c.id, art).then(kept => {
+            if (!kept) alert('No se pudo guardar la imagen en el navegador. Descárgala antes de cerrar la página.');
+          });
         } }, 'Usar este recorte'),
         h('button', { class: 'ebtn', onclick: () => { cropImage = null; renderArt(); } }, 'Cancelar'),
       )));
@@ -526,7 +608,7 @@ function renderArt(): void {
       current ? h('button', { class: 'ebtn ebtn--main', onclick: () => download(`${c.id}.${current.ext}`, current.dataUrl) }, `Descargar ${c.id}.${current.ext}`) : '',
       h('button', { class: 'ebtn ebtn--danger', onclick: () => {
         arts.delete(c.id);
-        saveImage(c.id, null);
+        void saveImage(c.id, null);
         delete c.art;
         changed();
         renderArt();
@@ -597,13 +679,21 @@ function renderSide(): void {
         download('cards.json', url);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } }, 'Descargar cards.json'),
+      pending.length ? h('button', { class: 'ebtn ebtn--main', onclick: () => {
+        const files: ZipFile[] = pending.map(id => { const a = arts.get(id)!; return { name: `${id}.${a.ext}`, data: dataUrlBytes(a.dataUrl) }; });
+        downloadBlob(`imagenes-cartas-${pending.length}.zip`, makeZip(files));
+        status.textContent = `ZIP con ${files.length} imágenes. Descomprímelo en public/cards/ y luego toca "Ya las copié".`;
+      } }, `Descargar imágenes en ZIP (${pending.length})`) : '',
       pending.length ? h('button', { class: 'ebtn', onclick: () => {
-        pending.forEach((id, i) => setTimeout(() => { const a = arts.get(id)!; download(`${id}.${a.ext}`, a.dataUrl); }, i * 300));
-      } }, `Descargar imágenes (${pending.length})`) : '',
+        if (!confirm(`¿Ya pusiste las ${pending.length} imágenes en public/cards/? Se quitan del borrador del navegador (las cartas siguen usando su imagen de public/cards/).`)) return;
+        for (const id of pending) { arts.delete(id); void saveImage(id, null); }
+        renderAll();
+      } }, 'Ya las copié') : '',
+      h('button', { class: 'ebtn', onclick: () => void optimizeFolderArt(status) }, 'Aligerar arte de public/cards (ZIP)'),
       h('button', { class: 'ebtn', onclick: () => importCards(status) }, 'Importar cartas (JSON)'),
       h('button', { class: 'ebtn ebtn--danger', onclick: () => {
         if (!confirm('¿Descartar el borrador y volver al cards.json del proyecto? Las imágenes nuevas también se borran.')) return;
-        for (const id of arts.keys()) saveImage(id, null);
+        for (const id of arts.keys()) void saveImage(id, null);
         arts.clear();
         cards = structuredClone(original);
         selectedId = cards[0]?.id ?? 0;
@@ -695,3 +785,4 @@ function renderAll(): void {
 }
 
 renderAll();
+void loadImages().then(() => { if (arts.size) renderAll(); });
