@@ -2,32 +2,34 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 
 /**
- * Arte de cartas por nombre de archivo: pon public/cards/101.jpg (o .webp / .png) y la carta 101 lo usa sola,
- * sin tocar cards.json. Si una carta tiene "art" en cards.json, gana ese.
+ * Arte por nombre de archivo, sin tocar los JSON:
+ *   public/cards/101.jpg            → la carta 101   (virtual:card-arts)     · si la carta tiene "art", gana ese
+ *   public/duelists/tianguis.webp   → el duelista "tianguis" (virtual:duelist-arts)
+ * Acepta .webp, .png, .jpg; si hay varias, usa la .webp.
  */
-function cardArts(): Plugin {
-  const id = 'virtual:card-arts';
-  const dir = new URL('./public/cards/', import.meta.url);
+function artFolder(name: string, folder: string, key: RegExp): Plugin {
+  const id = `virtual:${name}`;
+  const dir = new URL(`./public/${folder}/`, import.meta.url);
   const order = ['webp', 'png', 'jpg', 'jpeg'];
   const scan = () => {
-    const map: Record<number, string> = {};
+    const map: Record<string, string> = {};
     if (!existsSync(dir)) return map;
     for (const f of readdirSync(dir)) {
-      const m = /^(\d+)\.(webp|png|jpe?g)$/i.exec(f);
-      if (!m) continue;
-      const n = Number(m[1]);
-      const prev = map[n];
-      if (!prev || order.indexOf(m[2].toLowerCase()) < order.indexOf(prev.split('.').pop()!.toLowerCase())) map[n] = `/cards/${f}`;
+      const m = /^(.+)\.(webp|png|jpe?g)$/i.exec(f);
+      if (!m || !key.test(m[1])) continue;
+      const prev = map[m[1]];
+      if (!prev || order.indexOf(m[2].toLowerCase()) < order.indexOf(prev.split('.').pop()!.toLowerCase())) map[m[1]] = `/${folder}/${f}`;
     }
     return map;
   };
+  const inFolder = new RegExp(`[\\\\/]public[\\\\/]${folder}[\\\\/]`);
   return {
-    name: 'card-arts',
+    name,
     resolveId: x => (x === id ? '\0' + id : null),
     load: x => (x === '\0' + id ? `export default ${JSON.stringify(scan())};` : null),
     configureServer(server) {
       const reload = (file: string) => {
-        if (!/[\\/]public[\\/]cards[\\/]/.test(file)) return;
+        if (!inFolder.test(file)) return;
         const mod = server.moduleGraph.getModuleById('\0' + id);
         if (mod) server.moduleGraph.invalidateModule(mod);
         server.ws.send({ type: 'full-reload' });
@@ -46,7 +48,7 @@ const built = new Date().toISOString().slice(0, 10);
 
 // Páginas: el juego (index.html), la galería de cartas (cartas.html) el editor de fusiones (fusiones.html) y el de cartas (editor-cartas.html).
 export default defineConfig({
-  plugins: [cardArts()],
+  plugins: [artFolder('card-arts', 'cards', /^\d+$/), artFolder('duelist-arts', 'duelists', /^[a-z0-9-]+$/)],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_BUILD__: JSON.stringify(commit ? `${built} · ${commit}` : built),

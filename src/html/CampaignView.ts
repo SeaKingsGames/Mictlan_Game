@@ -2,6 +2,7 @@ import { cardDb } from '../data/index.ts';
 import { duelists, isUnlocked, type Duelist } from '../game/duelists.ts';
 import { validatePlayerDeck, type Profile } from '../game/profile.ts';
 import { h } from './dom.ts';
+import { fillPortrait } from './portrait.ts';
 import { chapterOf } from '../data/sets/index.ts';
 
 /** Lista de rivales en orden. Se desbloquean al vencer al anterior. */
@@ -35,7 +36,7 @@ export function renderCampaign(root: HTMLElement, profile: Profile, go: (hash: s
         const beaten = profile.defeated.includes(d.id);
         const signature = cardDb.tryGet(d.signature);
         return [...head, h('li', { class: `duelist${unlocked ? '' : ' duelist--locked'}${beaten ? ' duelist--beaten' : ''}` },
-          h('div', { class: 'duelist__portrait' }, unlocked ? d.glyph : '🔒'),
+          fillPortrait(h('div', { class: 'duelist__portrait' }), d, !unlocked),
           h('div', { class: 'duelist__body' },
             h('p', { class: 'duelist__step' }, `${i + 1} · ${d.title}`),
             h('h2', { class: 'duelist__name' }, unlocked ? d.name : '???'),

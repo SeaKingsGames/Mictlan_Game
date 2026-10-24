@@ -624,3 +624,9 @@ button.thumb:hover .card { transform: translateY(-3px); }
   .jade .panel__count { display: none; }
   .jade .panel__title { font-size: 13px; }
 }
+
+/* Retratos de duelistas (public/duelists/<id>.webp) */
+.portrait-img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; display: block; }
+.has-portrait { overflow: hidden; padding: 0; }
+.duelist__portrait.has-portrait, .free__glyph.has-portrait, .pl__avatar.has-portrait { overflow: hidden; }
+.free__portrait.has-portrait { background: #0b0807; }

@@ -8,6 +8,7 @@ import { aiStep, createDuel } from '../game/replay.ts';
 import { HIDDEN_CARD, ViewEngine, type PvpStep, type PvpView } from '../game/pvpView.ts';
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects, KEYWORD_TEXT } from '../data/effectText.ts';
+import { fillPortrait } from './portrait.ts';
 import { createCardElement } from './cardElement.ts';
 import { DuelFx } from './duelFx.ts';
 import { muteButton, musicButton, sfx, type Sfx } from './sound.ts';
@@ -682,7 +683,8 @@ export class DuelView {
     const hit = this.lastLife[player] > p.life;
     const avatar = document.createElement('span');
     avatar.className = 'pl__avatar';
-    avatar.textContent = player === this.me ? '☀' : this.setup.opponent.glyph;
+    if (player === this.me) avatar.textContent = '☀';
+    else fillPortrait(avatar, this.setup.opponent);
     const text = document.createElement('span');
     text.className = 'pl__text';
     text.innerHTML = `<span class="pl__name"></span><span class="pl__life${hit ? ' pl__life--hit' : ''}"></span>

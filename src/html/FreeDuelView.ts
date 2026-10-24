@@ -1,4 +1,5 @@
 import { cardDb } from '../data/index.ts';
+import { fillPortrait, hasPortrait } from './portrait.ts';
 import { RARITIES, rarityOf, type CardDef, type CardRarity } from '../data/types.ts';
 import { WIN_CACAO } from '../game/economy.ts';
 import { CURRENCY } from '../game/config.ts';
@@ -54,14 +55,14 @@ export function renderFreeDuel(root: HTMLElement, profile: Profile, go: (hash: s
       const b = h('button', {
         class: `free__pick${x === d ? ' free__pick--on' : ''}`, disabled: !open, 'aria-pressed': x === d, role: 'listitem',
       },
-        h('span', { class: 'free__glyph' }, open ? x.glyph : '🔒'),
+        fillPortrait(h('span', { class: 'free__glyph' }), x, !open),
         h('span', { class: 'free__pick-text' }, h('b', {}, open ? x.name : '???'), h('small', {}, open ? stars(x) : 'Bloqueado')),
         profile.defeated.includes(x.id) ? h('span', { class: 'free__check', title: 'Vencido' }, '✓') : '');
       b.addEventListener('click', () => { sfx('click'); selected = x; renderSide(); renderDrops(); });
       return b;
     }));
     side.replaceChildren(
-      h('div', { class: 'free__portrait' }, h('span', {}, d.glyph)),
+      hasPortrait(d.id) ? fillPortrait(h('div', { class: 'free__portrait' }), d) : h('div', { class: 'free__portrait' }, h('span', {}, d.glyph)),
       h('div', { class: 'free__who' },
         h('p', { class: 'free__title' }, d.title),
         h('h2', { class: 'free__name' }, d.name),
