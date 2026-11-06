@@ -38,7 +38,10 @@ export const startCheckout = (packageId: string, gift: boolean) => call<{ orderI
 
 export const checkOrder = (orderId: string) => call<{ order: JadeOrder; wallet: Wallet }>('check', { orderId });
 
-export const listOrders = () => call<{ orders: JadeOrder[]; firstDone: string[] }>('orders');
+/** Oferta vigente de un paquete (tabla store_offers). */
+export interface StoreOffer { id: number; package_id: string; label: string; bonus_pct: number; extra_gold: number; price: number | null; ends_at: string }
+
+export const listOrders = () => call<{ orders: JadeOrder[]; firstDone: string[]; offers?: StoreOffer[] }>('orders');
 
 export const redeemCode = (code: string) => call<{ rewards: Rewards; wallet: Wallet }>('redeem', { code });
 

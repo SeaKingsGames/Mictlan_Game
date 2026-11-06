@@ -31,11 +31,13 @@ Deno.serve(handler(async (req, body) => {
       .eq('user_id', user.id).eq('status', 'pending').gte('created_at', since);
     if ((count ?? 0) >= MAX_PENDING_PER_HOUR) return json({ error: 'Tienes muchas compras sin terminar. Espera un rato.' }, 429);
 
+    const offer = await activeOffer(db, pkg.id);
+    const price = offer?.price ? Number(offer.price) : pkg.price;
     const { data: order, error } = await db.from('jade_orders')
-      .insert({ user_id: user.id, package_id: pkg.id, price: pkg.price, gift })
+      .insert({ user_id: user.id, package_id: pkg.id, price, gift, offer })
       .select('*').single<OrderRow>();
     if (error) throw error;
-    const pref = await createPreference(order, `${pkg.name}${gift ? ' (regalo)' : ''} · Cartas del Quinto Sol`, user.email ?? null);
+    const pref = await createPreference(order, `${pkg.name}${offer ? ` (${offer.label})` : ''}${gift ? ' (regalo)' : ''} · Cartas del Quinto Sol`, user.email ?? null);
     await db.from('jade_orders').update({ mp_preference_id: pref.id }).eq('id', order.id);
     return json({ orderId: order.id, url: pref.url });
   }
@@ -59,6 +61,7 @@ Deno.serve(handler(async (req, body) => {
     // Para "doble jade": paquetes que ya compraste para ti (contando todos, no solo los 30 últimos)
     const { data: done } = await db.from('jade_orders').select('package_id').eq('user_id', user.id).eq('first_bonus', true);
     return json({
+      offers: await activeOffers(db),
       orders: rows.filter(o => o.status !== 'pending' || Date.now() - Date.parse(o.created_at) < 3 * 86400_000).map(view),
       firstDone: [...new Set((done ?? []).map(r => r.package_id))],
     });
@@ -88,6 +91,20 @@ Deno.serve(handler(async (req, body) => {
 
   return json({ error: 'Acción desconocida' }, 400);
 }));
+
+export interface Offer { id: number; package_id: string; label: string; bonus_pct: number; extra_gold: number; price: number | null; ends_at: string }
+
+/** Ofertas vigentes (tabla store_offers; las creas en el SQL Editor). */
+async function activeOffers(db: SupabaseClient): Promise<Offer[]> {
+  const now = new Date().toISOString();
+  const { data } = await db.from('store_offers').select('id, package_id, label, bonus_pct, extra_gold, price, ends_at')
+    .eq('active', true).lte('starts_at', now).gte('ends_at', now).order('created_at', { ascending: false });
+  const seen = new Set<string>();
+  return ((data ?? []) as Offer[]).filter(o => !seen.has(o.package_id) && seen.add(o.package_id));
+}
+async function activeOffer(db: SupabaseClient, packageId: string): Promise<Offer | null> {
+  return (await activeOffers(db)).find(o => o.package_id === packageId) ?? null;
+}
 
 async function ownOrder(db: SupabaseClient, userId: string, id: string): Promise<OrderRow | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;

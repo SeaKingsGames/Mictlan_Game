@@ -5299,6 +5299,10 @@ function withSetCards(base) {
 function withSetRules(data) {
   return { ...data, rules: [...data.rules, ...SETS.flatMap((s) => s.rules)] };
 }
+function chapterOf(duelistId) {
+  const s = SETS.find((x) => x.duelists.some((d) => d.id === duelistId));
+  return s ? { chapter: s.chapter, name: s.name } : null;
+}
 
 // src/data/types.ts
 var CARD_TAGS = [
@@ -5695,7 +5699,7 @@ function rollRarity(rng) {
 }
 function openPack(pack, db, rng, sinceUr) {
   const pool = packPool(pack, db);
-  const pick = (r) => {
+  const pick2 = (r) => {
     const target = fallbackRarity(pool, r);
     if (!target) return null;
     const list = pool[target];
@@ -5703,7 +5707,7 @@ function openPack(pack, db, rng, sinceUr) {
   };
   const cards = [];
   for (let i = 0; i < PACK_SIZE; i++) {
-    const c = pick(rollRarity(rng));
+    const c = pick2(rollRarity(rng));
     if (c) cards.push(c);
   }
   let pity = false;
@@ -6532,7 +6536,7 @@ var DuelEngine = class {
     const side = card.zone === "field" ? this.controllerOf(card) : card.owner;
     const mine = this.state.players[side].field.filter((c) => c !== null);
     const theirs = this.state.players[opponentOf(side)].field.filter((c) => c !== null);
-    const pick = (list) => list.length ? [list[Math.floor(this.effectRng() * list.length)]] : [];
+    const pick2 = (list) => list.length ? [list[Math.floor(this.effectRng() * list.length)]] : [];
     const withTag = (list) => tag ? list.filter((c) => c.def.tags.includes(tag)) : list;
     const byAtk = [...theirs].sort((a, b) => b.atk - a.atk);
     switch (target) {
@@ -6557,9 +6561,9 @@ var DuelEngine = class {
       case "lowestAtkEnemy":
         return byAtk.slice(-1);
       case "randomEnemy":
-        return pick(withTag(theirs));
+        return pick2(withTag(theirs));
       case "randomMonster":
-        return pick(withTag([...mine, ...theirs]));
+        return pick2(withTag([...mine, ...theirs]));
       case "allMonsters":
         return withTag([...mine, ...theirs]);
       case "summoned":
@@ -6598,14 +6602,14 @@ var DuelEngine = class {
         return;
       case "revive": {
         const slot = me.field.findIndex((c) => c === null);
-        const pick = me.mictlan.filter((c) => c !== card && c.def.type === "monster" && (!a.tag || c.def.tags.includes(a.tag))).sort((x, y) => y.atk - x.atk)[0];
-        if (slot < 0 || !pick) return;
-        me.mictlan = me.mictlan.filter((c) => c !== pick);
-        pick.resetForZoneChange();
-        pick.zone = "field";
-        pick.fieldSlot = slot;
-        me.field[slot] = pick;
-        events.push({ type: "revived", instanceId: pick.instanceId, slot });
+        const pick2 = me.mictlan.filter((c) => c !== card && c.def.type === "monster" && (!a.tag || c.def.tags.includes(a.tag))).sort((x, y) => y.atk - x.atk)[0];
+        if (slot < 0 || !pick2) return;
+        me.mictlan = me.mictlan.filter((c) => c !== pick2);
+        pick2.resetForZoneChange();
+        pick2.zone = "field";
+        pick2.fieldSlot = slot;
+        me.field[slot] = pick2;
+        events.push({ type: "revived", instanceId: pick2.instanceId, slot });
         return;
       }
       case "negateAttack":
@@ -6880,6 +6884,37 @@ function spellKind(card) {
   return "other";
 }
 
+// src/game/duelStats.ts
+var StatsCollector = class {
+  s = { won: false, turns: 0, fusions: 0, spells: 0, traps: 0, destroyed: 0, damage: 0, lifeLeft: 0, nightWin: false };
+  me;
+  constructor(me) {
+    this.me = me;
+  }
+  add(events, engine) {
+    const foe = this.me === 0 ? 1 : 0;
+    for (const e of events) {
+      if (e.type === "fusion" && e.player === this.me) this.s.fusions++;
+      else if (e.type === "activated" && e.player === this.me) this.s.spells++;
+      else if (e.type === "trapActivated" && e.player === this.me) this.s.traps++;
+      else if (e.type === "damage" && e.player === foe) this.s.damage += e.amount;
+      else if (e.type === "sentToMictlan" && (e.reason === "battle" || e.reason === "effect")) {
+        if (engine.state.players[foe].mictlan.some((c) => c.instanceId === e.instanceId && c.def.type === "monster")) this.s.destroyed++;
+      }
+    }
+  }
+  result(engine) {
+    const st = engine.state;
+    return {
+      ...this.s,
+      won: st.winner === this.me,
+      turns: st.turn,
+      lifeLeft: st.players[this.me].life,
+      nightWin: st.winner === this.me && isNightTurn(st.turn)
+    };
+  }
+};
+
 // src/game/replay.ts
 var HUMAN = 0;
 var AI = 1;
@@ -6897,12 +6932,14 @@ function createDuel(seed, playerDeck, opponent, db, fusion, levels) {
 function replayDuel(input, db, fusion) {
   if (input.intents.some((i) => i?.type === "surrender")) return { ok: true, winner: AI, turns: 0 };
   const engine = createDuel(input.seed, input.playerDeck, input.opponent, db, fusion, input.levels);
-  engine.start();
+  const stats = new StatsCollector(HUMAN);
+  stats.add(engine.start(), engine);
   let next = 0;
   let guard = 0;
   while (engine.state.winner === null && guard++ < 2e4) {
     if (engine.state.turnPlayer === AI) {
-      aiStep(engine, input.opponent, fusion);
+      const r = aiStep(engine, input.opponent, fusion);
+      if (r.ok) stats.add(r.events, engine);
       continue;
     }
     const intent = input.intents[next];
@@ -6911,11 +6948,12 @@ function replayDuel(input, db, fusion) {
     if (intent.player !== HUMAN) return { ok: false, error: `La jugada ${next} no es del jugador` };
     const result = engine.apply(intent);
     if (!result.ok) return { ok: false, error: `La jugada ${next} no es v\xE1lida: ${result.error}` };
+    stats.add(result.events, engine);
   }
   if (engine.state.winner !== null && next < input.intents.length) {
     return { ok: false, error: "Hay jugadas despu\xE9s de que termin\xF3 el duelo" };
   }
-  return { ok: true, winner: engine.state.winner, turns: engine.state.turn };
+  return { ok: true, winner: engine.state.winner, turns: engine.state.turn, stats: stats.result(engine) };
 }
 var pvpFirstPlayer = (seed) => seed >>> 3 & 1;
 function createPvpDuel(setup, db, fusion) {
@@ -6941,15 +6979,28 @@ function replayPvp(setup, intents, db, fusion) {
   }
   return { ok: true, engine, winner: engine.state.winner };
 }
+function pvpStats(setup, intents, db, fusion) {
+  const engine = createPvpDuel(setup, db, fusion);
+  const cols = [new StatsCollector(0), new StatsCollector(1)];
+  const first = engine.start();
+  cols.forEach((c) => c.add(first, engine));
+  for (const intent of intents) {
+    if (engine.state.winner !== null) break;
+    const r = engine.apply(intent);
+    if (!r.ok) return null;
+    cols.forEach((c) => c.add(r.events, engine));
+  }
+  return [cols[0].result(engine), cols[1].result(engine)];
+}
 
 // src/game/rewards.ts
 function rollRewards(duelist, firstWin, rng) {
   const total = duelist.rewards.reduce((n, r) => n + r.weight, 0);
-  let pick = rng() * total;
+  let pick2 = rng() * total;
   let card = duelist.rewards[0].card;
   for (const r of duelist.rewards) {
-    pick -= r.weight;
-    if (pick < 0) {
+    pick2 -= r.weight;
+    if (pick2 < 0) {
       card = r.card;
       break;
     }
@@ -6986,6 +7037,117 @@ function normalizeCode(input) {
   return input.trim().toUpperCase().replace(/[\s_]+/g, "").replace(/[—–]/g, "-");
 }
 var isPlausibleCode = (code) => /^[A-Z0-9-]{4,24}$/.test(code);
+
+// src/game/missions.ts
+var DAILY_COUNT = 3;
+var WEEKLY_COUNT = 4;
+var DAILY_POOL = [
+  { id: "d-win-2", stat: "duel_win", target: 2, text: "Gana 2 duelos contra duelistas", reward: { cacao: 150 } },
+  { id: "d-play-3", stat: "duel_play", target: 3, text: "Juega 3 duelos contra duelistas", reward: { cacao: 100, tickets: 1 } },
+  { id: "d-fusion-5", stat: "fusion", target: 5, text: "Haz 5 fusiones", reward: { cacao: 120 } },
+  { id: "d-spell-4", stat: "spell", target: 4, text: "Usa 4 m\xE1gicas o equipos", reward: { cacao: 100 } },
+  { id: "d-trap-2", stat: "trap", target: 2, text: "Haz que salten 2 trampas", reward: { cacao: 120 } },
+  { id: "d-destroy-8", stat: "destroy", target: 8, text: "Destruye 8 monstruos rivales", reward: { cacao: 150 } },
+  { id: "d-damage-8000", stat: "damage", target: 8e3, text: "Haz 8,000 de da\xF1o a tus rivales", reward: { cacao: 150 } },
+  { id: "d-night-1", stat: "night_win", target: 1, text: "Gana un duelo de noche (Ocaso o Medianoche)", reward: { cacao: 150, tickets: 1 } },
+  { id: "d-pack-1", stat: "pack_open", target: 1, text: "Abre 1 sobre", reward: { cacao: 100 } },
+  { id: "d-spin-1", stat: "spin", target: 1, text: "Gira la ruleta 1 vez", reward: { cacao: 200 } },
+  { id: "d-pvp-1", stat: "pvp_play", target: 1, text: "Juega 1 duelo contra otro jugador", reward: { cacao: 150, tickets: 2 } },
+  { id: "d-level-1", stat: "level_up", target: 1, text: "Sube de nivel 1 carta", reward: { tickets: 2 } }
+];
+var WEEKLY_POOL = [
+  { id: "w-win-15", stat: "duel_win", target: 15, text: "Gana 15 duelos contra duelistas", reward: { jade: 150, tickets: 3 } },
+  { id: "w-fusion-40", stat: "fusion", target: 40, text: "Haz 40 fusiones", reward: { jade: 100, cacao: 300 } },
+  { id: "w-destroy-50", stat: "destroy", target: 50, text: "Destruye 50 monstruos rivales", reward: { jade: 100, cacao: 300 } },
+  { id: "w-damage-60000", stat: "damage", target: 6e4, text: "Haz 60,000 de da\xF1o a tus rivales", reward: { jade: 150 } },
+  { id: "w-night-5", stat: "night_win", target: 5, text: "Gana 5 duelos de noche", reward: { jade: 100, tickets: 3 } },
+  { id: "w-big-3", stat: "big_win", target: 3, text: "Gana 3 duelos con 5,000 PV o m\xE1s", reward: { jade: 150 } },
+  { id: "w-fast-3", stat: "fast_win", target: 3, text: "Gana 3 duelos en 12 turnos o menos", reward: { jade: 150 } },
+  { id: "w-ch2-3", stat: "chapter2_win", target: 3, text: "Vence 3 veces a duelistas de La Guerra Florida", reward: { jade: 150, gold: 1 } },
+  { id: "w-pvp-5", stat: "pvp_win", target: 5, text: "Gana 5 duelos contra otros jugadores", reward: { jade: 200, gold: 1 } },
+  { id: "w-pack-5", stat: "pack_open", target: 5, text: "Abre 5 sobres", reward: { cacao: 500, tickets: 3 } },
+  { id: "w-market-3", stat: "market_buy", target: 3, text: "Compra 3 cartas en el mercado", reward: { jade: 100 } },
+  { id: "w-level-5", stat: "level_up", target: 5, text: "Sube de nivel 5 cartas", reward: { jade: 100, tickets: 3 } }
+];
+var LOGIN_REWARDS = [
+  { cacao: 200 },
+  { tickets: 3 },
+  { cacao: 400 },
+  { jade: 50 },
+  { cacao: 600, tickets: 3 },
+  { jade: 100 },
+  { jade: 150, gold: 1 }
+];
+var dayKey = (now = Date.now()) => shopDay(now);
+function weekKey(now = Date.now()) {
+  const d = /* @__PURE__ */ new Date(dayKey(now) + "T00:00:00Z");
+  const dow = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dow + 3);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const week = 1 + Math.round(((d.getTime() - yearStart.getTime()) / 864e5 - 3 + (yearStart.getUTCDay() + 6) % 7) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+function pick(pool, count, key) {
+  const rng = createRng(hash(key));
+  const left = [...pool];
+  const out = [];
+  while (out.length < count && left.length) {
+    const m = left.splice(Math.floor(rng() * left.length), 1)[0];
+    if (out.some((x) => x.stat === m.stat)) continue;
+    out.push(m);
+  }
+  return out;
+}
+function activeMissions(now = Date.now()) {
+  const day = dayKey(now), week = weekKey(now);
+  return [
+    ...pick(DAILY_POOL, DAILY_COUNT, "dia:" + day).map((m) => ({ ...m, kind: "daily", period: day })),
+    ...pick(WEEKLY_POOL, WEEKLY_COUNT, "semana:" + week).map((m) => ({ ...m, kind: "weekly", period: week }))
+  ];
+}
+function findActiveMission(period, id, now = Date.now()) {
+  return activeMissions(now).find((m) => m.period === period && m.id === id);
+}
+function duelProgress(stats, opts) {
+  const out = opts.pvp ? { pvp_play: 1 } : { duel_play: 1 };
+  if (!stats) return out;
+  if (stats.won) {
+    if (opts.pvp) out.pvp_win = 1;
+    else out.duel_win = 1;
+    if (stats.nightWin) out.night_win = 1;
+    if (stats.lifeLeft >= 5e3) out.big_win = 1;
+    if (stats.turns <= 12) out.fast_win = 1;
+    if (opts.chapter2) out.chapter2_win = 1;
+  }
+  if (stats.fusions) out.fusion = stats.fusions;
+  if (stats.spells) out.spell = stats.spells;
+  if (stats.traps) out.trap = stats.traps;
+  if (stats.destroyed) out.destroy = stats.destroyed;
+  if (stats.damage) out.damage = stats.damage;
+  return out;
+}
+function progressItems(counts, now = Date.now()) {
+  return activeMissions(now).filter((m) => (counts[m.stat] ?? 0) > 0).map((m) => ({ period: m.period, mission: m.id, target: m.target, amount: Math.floor(counts[m.stat]) }));
+}
+function loginStatus(st, now = Date.now()) {
+  const today = dayKey(now);
+  if (st.lastDay === today) {
+    const day2 = (Math.max(1, st.streak) - 1) % LOGIN_REWARDS.length + 1;
+    return { today, day: day2, claimed: true, reward: LOGIN_REWARDS[day2 - 1] };
+  }
+  const gap = st.lastDay ? Math.round((Date.parse(today) - Date.parse(st.lastDay)) / 864e5) : 99;
+  const streak = gap === 1 ? st.streak + 1 : 1;
+  const day = (streak - 1) % LOGIN_REWARDS.length + 1;
+  return { today, day, claimed: false, reward: LOGIN_REWARDS[day - 1] };
+}
 
 // src/game/pvpView.ts
 var MASK_RANGE = 1024;
@@ -7137,7 +7299,8 @@ function verifyDuel(input) {
   const result = replayDuel({ seed: input.seed, playerDeck: input.deck, opponent: duelist, intents: input.intents, levels }, cardDb, fusionDb);
   if (!result.ok) return result;
   if (result.winner === null) return { ok: false, error: "El duelo no termin\xF3" };
-  return { ok: true, value: { won: result.winner === 0, turns: result.turns } };
+  const chapter2 = !!chapterOf(duelist.id) && result.winner === 0;
+  return { ok: true, value: { won: result.winner === 0, turns: result.turns, progress: duelProgress(result.stats, { pvp: false, chapter2 }) } };
 }
 function planRewards(duelistId, seed, firstWin) {
   const duelist = getDuelist(duelistId);
@@ -7256,6 +7419,13 @@ function planGrant(grant, seed, collection) {
     cards: ids.map((id) => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] }))
   };
 }
+function missionItems(counts, now) {
+  return progressItems(counts, now);
+}
+function pvpProgress(m) {
+  const st = pvpStats(setupOf(m), m.intents, cardDb, fusionDb);
+  return [duelProgress(st?.[0], { pvp: true }), duelProgress(st?.[1], { pvp: true })];
+}
 export {
   CURRENCY_CODE,
   DATA_VERSION,
@@ -7273,12 +7443,17 @@ export {
   ROULETTE_PRIZES,
   SHOP_REFRESH_TICKETS,
   START_JADE,
+  activeMissions,
   checkDuelStart,
   checkPvpDeck,
   cleanLevels,
+  dayKey,
   deckLevels,
+  findActiveMission,
   isPlausibleCode,
   jadePackage,
+  loginStatus,
+  missionItems,
   newGiftCode,
   newSeed,
   normalizeCode,
@@ -7292,10 +7467,12 @@ export {
   planSpin,
   pvpFirstPlayer,
   pvpMove,
+  pvpProgress,
   pvpTurnOf,
   pvpView,
   roomCode,
   shopDay,
   trimDeckToCollection,
-  verifyDuel
+  verifyDuel,
+  weekKey
 };

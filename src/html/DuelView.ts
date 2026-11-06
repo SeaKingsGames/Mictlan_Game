@@ -9,6 +9,7 @@ import { HIDDEN_CARD, ViewEngine, type PvpStep, type PvpView } from '../game/pvp
 import { START_LIFE, isSupportCard, needsEquipTarget, type CardDef } from '../data/types.ts';
 import { describeEffects, KEYWORD_TEXT } from '../data/effectText.ts';
 import { fillPortrait } from './portrait.ts';
+import { Tutorial, tutorialPending } from './tutorial.ts';
 import { createCardElement } from './cardElement.ts';
 import { DuelFx } from './duelFx.ts';
 import { muteButton, musicButton, sfx, type Sfx } from './sound.ts';
@@ -87,6 +88,8 @@ export interface DuelSetup {
   onFinish: (won: boolean, intents: readonly Intent[]) => DuelResult | Promise<DuelResult>;
   /** Volver al menú / campaña. */
   onExit: () => void;
+  /** Mostrar el tutorial si el jugador no lo ha visto. */
+  tutorial?: boolean;
 }
 
 /**
@@ -98,6 +101,7 @@ export class DuelView {
   private selectedHand: number[] = [];
   private selectedAttacker: number | null = null;
   private aiThinking = false;
+  private tutorial: Tutorial | null = null;
   private log: string[] = [];
   private message = '';
   private inspected: CardInstance | null = null;
@@ -209,6 +213,7 @@ export class DuelView {
       </div>`;
 
     this.fx = new DuelFx(root.querySelector<HTMLElement>('.stage')!);
+    if (setup.tutorial && !setup.remote && tutorialPending()) this.tutorial = new Tutorial(root.querySelector<HTMLElement>('.stage')!, this.me);
     const ref = (name: string) => root.querySelector<HTMLElement>(`[data-ref="${name}"]`)!;
     const btn = (name: string) => root.querySelector<HTMLButtonElement>(`[data-btn="${name}"]`)!;
     this.el = {
@@ -1260,6 +1265,7 @@ export class DuelView {
   // ---------------------------------------------------------------- registro
 
   private record(events: DuelEvent[]): void {
+    this.tutorial?.onEvents(events, this.engine.state.turnPlayer);
     this.playSounds(events);
     this.animate(events);
     for (const e of events) {

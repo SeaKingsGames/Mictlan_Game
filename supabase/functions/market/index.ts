@@ -9,6 +9,7 @@ import {
   DATA_VERSION, GOLD_BUY_COUNTS, GOLD_TICKET_PRICE, newSeed, planFeatured, planShop, planSpin, SHOP_REFRESH_TICKETS, shopDay,
 } from '../_shared/game.js';
 import { admin, currentUser, handler, json } from '../_shared/http.ts';
+import { recordProgress } from '../_shared/progress.ts';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const secureRandom = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
@@ -58,6 +59,7 @@ Deno.serve(handler(async (req, body) => {
       if (error) throw error;
       if (!data.ok && data.error === 'retry') continue;
       if (!data.ok) return json({ error: data.error }, 400);
+      await recordProgress(db, user.id, { spin: 1 });
       return json({
         index: plan.value.index, prize: { kind: p.kind, amount: p.amount, card: p.card }, card: data.card,
         wallet: { cacao: data.cacao, jade: data.jade, tickets: data.tickets, gold: data.gold },
@@ -82,6 +84,7 @@ Deno.serve(handler(async (req, body) => {
     const { data, error } = await db.rpc('shop_buy', { p_user: user.id, p_slot: slot, p_card: s.card, p_price: s.price });
     if (error) throw error;
     if (!data.ok) return json({ error: data.error }, 400);
+    await recordProgress(db, user.id, { market_buy: 1 });
     return json({ wallet: wallet(await profile(db, user.id)), shop: { slots: data.slots, day: shopDay() }, card: s.card });
   }
 

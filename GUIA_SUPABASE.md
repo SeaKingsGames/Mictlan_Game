@@ -290,3 +290,62 @@ Cada expansión vive en `src/data/sets/<nombre>.json` con sus cartas, duelistas,
 **Arte**: abre el editor de cartas, busca el número (101–220), sube la imagen y descarga `cards.json` + la imagen como siempre. Cuando una carta de la expansión ya está en tu `cards.json`, gana la de `cards.json` (así se guarda tu arte).
 
 **Al subir una expansión**: `npm run build:server`, sube todas las funciones (cambia la huella de datos), `npm test` y push.
+
+## Misiones, recompensa diaria y tutorial
+
+- **Recompensa diaria** (7 días seguidos; si faltas un día, vuelve al día 1; el día 7 trae ticket oro). Sale sola al entrar al menú y en `#/misiones`.
+- **Misiones**: 3 del día y 4 de la semana, elegidas **solas al azar** con la fecha (iguales para todos). Cambian a la medianoche de México y cada lunes. No necesitas programar nada.
+  - Para agregar o cambiar misiones: `src/game/missions.ts` (`DAILY_POOL`, `WEEKLY_POOL`, `LOGIN_REWARDS`). Luego `npm run build:server` y sube las funciones.
+  - El progreso lo cuenta el servidor al guardar duelos, sobres, mercado, ruleta, niveles y multijugador (no se puede hacer trampa).
+- **Tutorial**: globos de ayuda en el primer duelo. "❓ Cómo jugar" en el menú lo vuelve a mostrar.
+
+**Instalar**: SQL Editor → `supabase/migrations/20261105000000_misiones_ofertas.sql` → Run. Luego:
+```bash
+npm run build:server
+npx supabase functions deploy rewards --use-api
+npx supabase functions deploy duel-finish --use-api
+npx supabase functions deploy pack-open --use-api
+npx supabase functions deploy market --use-api
+npx supabase functions deploy card-upgrade --use-api
+npx supabase functions deploy pvp --use-api
+npx supabase functions deploy payments --use-api
+npx supabase functions deploy mp-webhook --use-api --no-verify-jwt
+npx supabase functions deploy duel-start --use-api
+npm test
+```
+
+## Ofertas de la tienda de jade
+
+Se crean en Supabase → SQL Editor. Salen solas en la tienda (etiqueta naranja) y desaparecen al terminar.
+
+```sql
+-- +50% de jade en el Cofre todo el fin de semana
+insert into public.store_offers (package_id, label, bonus_pct, starts_at, ends_at)
+values ('cofre', 'Fin de semana +50%', 50, '2026-11-07 00:00-06', '2026-11-09 23:59-06');
+
+-- Ofrenda de Tláloc a $149 (en vez de $199) por 3 días, con 2 tickets oro extra
+insert into public.store_offers (package_id, label, price, extra_gold, ends_at)
+values ('tlaloc', '¡$149 por 3 días!', 149, 2, now() + interval '3 days');
+
+-- Ver las ofertas / quitar una antes de tiempo
+select * from public.store_offers order by created_at desc;
+update public.store_offers set active = false where id = 1;
+```
+- Paquetes: `punado`, `bolsa`, `cofre`, `tlaloc`, `quetzalcoatl`, `moctezuma`, `tenochtitlan`, `quinto-sol`.
+- `bonus_pct` = % de jade extra · `extra_gold` = tickets oro extra · `price` = precio especial en pesos (vacío = normal).
+- `-06` en la fecha = hora de México. Si un jugador empezó a pagar con oferta y la oferta termina mientras paga, se le respeta.
+- La doble de la primera compra se suma aparte: primera compra del Cofre con +50% = 1150×2 + 575.
+
+## Códigos (regalos, TikTok, sorteos)
+
+```sql
+-- QUINTOSOL50: 500 jade + 1 ticket oro, para las primeras 100 cuentas, 7 días
+select public.create_promo_code('QUINTOSOL50', 500, 0, 1, 100, now() + interval '7 days', 'Live TikTok');
+-- Premio de sorteo: 1 UR para una sola persona, sin caducidad
+select public.create_promo_code('SORTEO-UR-01', 0, 1, 0, 1, null, 'Sorteo');
+-- ¿Cuántos lo han usado?
+select code, uses, max_uses, expires_at from public.redeem_codes order by created_at desc;
+-- Desactivar
+update public.redeem_codes set active = false where code = 'QUINTOSOL50';
+```
+Orden de los datos: código, jade, UR, tickets oro, usos máximos, caduca, nota. Cada cuenta canjea un código una sola vez (Tienda de Jade → Canjear código).

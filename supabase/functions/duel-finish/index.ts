@@ -2,6 +2,7 @@
 // Vuelve a jugar el duelo con la semilla guardada. Solo si ganaste de verdad hay premio.
 import { DATA_VERSION, planRewards, verifyDuel } from '../_shared/game.js';
 import { admin, currentUser, handler, json } from '../_shared/http.ts';
+import { recordProgress } from '../_shared/progress.ts';
 
 Deno.serve(handler(async (req, body) => {
   const db = admin();
@@ -39,6 +40,7 @@ Deno.serve(handler(async (req, body) => {
   });
   if (rpcError) throw rpcError;
   if (!result.ok) return json({ error: 'Este duelo ya se guardó', code: 'already_settled' }, 409);
+  await recordProgress(db, user.id, verified.value.progress);
 
   const { data: balance } = await db.from('profiles').select('cacao, jade, tickets, gold_tickets, wins, losses').eq('id', user.id).single();
   return json({ won, ...result, balance });

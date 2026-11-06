@@ -7,9 +7,10 @@
 //   leave  { matchId }                 → cancelar sala (si nadie entró) o rendirse
 import {
   checkPvpDeck, DATA_VERSION, deckLevels, PVP_DAILY_REWARDED_WINS, PVP_SAME_RIVAL_DAILY, PVP_TURN_TIMEOUT_MS,
-  PVP_WIN_CACAO, pvpMove, pvpTurnOf, pvpView, roomCode, type PvpMatchData,
+  PVP_WIN_CACAO, pvpMove, pvpProgress, pvpTurnOf, pvpView, roomCode, type PvpMatchData,
 } from '../_shared/game.js';
 import { admin, currentUser, handler, json } from '../_shared/http.ts';
+import { recordProgress } from '../_shared/progress.ts';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(handler(async (req, body) => {
@@ -87,7 +88,7 @@ Deno.serve(handler(async (req, body) => {
   return json({ error: 'Acción desconocida' }, 400);
 }));
 
-type Match = PvpMatchData & { id: string; intents: unknown[]; status: string; winner: 0 | 1 | null; rewards: unknown; last_move_at: string; guest_id: string | null };
+type Match = PvpMatchData & { id: string; host_id: string; intents: unknown[]; status: string; winner: 0 | 1 | null; rewards: unknown; last_move_at: string; guest_id: string | null };
 
 /** Lo que ve `viewer`: nunca la mano del rival, sus cartas boca abajo ni la semilla. */
 function snapshot(m: Match, viewer: 0 | 1, since: number) {
@@ -114,6 +115,9 @@ async function applyMove(db: SupabaseClient, m: Match, player: 0 | 1, viewer: 0 
     });
     if (sErr) throw sErr;
     rewards = data;
+    // Misiones de los dos jugadores
+    const [hostP, guestP] = pvpProgress({ ...m, intents: r.value.intents } as PvpMatchData);
+    await Promise.all([recordProgress(db, m.host_id, hostP), recordProgress(db, m.guest_id, guestP)]);
   }
   const after: Match = {
     ...m, intents: r.value.intents, winner: r.value.winner, rewards,

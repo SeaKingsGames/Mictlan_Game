@@ -3,6 +3,7 @@
 // Qué sale lo decide game.js con una semilla del servidor; el cobro lo hace la base de datos en una transacción.
 import { DATA_VERSION, newSeed, planPacks, PACK_SIZE } from '../_shared/game.js';
 import { admin, currentUser, handler, json } from '../_shared/http.ts';
+import { recordProgress } from '../_shared/progress.ts';
 
 const secureRandom = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
 
@@ -40,6 +41,7 @@ Deno.serve(handler(async (req, body) => {
       i += p.cards.length;
       return { cards, pity: p.pity };
     });
+    await recordProgress(db, user.id, { pack_open: count });
     return json({ ok: true, packs, jade: data.jade, cacao: data.cacao, sinceUr: data.sinceUr, size: PACK_SIZE });
   }
   return json({ error: 'Intenta de nuevo' }, 409);

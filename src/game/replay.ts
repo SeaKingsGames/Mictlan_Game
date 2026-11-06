@@ -5,6 +5,7 @@ import type { FusionResolver } from '../core/fusion.ts';
 import type { CardDatabase } from '../data/cardDatabase.ts';
 import { daySigns } from '../data/index.ts';
 import type { Duelist } from './duelists.ts';
+import { StatsCollector, type DuelStats } from './duelStats.ts';
 
 /**
  * Repetir un duelo contra la IA para comprobar quién ganó.
@@ -24,7 +25,7 @@ export interface ReplayInput {
 }
 
 export type ReplayResult =
-  | { ok: true; winner: PlayerIndex | null; turns: number }
+  | { ok: true; winner: PlayerIndex | null; turns: number; stats?: DuelStats }
   | { ok: false; error: string };
 
 const HUMAN: PlayerIndex = 0;
@@ -53,12 +54,14 @@ export function replayDuel(input: ReplayInput, db: CardDatabase, fusion: FusionR
   // Rendirse siempre es derrota (y puede pasar en el turno del rival): no hace falta repetir nada.
   if (input.intents.some(i => i?.type === 'surrender')) return { ok: true, winner: AI, turns: 0 };
   const engine = createDuel(input.seed, input.playerDeck, input.opponent, db, fusion, input.levels);
-  engine.start();
+  const stats = new StatsCollector(HUMAN);
+  stats.add(engine.start(), engine);
   let next = 0;
   let guard = 0;
   while (engine.state.winner === null && guard++ < 20000) {
     if (engine.state.turnPlayer === AI) {
-      aiStep(engine, input.opponent, fusion);
+      const r = aiStep(engine, input.opponent, fusion);
+      if (r.ok) stats.add(r.events, engine);
       continue;
     }
     const intent = input.intents[next];
@@ -67,12 +70,13 @@ export function replayDuel(input: ReplayInput, db: CardDatabase, fusion: FusionR
     if (intent.player !== HUMAN) return { ok: false, error: `La jugada ${next} no es del jugador` };
     const result = engine.apply(intent);
     if (!result.ok) return { ok: false, error: `La jugada ${next} no es válida: ${result.error}` };
+    stats.add(result.events, engine);
   }
   // Jugadas de sobra después del final = algo raro (excepto que no haya ninguna)
   if (engine.state.winner !== null && next < input.intents.length) {
     return { ok: false, error: 'Hay jugadas después de que terminó el duelo' };
   }
-  return { ok: true, winner: engine.state.winner, turns: engine.state.turn };
+  return { ok: true, winner: engine.state.winner, turns: engine.state.turn, stats: stats.result(engine) };
 }
 
 // ---------------------------------------------------------------- multijugador (jugador contra jugador)
@@ -110,4 +114,19 @@ export function replayPvp(setup: PvpSetup, intents: readonly Intent[], db: CardD
     if (!r.ok) return { ok: false, error: r.error, at: i };
   }
   return { ok: true, engine, winner: engine.state.winner };
+}
+
+/** Estadísticas de cada jugador en una partida multijugador terminada (para las misiones). */
+export function pvpStats(setup: PvpSetup, intents: readonly Intent[], db: CardDatabase, fusion: FusionResolver): [DuelStats, DuelStats] | null {
+  const engine = createPvpDuel(setup, db, fusion);
+  const cols = [new StatsCollector(0), new StatsCollector(1)] as const;
+  const first = engine.start();
+  cols.forEach(c => c.add(first, engine));
+  for (const intent of intents) {
+    if (engine.state.winner !== null) break;
+    const r = engine.apply(intent);
+    if (!r.ok) return null;
+    cols.forEach(c => c.add(r.events, engine));
+  }
+  return [cols[0].result(engine), cols[1].result(engine)];
 }

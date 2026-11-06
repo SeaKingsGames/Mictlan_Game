@@ -15,7 +15,9 @@ import { renderDeckBuilder, type CardUpgrades } from './html/DeckBuilderView.ts'
 import { h } from './html/dom.ts';
 import { DuelView, type DuelResult } from './html/DuelView.ts';
 import { renderLogin } from './html/LoginView.ts';
-import { renderMenu } from './html/MenuView.ts';
+import { renderMenu, setMenuBadge } from './html/MenuView.ts';
+import { renderMissions, showDailyPopup } from './html/MissionsView.ts';
+import { loadRewards, pendingCount } from './net/rewards.ts';
 import { renderFreeDuel } from './html/FreeDuelView.ts';
 import { renderLibrary } from './html/LibraryView.ts';
 import { renderShop, type PackShop } from './html/ShopView.ts';
@@ -49,6 +51,7 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  *   #/biblioteca  todas las cartas del juego
  *   #/ruleta      ruleta de premios (tickets oro)
  *   #/mercado     mercado de cartas (6 cartas al azar por cacao)
+ *   #/misiones    recompensa diaria y misiones (diarias y semanales)
  *   #/jade        tienda de jade con dinero real (Mercado Pago) y canjear códigos
  *   #/jade/<id>   regreso de Mercado Pago: confirma ese pedido
  *   #/duelo/<id>  duelo contra ese duelista
@@ -108,6 +111,7 @@ function route(): void {
     case 'biblioteca': renderLibrary(app, p, go); return;
     case 'ruleta': renderRoulette(app, p, go, marketFor(p)); return;
     case 'mercado': renderCardMarket(app, p, go, marketFor(p)); return;
+    case 'misiones': leaveScreen = renderMissions(app, p, go, cloudEnabled); return;
     case 'jade': leaveScreen = renderJadeStore(app, p, go, cloudEnabled, arg || undefined); return;
     case 'duelo': startDuel(p, arg); return;
     case 'pvp':
@@ -124,7 +128,22 @@ function route(): void {
         onUpgrade: cloudEnabled ? () => go('#/cuenta') : undefined,
         onRename: cloudEnabled ? setUsername : undefined,
       });
+      menuRewards(p);
   }
+}
+
+let dailyPopupShown = false;
+/** En el menú: puntito en "Misiones" y, una vez por sesión, la ventana de la recompensa del día. */
+function menuRewards(p: Profile): void {
+  if (!cloudEnabled || !p.account || p.account.guest) return;
+  void loadRewards(p).then(st => {
+    if (location.hash.split('/')[1]) return;          // ya no estás en el menú
+    setMenuBadge('#/misiones', pendingCount(st));
+    if (!dailyPopupShown && !st.daily.claimed) {
+      dailyPopupShown = true;
+      showDailyPopup(p, st, () => route());
+    }
+  }).catch(() => { /* sin conexión: no pasa nada */ });
 }
 
 /** Subir de nivel y ascender: en la nube lo decide el servidor; en modo local, el navegador. */
@@ -255,6 +274,7 @@ function startDuel(p: Profile, id: string): void {
       ? (_won, intents) => finishInCloud(p, rival, duelId, intents)
       : won => finishLocally(p, rival, won),
     onExit: () => go('#/campana'),
+    tutorial: true,
   });
 }
 

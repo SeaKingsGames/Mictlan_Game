@@ -4,6 +4,7 @@
 // Las reglas (costos, a qué asciende) salen de game.js; el cobro lo hace la base de datos en una transacción.
 import { DATA_VERSION, planAscend, planLevelUp, trimDeckToCollection } from '../_shared/game.js';
 import { admin, currentUser, handler, json } from '../_shared/http.ts';
+import { recordProgress } from '../_shared/progress.ts';
 
 Deno.serve(handler(async (req, body) => {
   const db = admin();
@@ -26,6 +27,7 @@ Deno.serve(handler(async (req, body) => {
     const { data, error: rpcErr } = await db.rpc('level_up_card', { p_user: user.id, p_card: cardId, p_cost: plan.cost, p_from_level: level });
     if (rpcErr) throw rpcErr;
     if (!data.ok) return json({ error: data.error }, 409);
+    await recordProgress(db, user.id, { level_up: 1 });
     return json({ ok: true, cardId, level: data.level, cacao: data.cacao });
   }
 

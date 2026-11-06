@@ -6,7 +6,7 @@ export declare const DATA_VERSION: string;
 export declare const MAX_INTENTS: number;
 export declare function checkDuelStart(input: { duelistId: string; deck: readonly number[]; collection: Record<string, number>; defeated: readonly string[] }): Check<Duelist>;
 export declare function newSeed(random?: () => number): number;
-export declare function verifyDuel(input: { seed: number; deck: readonly number[]; duelistId: string; intents: unknown; levels?: Record<string, number> | null }): Check<{ won: boolean; turns: number }>;
+export declare function verifyDuel(input: { seed: number; deck: readonly number[]; duelistId: string; intents: unknown; levels?: Record<string, number> | null }): Check<{ won: boolean; turns: number; progress: StatCounts }>;
 export declare function planRewards(duelistId: string, seed: number, firstWin: boolean): RewardPlan;
 export type UpgradeCheck = { ok: true; cost: number; result?: number } | { ok: false; error: string };
 export declare function cleanLevels(raw: Record<string, number> | null | undefined): Record<number, number>;
@@ -53,3 +53,13 @@ export interface Grant { jade: number; ur: number; gold: number }
 export interface GrantPlan { jade: number; gold: number; cards: { id: number; cacao: number; jade: number }[] }
 export declare function jadePackage(id: string): { id: string; name: string; price: number; jade: number; ur: number; gold: number } | null;
 export declare function planGrant(grant: Grant, seed: number, collection: Record<string, number>): GrantPlan;
+export type StatCounts = Partial<Record<string, number>>;
+export interface Reward { cacao?: number; jade?: number; tickets?: number; gold?: number }
+export interface ActiveMission { id: string; stat: string; target: number; text: string; reward: Reward; kind: 'daily' | 'weekly'; period: string }
+export declare function activeMissions(now?: number): ActiveMission[];
+export declare function findActiveMission(period: string, id: string, now?: number): ActiveMission | undefined;
+export declare function dayKey(now?: number): string;
+export declare function weekKey(now?: number): string;
+export declare function loginStatus(st: { streak: number; lastDay: string | null }, now?: number): { today: string; day: number; claimed: boolean; reward: Reward };
+export declare function missionItems(counts: StatCounts, now?: number): { period: string; mission: string; target: number; amount: number }[];
+export declare function pvpProgress(m: PvpMatchData): [StatCounts, StatCounts];

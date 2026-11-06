@@ -6,6 +6,7 @@ import { h } from './dom.ts';
 import { canPromptInstall, installHelpText, isInstalled, onInstallChange, promptInstall } from './install.ts';
 import { muteButton, musicButton, sfx } from './sound.ts';
 import { applyUpdate, checkForUpdate } from './update.ts';
+import { resetTutorial } from './tutorial.ts';
 import { wallets } from './shell.ts';
 
 /** Pantalla de inicio. */
@@ -70,7 +71,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
       } }, 'Cerrar sesión') : ''));
 
   const item = (label: string, hash: string, sub: string, main = false) =>
-    h('button', { class: `menu-item${main ? ' menu-item--main' : ''}`, onclick: () => { sfx('click'); go(hash); } },
+    h('button', { class: `menu-item${main ? ' menu-item--main' : ''}`, 'data-hash': hash, onclick: () => { sfx('click'); go(hash); } },
       h('span', { class: 'menu-item__label' }, label), h('small', {}, sub));
 
   root.replaceChildren(h('main', { class: 'menu2' },
@@ -82,6 +83,7 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
       h('p', { class: 'menu__subtitle' }, GAME_SUBTITLE),
       h('nav', { class: 'menu2__buttons' },
         item('Campaña', '#/campana', 'Vence a los duelistas en orden', true),
+        item('Misiones', '#/misiones', '☀ Recompensa diaria y misiones'),
         item('Duelo libre', '#/libre', 'Reta a quien ya desbloqueaste'),
         item('⚔ Contra otro jugador', '#/pvp', 'Sala con código'),
         item('Tienda de sobres', '#/tienda', `${CURRENCY.premium.icon} Sobres temáticos de 5 cartas`),
@@ -90,7 +92,9 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
         item('Ruleta de premios', '#/ruleta', `${CURRENCY.gold.icon} Gira con tickets oro`),
         item('Editor de mazo', '#/mazo', 'Arma tu mazo de 40'),
         item('Biblioteca', '#/biblioteca', 'Todas las cartas del juego')),
-      h('div', { class: 'menu__install' }, installButton(), muteButton(), musicButton()),
+      h('div', { class: 'menu__install' }, installButton(),
+        h('button', { class: 'link-btn', onclick: () => { resetTutorial(); sfx('click'); go('#/campana'); } }, '❓ Cómo jugar'),
+        muteButton(), musicButton()),
       // Editores: solo en tu compu (npm run dev), no en la página pública
       !import.meta.env.DEV ? '' : h('details', { class: 'menu__tools' },
         h('summary', {}, 'Herramientas'),
@@ -145,4 +149,12 @@ function updateButton(): HTMLElement {
     say(state === 'same' ? '✓ Ya tienes la última versión' : 'Sin conexión: intenta más tarde');
   });
   return h('div', { class: 'update-btn__wrap' }, btn, tip);
+}
+
+/** Puntito con número sobre un botón del menú (cosas por cobrar). */
+export function setMenuBadge(hash: string, n: number): void {
+  const btn = document.querySelector<HTMLElement>(`.menu-item[data-hash="${hash}"]`);
+  if (!btn) return;
+  btn.querySelector('.menu-item__badge')?.remove();
+  if (n > 0) btn.append(h('span', { class: 'menu-item__badge' }, String(n)));
 }

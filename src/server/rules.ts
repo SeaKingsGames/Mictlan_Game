@@ -8,12 +8,14 @@ import { WIN_CACAO, WIN_TICKETS } from '../game/economy.ts';
 import { GOLD_TICKET_PRICE, GOLD_BUY_COUNTS, pickFeatured, ROULETTE_PRIZES, spinIndex } from '../game/roulette.ts';
 import { rollShop, SHOP_REFRESH_TICKETS, shopDay, type ShopSlot } from '../game/cardShop.ts';
 import { validatePlayerDeck, type Profile } from '../game/profile.ts';
-import { replayDuel, replayPvp, pvpFirstPlayer, type PvpSetup } from '../game/replay.ts';
+import { replayDuel, replayPvp, pvpFirstPlayer, pvpStats, type PvpSetup } from '../game/replay.ts';
 import type { PlayerIndex } from '../core/DuelState.ts';
 import { checkAscend, checkLevelUp, clampLevel, type UpgradeCheck } from '../core/progression.ts';
 import { rollRewards } from '../game/rewards.ts';
 import { getPack, openPacks, PACK_COUNTS } from '../game/packs.ts';
 import { CURRENCY_CODE, FIRST_PURCHASE_MULTIPLIER, getJadePackage, JADE_PACKAGES, newGiftCode, normalizeCode, isPlausibleCode, pickUrs, type Grant } from '../game/jadeStore.ts';
+import { activeMissions, dayKey, duelProgress, findActiveMission, loginStatus, progressItems, weekKey, type StatCounts } from '../game/missions.ts';
+import { chapterOf } from '../data/sets/index.ts';
 import { idMask, pvpSnapshotFor, unmaskIntent, type PvpSnapshot } from '../game/pvpView.ts';
 
 /**
@@ -49,7 +51,7 @@ export function newSeed(random: () => number = Math.random): number {
 }
 
 /** Vuelve a jugar el duelo. Devuelve si el jugador ganó de verdad. */
-export function verifyDuel(input: { seed: number; deck: readonly number[]; duelistId: string; intents: unknown; levels?: Record<string, number> | null }): Check<{ won: boolean; turns: number }> {
+export function verifyDuel(input: { seed: number; deck: readonly number[]; duelistId: string; intents: unknown; levels?: Record<string, number> | null }): Check<{ won: boolean; turns: number; progress: StatCounts }> {
   const duelist = getDuelist(input.duelistId);
   if (!duelist) return { ok: false, error: 'Ese duelista no existe' };
   if (!Array.isArray(input.intents)) return { ok: false, error: 'Faltan las jugadas' };
@@ -58,7 +60,8 @@ export function verifyDuel(input: { seed: number; deck: readonly number[]; dueli
   const result = replayDuel({ seed: input.seed, playerDeck: input.deck, opponent: duelist, intents: input.intents as Intent[], levels }, cardDb, fusionDb);
   if (!result.ok) return result;
   if (result.winner === null) return { ok: false, error: 'El duelo no terminó' };
-  return { ok: true, value: { won: result.winner === 0, turns: result.turns } };
+  const chapter2 = !!chapterOf(duelist.id) && result.winner === 0;
+  return { ok: true, value: { won: result.winner === 0, turns: result.turns, progress: duelProgress(result.stats, { pvp: false, chapter2 }) } };
 }
 
 export interface RewardPlan {
@@ -270,4 +273,20 @@ export function planGrant(grant: Grant, seed: number, collection: Record<string,
     gold: Math.max(0, Math.floor(grant.gold) || 0),
     cards: ids.map(id => ({ id, ...DUPLICATE_VALUE[rarityOf(cardDb.get(id))] })),
   };
+}
+
+// ---------------------------------------------------------------- misiones y entrada diaria
+
+export { activeMissions, dayKey, weekKey, findActiveMission, loginStatus };
+export type { StatCounts };
+
+/** Filas de progreso que suma algo que hiciste (solo misiones activas hoy/esta semana). */
+export function missionItems(counts: StatCounts, now?: number) {
+  return progressItems(counts, now);
+}
+
+/** Lo que suma a las misiones una partida multijugador terminada, para cada jugador [anfitrión, invitado]. */
+export function pvpProgress(m: PvpMatchData): [StatCounts, StatCounts] {
+  const st = pvpStats(setupOf(m), m.intents as Intent[], cardDb, fusionDb);
+  return [duelProgress(st?.[0], { pvp: true }), duelProgress(st?.[1], { pvp: true })];
 }

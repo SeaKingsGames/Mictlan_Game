@@ -646,3 +646,50 @@ button.thumb:hover .card { transform: translateY(-3px); }
   .update-btn__wrap { top: 8px; right: 8px; }
   .update-btn { width: 34px; height: 34px; font-size: 18px; }
 }
+
+/* =====================================================================
+   Misiones y entrada diaria
+   ===================================================================== */
+.menu-item { position: relative; }
+.menu-item__badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: #d94f30; color: #fff;
+  font: 800 13px/22px system-ui; text-align: center; box-shadow: 0 0 0 2px #1d1612, 0 0 12px rgb(217 79 48 / .7); animation: badge-pulse 1.6s ease-in-out infinite; }
+@keyframes badge-pulse { 50% { transform: scale(1.12); } }
+.mis .app-body { display: block; overflow: auto; }
+.mis__body { display: grid; gap: 12px; max-width: 980px; margin: 0 auto; }
+.mis .panel { overflow: visible; }
+.mis__guest { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.daily { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.daily__day { display: grid; gap: 4px; justify-items: center; align-content: center; min-height: 70px; padding: 6px 4px; border-radius: 10px; text-align: center;
+  background: #140f0c; border: 1px solid var(--line); }
+.daily__day small { color: var(--ink-soft); font: 700 11px system-ui; text-transform: uppercase; letter-spacing: .06em; }
+.daily__day b { font: 700 13px/1.25 system-ui; color: var(--ink); }
+.daily__day--done { background: #13251b; border-color: #3f8f5f; }
+.daily__day--done b { color: #6fd6a8; font-size: 20px; }
+.daily__day--today { border: 2px solid #f2c12e; background: linear-gradient(180deg, #3a2a12, #1d1510); box-shadow: 0 0 16px rgb(242 193 46 / .35); }
+.daily__day--big:not(.daily__day--done) { background: linear-gradient(180deg, #3a1d4a, #1d1218); border-color: #b06ad6; }
+.mis__rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mis__row { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; background: #140f0c; border: 1px solid var(--line); }
+.mis__row--done { border-color: #f2c12e; box-shadow: 0 0 12px rgb(242 193 46 / .2); }
+.mis__row--claimed { opacity: .6; }
+.mis__info { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.mis__info b { font-size: 15px; }
+.mis__info small { color: var(--ink-soft); }
+.mis__meter { height: 8px; }
+.mis__claim { flex: none; min-width: 120px; padding: 8px 12px; font-size: 14px; }
+.daily-pop .daily { width: min(640px, 100%); }
+@media (orientation: landscape) and (max-height: 540px) {
+  .daily__day { min-height: 50px; padding: 4px 2px; }
+  .daily__day b { font-size: 11px; }
+  .mis__row { padding: 6px 8px; }
+  .mis__info b { font-size: 13px; }
+  .mis__claim { min-width: 96px; padding: 6px 8px; font-size: 12px; }
+  .menu-item__badge { top: -5px; right: -5px; min-width: 18px; height: 18px; font-size: 11px; line-height: 18px; }
+}
+
+/* Ofertas de la tienda de jade */
+.jpack__offer { position: absolute; top: 12%; left: 0; padding: 2px 9px 2px 7px; border-radius: 0 8px 8px 0; background: linear-gradient(90deg, #d94f30, #f2a12e);
+  color: #fff; font: 800 11px system-ui; box-shadow: 0 1px 4px rgb(0 0 0 / .4); max-width: 80%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jpack--offer .jpack__art { box-shadow: 0 0 0 2px #f2a12e, 0 0 18px rgb(242 161 46 / .5), 0 6px 16px rgb(0 0 0 / .45); }
+.jpack__price s { color: var(--ink-soft); font-size: 13px; margin-right: 5px; }
+.jade__offer-line { list-style: none; margin-left: -18px; color: #f2a12e; }
+.daily-pop { --pack: #c98a1a; }

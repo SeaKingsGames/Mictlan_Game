@@ -35,6 +35,7 @@ export interface OrderRow {
   id: string; user_id: string; package_id: string; price: number; gift: boolean; status: string;
   mp_status: string | null; first_bonus: boolean; rewards: unknown; code: string | null;
   created_at: string; paid_at: string | null; mp_preference_id: string | null;
+  offer?: { bonus_pct?: number; extra_gold?: number } | null;
 }
 
 /** Crea el cobro en Mercado Pago (Checkout Pro). Devuelve la liga a donde mandar al jugador. */
@@ -96,12 +97,15 @@ export async function settlePayment(db: SupabaseClient, pay: MpPayment): Promise
   const { data: coll } = await db.from('collection').select('card_id, count').eq('user_id', order.user_id);
   const collection: Record<string, number> = {};
   for (const r of coll ?? []) collection[r.card_id] = r.count;
-  const plan = planGrant({ jade: pkg.jade, ur: pkg.ur, gold: pkg.gold }, newSeed(secureRandom), collection);
+  // Oferta con la que se creó el pedido: +% de jade y tickets oro extra
+  const bonusJade = Math.round(pkg.jade * Math.max(0, Number(order.offer?.bonus_pct ?? 0)) / 100);
+  const gold = pkg.gold + Math.max(0, Number(order.offer?.extra_gold ?? 0));
+  const plan = planGrant({ jade: pkg.jade, ur: pkg.ur, gold }, newSeed(secureRandom), collection);
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data, error } = await db.rpc('fulfill_jade_order', {
       p_order: order.id, p_payment: String(pay.id), p_mp_status: pay.status, p_amount: Number(pay.transaction_amount),
-      p_jade_first: pkg.jade * FIRST_PURCHASE_MULTIPLIER, p_jade: pkg.jade, p_gold: pkg.gold, p_ur: pkg.ur,
+      p_jade_first: pkg.jade * FIRST_PURCHASE_MULTIPLIER + bonusJade, p_jade: pkg.jade + bonusJade, p_gold: gold, p_ur: pkg.ur,
       p_cards: order.gift ? [] : plan.cards, p_code: order.gift ? newGiftCode(secureRandom) : null,
     });
     if (error && error.code === '23505' && order.gift) continue;   // código repetido (casi imposible): otro

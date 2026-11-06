@@ -1,0 +1,4 @@
+Retratos de los duelistas. Pon aquí una imagen cuadrada con el id del duelista como nombre:
+  tianguis, chalchiuhtlicue, jaguar, xiuhtecuhtli, mictlantecuhtli, ocelotl, cuauhtli, tlamacazqui
+Ej.: tianguis.webp (también sirve .jpg o .png). Tamaño recomendado: 512×512.
+Si falta la imagen, se ve el símbolo del duelista.

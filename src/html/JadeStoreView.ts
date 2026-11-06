@@ -4,7 +4,7 @@ import { CURRENCY } from '../game/config.ts';
 import { FIRST_PURCHASE_MULTIPLIER, formatMxn, getJadePackage, JADE_PACKAGES, normalizeCode, isPlausibleCode, type JadePackage } from '../game/jadeStore.ts';
 import { levelOf, type Profile } from '../game/profile.ts';
 import {
-  applyCards, applyWallet, checkOrder, forgetOrder, listOrders, redeemCode, rememberedOrder, rememberOrder, startCheckout, type JadeOrder, type Rewards,
+  applyCards, applyWallet, checkOrder, type StoreOffer, forgetOrder, listOrders, redeemCode, rememberedOrder, rememberOrder, startCheckout, type JadeOrder, type Rewards,
 } from '../net/payments.ts';
 import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
@@ -40,6 +40,11 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
   let selected: JadePackage = JADE_PACKAGES.find(p => p.ur > 0) ?? JADE_PACKAGES[0];
   let gift = false;
   let firstDone = new Set<string>();
+  let offers = new Map<string, StoreOffer>();
+  const offerOf = (p: JadePackage) => offers.get(p.id);
+  const priceOf = (p: JadePackage) => Number(offerOf(p)?.price ?? p.price);
+  const bonusOf = (p: JadePackage) => Math.round(p.jade * (offerOf(p)?.bonus_pct ?? 0) / 100);
+  const goldOf = (p: JadePackage) => p.gold + (offerOf(p)?.extra_gold ?? 0);
   let orders: JadeOrder[] = [];
   let busy = false;
   let alive = true;
@@ -51,15 +56,17 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
   // ------------------------------------------------------------ paquetes
   function renderGrid(): void {
     grid.replaceChildren(...JADE_PACKAGES.map(p => {
-      const b = h('button', { class: `jpack${p.id === selected.id ? ' jpack--on' : ''}`, style: `--c:${p.color}`, 'aria-pressed': p.id === selected.id },
+      const o = offerOf(p);
+      const b = h('button', { class: `jpack${p.id === selected.id ? ' jpack--on' : ''}${o ? ' jpack--offer' : ''}`, style: `--c:${p.color}`, 'aria-pressed': p.id === selected.id },
         h('div', { class: 'jpack__art' },
           h('span', { class: 'jpack__crimp', 'aria-hidden': 'true' }),
+          o ? h('span', { class: 'jpack__offer' }, o.label) : '',
           p.ur ? h('span', { class: 'jpack__ur' }, `${p.ur} UR`) : '',
           h('span', { class: 'jpack__glyph', 'aria-hidden': 'true' }, p.glyph),
           h('span', { class: 'jpack__name' }, p.name)),
-        h('b', { class: 'jpack__price' }, formatMxn(p.price).replace(' MXN', '')),
-        h('span', { class: 'jpack__jade' }, `${JADE} ${n(p.jade)}`, isFirst(p) ? h('em', { class: 'jpack__x2' }, `×${FIRST_PURCHASE_MULTIPLIER}`) : ''),
-        p.gold ? h('small', { class: 'jpack__gold' }, `+${p.gold} ${GOLD}`) : h('small', { class: 'jpack__gold' }, ' '));
+        h('b', { class: 'jpack__price' }, priceOf(p) !== p.price ? h('s', {}, formatMxn(p.price).replace(' MXN', '')) : '', formatMxn(priceOf(p)).replace(' MXN', '')),
+        h('span', { class: 'jpack__jade' }, `${JADE} ${n(p.jade + bonusOf(p))}`, isFirst(p) ? h('em', { class: 'jpack__x2' }, `×${FIRST_PURCHASE_MULTIPLIER}`) : ''),
+        goldOf(p) ? h('small', { class: 'jpack__gold' }, `+${goldOf(p)} ${GOLD}`) : h('small', { class: 'jpack__gold' }, ' '));
       b.addEventListener('click', () => { sfx('click'); selected = p; renderGrid(); renderCheckout(); });
       return b;
     }));
@@ -69,11 +76,14 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
   function renderCheckout(): void {
     const p = selected;
     const first = isFirst(p) && !gift;
-    const jade = p.jade * (first ? FIRST_PURCHASE_MULTIPLIER : 1);
+    const o = offerOf(p);
+    const jade = p.jade * (first ? FIRST_PURCHASE_MULTIPLIER : 1) + bonusOf(p);
+    const gold = goldOf(p);
     const items = [
-      h('li', {}, h('b', {}, `${JADE} ${n(jade)} jade`), first ? h('span', { class: 'jade__x2' }, ` doble por ser tu primera compra de este paquete`) : ''),
+      o ? h('li', { class: 'jade__offer-line' }, h('b', {}, `🔥 ${o.label}`), ` · termina ${new Date(o.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}`) : '',
+      h('li', {}, h('b', {}, `${JADE} ${n(jade)} jade`), first ? h('span', { class: 'jade__x2' }, ` doble por ser tu primera compra de este paquete`) : '', bonusOf(p) ? h('span', { class: 'jade__x2' }, ` (+${n(bonusOf(p))} de oferta)`) : ''),
       p.ur ? h('li', {}, h('b', {}, `${p.ur} carta${p.ur > 1 ? 's' : ''} UR`), ' al azar (primero las que no tienes)') : '',
-      p.gold ? h('li', {}, h('b', {}, `${p.gold} ${GOLD} ticket${p.gold > 1 ? 's' : ''} oro`), ` (${p.gold} giro${p.gold > 1 ? 's' : ''} de ruleta)`) : '',
+      gold ? h('li', {}, h('b', {}, `${gold} ${GOLD} ticket${gold > 1 ? 's' : ''} oro`), ` (${gold} giro${gold > 1 ? 's' : ''} de ruleta)`) : '',
     ];
     let action: Node;
     if (!cloud) {
@@ -85,7 +95,7 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
     } else {
       const giftBox = h('input', { type: 'checkbox', checked: gift });
       giftBox.addEventListener('change', () => { gift = giftBox.checked; renderCheckout(); });
-      const pay = h('button', { class: 'big-btn big-btn--main jade__pay', disabled: busy }, busy ? 'Abriendo Mercado Pago…' : `Pagar ${formatMxn(p.price)}`);
+      const pay = h('button', { class: 'big-btn big-btn--main jade__pay', disabled: busy }, busy ? 'Abriendo Mercado Pago…' : `Pagar ${formatMxn(priceOf(p))}`);
       pay.addEventListener('click', () => void buy());
       action = h('div', { class: 'jade__actions' },
         h('label', { class: 'jade__gift' }, giftBox, h('span', {}, '🎁 Es para regalar', h('small', {}, 'Recibes un código para dárselo a quien quieras (sin doble jade).'))),
@@ -96,7 +106,7 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
     checkout.replaceChildren(
       h('div', { class: 'jade__sel', style: `--c:${p.color}` },
         h('span', { class: 'jade__sel-glyph', 'aria-hidden': 'true' }, p.glyph),
-        h('div', {}, h('h2', { class: 'jade__sel-name' }, p.name), h('b', { class: 'jade__sel-price' }, formatMxn(p.price)))),
+        h('div', {}, h('h2', { class: 'jade__sel-name' }, p.name), h('b', { class: 'jade__sel-price' }, formatMxn(priceOf(p))))),
       h('ul', { class: 'jade__gets' }, ...items),
       h('p', { class: 'jade__msg', role: 'status' }),
       action);
@@ -274,6 +284,7 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
       const r = await listOrders();
       orders = r.orders;
       firstDone = new Set(r.firstDone);
+      offers = new Map((r.offers ?? []).map(o => [o.package_id, o]));
     } catch { /* sin conexión: se queda lo que había */ }
     if (!alive) return;
     renderGrid(); renderCheckout(); renderOrders();
