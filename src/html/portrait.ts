@@ -1,4 +1,5 @@
 import DUELIST_ARTS from 'virtual:duelist-arts';
+import { assetUrl } from './assets.ts';
 
 /**
  * Retrato de un duelista: la imagen public/duelists/<id>.webp|jpg|png si existe; si no, su símbolo.
@@ -11,7 +12,7 @@ export function fillPortrait(el: HTMLElement, duelist: { id: string; glyph: stri
   if (!src) { el.append(locked ? '🔒' : duelist.glyph); return el; }
   const img = document.createElement('img');
   img.className = 'portrait-img';
-  img.src = src;
+  img.src = assetUrl(src);
   img.alt = '';
   img.decoding = 'async';
   img.addEventListener('error', () => { el.classList.remove('has-portrait'); el.replaceChildren(duelist.glyph); });

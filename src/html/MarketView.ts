@@ -7,7 +7,7 @@ import { levelOf, owned, type Profile } from '../game/profile.ts';
 import { GOLD_BUY_COUNTS, GOLD_TICKET_PRICE, ROULETTE_PRIZES } from '../game/roulette.ts';
 import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
-import { appScreen, rarityChip, wallets } from './shell.ts';
+import { appScreen, rarityChip, wallets, storeNav } from './shell.ts';
 import { sfx } from './sound.ts';
 
 /** Monedas que devuelve el servidor (null = modo local, todo gratis). */
@@ -40,7 +40,7 @@ export function renderRoulette(root: HTMLElement, profile: Profile, go: (hash: s
   const bar = h('div', { class: 'app-bar__wallets' });
   const wheelBox = h('section', { class: 'roul__wheel panel' });
   const side = h('aside', { class: 'roul__side panel' });
-  root.replaceChildren(appScreen({ cls: 'roul', title: 'Ruleta de premios', back: () => go('#/'), right: bar }, wheelBox, side));
+  root.replaceChildren(appScreen({ cls: 'roul', title: 'Tienda', nav: storeNav('ruleta', go), back: () => go('#/'), right: bar }, wheelBox, side));
   const paintBar = () => bar.replaceChildren(...wallets(profile));
   paintBar();
   wheelBox.replaceChildren(h('p', { class: 'empty' }, 'Cargando…'));
@@ -165,7 +165,7 @@ export function renderCardMarket(root: HTMLElement, profile: Profile, go: (hash:
   const bar = h('div', { class: 'app-bar__wallets' });
   const head = h('div', { class: 'mkt__head panel' });
   const grid = h('section', { class: 'mkt__grid' });
-  root.replaceChildren(appScreen({ cls: 'mkt', title: 'Mercado de cartas', back: () => go('#/'), right: bar }, head, grid));
+  root.replaceChildren(appScreen({ cls: 'mkt', title: 'Tienda', nav: storeNav('mercado', go), back: () => go('#/'), right: bar }, head, grid));
   const paintBar = () => bar.replaceChildren(...wallets(profile));
   paintBar();
   grid.replaceChildren(h('p', { class: 'empty' }, 'Cargando…'));

@@ -8,7 +8,7 @@ import {
 } from '../net/payments.ts';
 import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
-import { appScreen, wallets } from './shell.ts';
+import { appScreen, wallets, storeNav } from './shell.ts';
 import { sfx } from './sound.ts';
 
 const JADE = CURRENCY.premium.icon;
@@ -31,7 +31,7 @@ export function renderJadeStore(root: HTMLElement, profile: Profile, go: (hash: 
   const checkout = h('div', { class: 'jade__checkout' });
   const redeemBox = h('div', { class: 'jade__redeem' });
   const ordersBox = h('div', { class: 'jade__orders' });
-  root.replaceChildren(appScreen({ cls: 'jade', title: 'Tienda de Jade', back: () => go('#/'), right: bar },
+  root.replaceChildren(appScreen({ cls: 'jade', title: 'Tienda', nav: storeNav('jade', go), back: () => go('#/'), right: bar },
     h('section', { class: 'jade__packs panel' },
       h('div', { class: 'panel__head' }, h('h2', { class: 'panel__title' }, `${JADE} Paquetes de jade`), h('span', { class: 'panel__count' }, 'Precios finales en pesos mexicanos')),
       grid),

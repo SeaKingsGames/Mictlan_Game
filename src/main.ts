@@ -4,10 +4,11 @@ import './html/card.css';
 import './html/duel.css';
 import './html/screens.css';
 import './html/app.css';
+import './html/menu.css';
 import { createRng } from './core/rng.ts';
 import { cardDb } from './data/index.ts';
 import { CURRENCY, GAME_TITLE } from './game/config.ts';
-import { duelists, getDuelist, isUnlocked, type Duelist } from './game/duelists.ts';
+import { duelists, getDuelist, isChapterBoss, isUnlocked, type Duelist } from './game/duelists.ts';
 import { addCards, ascendLocal, levelUpLocal, levelsForDeck, loadProfile, saveProfile, validatePlayerDeck, type Profile } from './game/profile.ts';
 import { rollRewards } from './game/rewards.ts';
 import { renderCampaign } from './html/CampaignView.ts';
@@ -32,6 +33,7 @@ import { renderPvpLobby } from './html/PvpLobbyView.ts';
 import { renderJadeStore } from './html/JadeStoreView.ts';
 import { takeReturnFromCheckout } from './net/payments.ts';
 import { setupInstall } from './html/install.ts';
+import { cleanupResources } from './html/resources.ts';
 import { versionLabel } from './version.ts';
 import { setTrack } from './html/sound.ts';
 import { getMatch, myUserId, remoteFor, waitForResult } from './net/pvp.ts';
@@ -65,6 +67,7 @@ import { cloudEnabled, supabase } from './net/supabase.ts';
  */
 const app = document.querySelector<HTMLDivElement>('#app')!;
 setupInstall();
+cleanupResources();
 // Versión en letras pequeñas arriba (en todas las pantallas)
 document.body.append(Object.assign(document.createElement('div'), { className: 'app-version', textContent: versionLabel() }));
 document.title = GAME_TITLE;
@@ -100,7 +103,7 @@ function route(): void {
   const [, page = '', arg = ''] = location.hash.split('/');
   leaveScreen?.(); leaveScreen = null;
   document.body.classList.toggle('in-duel', page === 'duelo' || (page === 'pvp' && !!arg));
-  setTrack(page === 'duelo' || (page === 'pvp' && !!arg) ? 'duel' : 'menu');
+  setTrack(page === 'duelo' ? (isChapterBoss(arg) ? 'boss' : 'duel') : page === 'pvp' && !!arg ? 'duel' : 'menu');
   window.scrollTo(0, 0);
 
   switch (page) {

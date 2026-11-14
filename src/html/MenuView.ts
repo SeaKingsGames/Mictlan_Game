@@ -1,135 +1,118 @@
 import { cardDb } from '../data/index.ts';
-import { CURRENCY, GAME_SUBTITLE, GAME_TITLE } from '../game/config.ts';
+import { GAME_TITLE } from '../game/config.ts';
 import { duelists } from '../game/duelists.ts';
-import { resetProfile, saveProfile, type Profile } from '../game/profile.ts';
+import type { Profile } from '../game/profile.ts';
+import { assetUrl } from './assets.ts';
 import { h } from './dom.ts';
-import { canPromptInstall, installHelpText, isInstalled, onInstallChange, promptInstall } from './install.ts';
-import { muteButton, musicButton, sfx } from './sound.ts';
-import { applyUpdate, checkForUpdate } from './update.ts';
-import { resetTutorial } from './tutorial.ts';
+import { openOptions, openProfile, type MenuActions } from './OptionsView.ts';
 import { wallets } from './shell.ts';
+import { sfx } from './sound.ts';
+import { applyUpdate, checkForUpdate } from './update.ts';
 
-/** Pantalla de inicio. */
-export interface MenuActions {
-  onReset: (p: Profile) => void;     // modo local: reiniciar progreso
-  onSignOut?: () => void;            // con cuenta: cerrar sesión
-  onUpgrade?: () => void;            // invitado: guardar con correo
-  onRename?: (name: string) => Promise<string>;   // con cuenta: cambiar nombre de jugador
-}
+export type { MenuActions } from './OptionsView.ts';
 
+interface Spot { hash: string; img: string; label: string; sub?: string }
+
+/**
+ * Pantalla de inicio: arriba tu perfil, monedas y Opciones (⚙); al centro la rueda del Quinto Sol con
+ * 7 medallones. La Campaña va en medio, más grande; tocar cualquier medallón entra directo.
+ */
 export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: string) => void, actions: MenuActions): void {
-  const acc = profile.account;
+  const next = duelists.find(d => !profile.defeated.includes(d.id));
+  const spots: Spot[] = [
+    { hash: '#/misiones', img: 'misiones', label: 'Misiones' },
+    { hash: '#/pvp', img: 'pvp', label: 'Multijugador' },
+    { hash: '#/libre', img: 'libre', label: 'Duelo libre' },
+    { hash: '#/campana', img: 'campana', label: 'Campaña', sub: next ? `Sigue: ${next.name}` : 'Venciste a todos' },
+    { hash: '#/mazo', img: 'mazo', label: 'Mi mazo' },
+    { hash: '#/tienda', img: 'tienda', label: 'Tienda' },
+    { hash: '#/biblioteca', img: 'biblioteca', label: 'Biblioteca' },
+  ];
+  const mid = Math.floor(spots.length / 2);
+
+  const wheel = h('nav', { class: 'sunwheel', 'aria-label': 'Menú principal' },
+    sunStone(),
+    ...spots.map((s, i) => {
+      const o = i - mid;
+      return h('button', {
+        class: `medal${o === 0 ? ' medal--main' : ''}`, type: 'button', 'data-hash': s.hash,
+        style: `--o:${o};--a:${Math.abs(o)}`,
+        onclick: () => { sfx('click'); go(s.hash); },
+      },
+        h('span', { class: 'medal__ring' }, h('img', { class: 'medal__img', src: assetUrl(`/menu/${s.img}.webp`), alt: '', decoding: 'async', draggable: 'false' })),
+        h('span', { class: 'medal__label' }, s.label),
+        s.sub ? h('small', { class: 'medal__sub' }, s.sub) : '');
+    }));
+  // Flechas del teclado: de un medallón al de junto
+  wheel.addEventListener('keydown', ev => {
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    const items = [...wheel.querySelectorAll<HTMLButtonElement>('.medal')];
+    const i = items.indexOf(document.activeElement as HTMLButtonElement);
+    const j = i < 0 ? mid : Math.min(items.length - 1, Math.max(0, i + (ev.key === 'ArrowRight' ? 1 : -1)));
+    items[j].focus();
+    ev.preventDefault();
+  });
+
   const distinct = Object.keys(profile.collection).filter(id => (profile.collection[id] ?? 0) > 0).length;
   const total = cardDb.all().length;
   const beaten = duelists.filter(d => profile.defeated.includes(d.id)).length;
-
+  const acc = profile.account;
   const name = acc ? (acc.username ?? (acc.guest ? 'Invitado' : 'Jugador')) : 'Jugador local';
-  const canRename = !!acc && !!actions.onRename;
-  const nameBox = h('div', { class: 'menu-profile__who' });
-  const paintName = () => nameBox.replaceChildren(
-    h('b', { class: 'menu-profile__name' }, acc?.username ?? name,
-      canRename ? h('button', { class: 'menu-profile__edit', title: 'Cambiar nombre', 'aria-label': 'Cambiar nombre', onclick: editName }, '✎') : ''),
-    h('small', {}, acc ? (acc.guest ? 'Cuenta de invitado' : 'Cuenta guardada') : 'Modo local (este navegador)'),
-    canRename && !acc?.username ? h('button', { class: 'menu-profile__setname', onclick: editName }, '✎ Ponte un nombre de jugador') : '');
-  function editName(): void {
-    sfx('click');
-    const input = h('input', { class: 'field menu-profile__input', value: acc?.username ?? '', placeholder: 'Nombre de jugador', maxlength: 20, autocomplete: 'nickname' });
-    const msg = h('small', { class: 'menu-profile__err', role: 'status' });
-    const save = h('button', { class: 'big-btn big-btn--main', type: 'submit' }, 'Guardar');
-    const form = h('form', { class: 'menu-profile__rename' }, input,
-      h('div', { class: 'menu-profile__rename-btns' }, save, h('button', { class: 'big-btn', type: 'button', onclick: paintName }, 'Cancelar')), msg);
-    form.addEventListener('submit', async ev => {
-      ev.preventDefault();
-      save.disabled = true; msg.textContent = 'Guardando…';
-      try {
-        const n = await actions.onRename!(input.value);
-        if (acc) acc.username = n;
-        sfx('coin');
-        paintName();
-      } catch (e) { sfx('error'); msg.textContent = e instanceof Error ? e.message : String(e); save.disabled = false; }
-    });
-    nameBox.replaceChildren(form);
-    input.focus(); input.select();
+
+  const who = h('button', {
+    class: 'hud-who', type: 'button', title: 'Ver perfil',
+    onclick: () => { sfx('click'); openProfile(profile, actions, () => renderMenu(root, profile, go, actions)); },
+  },
+    h('span', { class: 'hud-who__avatar', 'aria-hidden': 'true' }, '✺'),
+    h('span', { class: 'hud-who__text' },
+      h('b', {}, name),
+      h('small', {}, `${distinct}/${total} cartas · ${beaten}/${duelists.length} rivales`)));
+
+  const hud = h('header', { class: 'hud' }, who,
+    h('div', { class: 'hud__right' },
+      h('div', { class: 'hud__wallets' }, ...wallets(profile)),
+      updateButton(),
+      h('button', {
+        class: 'hud-btn', type: 'button', title: 'Opciones', 'aria-label': 'Opciones',
+        onclick: () => { sfx('click'); openOptions(profile, go, actions); },
+      }, '⚙')));
+
+  root.replaceChildren(h('main', { class: 'menu3' }, hud, h('h1', { class: 'menu3__title' }, GAME_TITLE), wheel));
+}
+
+/** Piedra del sol detrás de los medallones (gira muy lento). */
+function sunStone(): SVGSVGElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>) => {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+    return e;
+  };
+  const svg = el('svg', { class: 'sunwheel__stone', viewBox: '-100 -100 200 200', 'aria-hidden': 'true' });
+  svg.append(
+    el('circle', { r: 98, class: 'stone-line' }),
+    el('circle', { r: 92, class: 'stone-dots' }),
+    el('circle', { r: 86, class: 'stone-line' }),
+    el('circle', { r: 66, class: 'stone-line' }));
+  // 20 casillas (los 20 signos de los días) entre los anillos
+  for (let i = 0; i < 20; i++) {
+    const g = el('g', { transform: `rotate(${i * 18})` });
+    g.append(el('rect', { x: -6, y: -84, width: 12, height: 14, rx: 2, class: 'stone-cell' }));
+    svg.append(g);
   }
-  paintName();
-  const profileCard = h('section', { class: 'menu-profile panel' },
-    h('div', { class: 'menu-profile__top' },
-      h('span', { class: 'menu-profile__avatar', 'aria-hidden': 'true' }, '✺'),
-      nameBox),
-    acc ? h('div', { class: 'menu-profile__wallets' }, ...wallets(profile)) : '',
-    h('dl', { class: 'menu-profile__stats' },
-      h('dt', {}, 'Victorias'), h('dd', { class: 'win' }, String(profile.wins)),
-      h('dt', {}, 'Derrotas'), h('dd', { class: 'loss' }, String(profile.losses)),
-      h('dt', {}, 'Cartas'), h('dd', {}, `${distinct}/${total}`),
-      h('dt', {}, 'Rivales vencidos'), h('dd', {}, `${beaten}/${duelists.length}`)),
-    h('div', { class: 'meter', title: 'Colección' }, h('span', { style: `width:${(distinct / total) * 100}%` })),
-    h('div', { class: 'menu-profile__links' },
-      acc?.guest && actions.onUpgrade ? h('button', { class: 'link-btn', onclick: actions.onUpgrade }, 'Guardar mi cuenta') : '',
-      actions.onSignOut ? h('button', { class: 'link-btn', onclick: () => {
-        if (acc?.guest && !confirm('Eres invitado: si cierras sesión perderás este progreso. ¿Cerrar sesión?')) return;
-        actions.onSignOut!();
-      } }, 'Cerrar sesión') : ''));
-
-  const item = (label: string, hash: string, sub: string, main = false) =>
-    h('button', { class: `menu-item${main ? ' menu-item--main' : ''}`, 'data-hash': hash, onclick: () => { sfx('click'); go(hash); } },
-      h('span', { class: 'menu-item__label' }, label), h('small', {}, sub));
-
-  root.replaceChildren(h('main', { class: 'menu2' },
-    h('div', { class: 'menu2__sky', 'aria-hidden': 'true' }, h('span', { class: 'menu2__sun' }, '✺')),
-    updateButton(),
-    profileCard,
-    h('div', { class: 'menu2__center' },
-      h('h1', { class: 'menu__title' }, GAME_TITLE),
-      h('p', { class: 'menu__subtitle' }, GAME_SUBTITLE),
-      h('nav', { class: 'menu2__buttons' },
-        item('Campaña', '#/campana', 'Vence a los duelistas en orden', true),
-        item('Misiones', '#/misiones', '☀ Recompensa diaria y misiones'),
-        item('Duelo libre', '#/libre', 'Reta a quien ya desbloqueaste'),
-        item('⚔ Contra otro jugador', '#/pvp', 'Sala con código'),
-        item('Tienda de sobres', '#/tienda', `${CURRENCY.premium.icon} Sobres temáticos de 5 cartas`),
-        item('Tienda de Jade', '#/jade', `${CURRENCY.premium.icon} Paquetes de jade, UR y códigos`),
-        item('Mercado de cartas', '#/mercado', `${CURRENCY.common.icon} 6 cartas al azar cada día`),
-        item('Ruleta de premios', '#/ruleta', `${CURRENCY.gold.icon} Gira con tickets oro`),
-        item('Editor de mazo', '#/mazo', 'Arma tu mazo de 40'),
-        item('Biblioteca', '#/biblioteca', 'Todas las cartas del juego')),
-      h('div', { class: 'menu__install' }, installButton(),
-        h('button', { class: 'link-btn', onclick: () => { resetTutorial(); sfx('click'); go('#/campana'); } }, '❓ Cómo jugar'),
-        muteButton(), musicButton()),
-      // Editores: solo en tu compu (npm run dev), no en la página pública
-      !import.meta.env.DEV ? '' : h('details', { class: 'menu__tools' },
-        h('summary', {}, 'Herramientas'),
-        h('div', { class: 'menu__tool-links' },
-          h('a', { href: '/editor-cartas.html' }, 'Editor de cartas'),
-          h('a', { href: '/fusiones.html' }, 'Editor de fusiones'),
-          h('a', { href: '/cartas.html' }, 'Galería'),
-          acc ? '' : h('button', { class: 'link-btn', onclick: () => {
-            if (!confirm('¿Borrar todo tu progreso (colección, mazo y campaña)?')) return;
-            const fresh = resetProfile();
-            saveProfile(fresh);
-            actions.onReset(fresh);
-          } }, 'Reiniciar progreso'),
-        ))),
-  ));
+  // 8 rayos del sol
+  for (let i = 0; i < 8; i++) {
+    const g = el('g', { transform: `rotate(${i * 45 + 22.5})` });
+    g.append(el('path', { d: 'M -7 -66 L 0 -98 L 7 -66 Z', class: 'stone-ray' }));
+    svg.append(g);
+  }
+  return svg;
 }
 
-/** "Instalar juego": solo si no lo estás jugando ya como app. */
-function installButton(): HTMLElement | string {
-  if (isInstalled()) return '';
-  const help = h('p', { class: 'install-help', role: 'status' });
-  const btn = h('button', { class: 'link-btn' }, '📲 Instalar juego');
-  btn.addEventListener('click', async () => {
-    if (canPromptInstall()) { if (await promptInstall()) wrap.remove(); }
-    else help.textContent = installHelpText();
-  });
-  const wrap = h('div', { class: 'install-wrap' }, btn, help);
-  const off = onInstallChange(() => { if (isInstalled()) { wrap.remove(); off(); } });
-  return wrap;
-}
-
-/** Botón redondo (esquina de arriba): busca una versión nueva y, si la hay, actualiza. */
+/** Botón redondo ⟳: busca una versión nueva y, si la hay, actualiza. */
 function updateButton(): HTMLElement {
   const tip = h('span', { class: 'update-btn__tip', role: 'status' });
-  const btn = h('button', { class: 'update-btn', title: 'Buscar actualización', 'aria-label': 'Buscar actualización' }, '⟳');
+  const btn = h('button', { class: 'hud-btn update-btn', type: 'button', title: 'Buscar actualización', 'aria-label': 'Buscar actualización' }, '⟳');
   let busy = false;
   const say = (text: string, ms = 2600) => {
     tip.textContent = text;
@@ -148,13 +131,13 @@ function updateButton(): HTMLElement {
     busy = false;
     say(state === 'same' ? '✓ Ya tienes la última versión' : 'Sin conexión: intenta más tarde');
   });
-  return h('div', { class: 'update-btn__wrap' }, btn, tip);
+  return h('div', { class: 'hud-update' }, tip, btn);
 }
 
-/** Puntito con número sobre un botón del menú (cosas por cobrar). */
+/** Puntito con número sobre un medallón del menú (cosas por cobrar). */
 export function setMenuBadge(hash: string, n: number): void {
-  const btn = document.querySelector<HTMLElement>(`.menu-item[data-hash="${hash}"]`);
-  if (!btn) return;
-  btn.querySelector('.menu-item__badge')?.remove();
-  if (n > 0) btn.append(h('span', { class: 'menu-item__badge' }, String(n)));
+  const ring = document.querySelector<HTMLElement>(`.medal[data-hash="${hash}"] .medal__ring`);
+  if (!ring) return;
+  ring.querySelector('.medal__badge')?.remove();
+  if (n > 0) ring.append(h('span', { class: 'medal__badge', 'aria-label': `${n} por cobrar` }, String(n)));
 }

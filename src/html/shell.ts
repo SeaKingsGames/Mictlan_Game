@@ -17,15 +17,36 @@ export interface ScreenOptions {
   backLabel?: string;
   profile?: Profile;
   right?: Node | string;
+  /** Pestañas en lugar del título (ej. la Tienda: Sobres · Mercado · Ruleta · Jade). */
+  nav?: Node;
 }
 
 export function appScreen(o: ScreenOptions, ...body: (Node | string)[]): HTMLElement {
   return h('main', { class: `app-screen ${o.cls}` },
     h('header', { class: 'app-bar' },
       h('button', { class: 'app-bar__back', onclick: () => { sfx('click'); o.back(); }, 'aria-label': o.backLabel ?? 'Volver' }, '←'),
-      h('h1', { class: 'app-bar__title' }, o.title),
+      h('h1', { class: `app-bar__title${o.nav ? ' sr-only' : ''}` }, o.title),
+      o.nav ?? '',
       h('div', { class: 'app-bar__right' }, o.right ?? '', ...(o.profile ? wallets(o.profile) : []))),
     h('div', { class: 'app-body' }, ...body));
+}
+
+export type StoreTab = 'sobres' | 'mercado' | 'ruleta' | 'jade';
+const STORE_TABS: [StoreTab, string, string, string][] = [
+  ['sobres', '#/tienda', '✦', 'Sobres'],
+  ['mercado', '#/mercado', CURRENCY.common.icon, 'Mercado'],
+  ['ruleta', '#/ruleta', CURRENCY.gold.icon, 'Ruleta'],
+  ['jade', '#/jade', CURRENCY.premium.icon, 'Jade'],
+];
+
+/** Pestañas de la Tienda (cada una es su propia pantalla: #/tienda, #/mercado, #/ruleta, #/jade). */
+export function storeNav(current: StoreTab, go: (hash: string) => void): HTMLElement {
+  return h('nav', { class: 'store-tabs', 'aria-label': 'Tienda' }, ...STORE_TABS.map(([id, hash, icon, label]) =>
+    h('button', {
+      class: `store-tab store-tab--${id}${id === current ? ' store-tab--on' : ''}`, type: 'button',
+      'aria-current': id === current ? 'page' : undefined,
+      onclick: () => { if (id !== current) { sfx('click'); go(hash); } },
+    }, h('span', { class: 'store-tab__icon', 'aria-hidden': 'true' }, icon), h('span', { class: 'store-tab__label' }, label))));
 }
 
 /** Número corto para monedas: 98,034 · 999.9 k · 1.3 M (el número completo sale al tocar/pasar el mouse). */

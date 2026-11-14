@@ -1,4 +1,5 @@
 import CARD_ARTS from 'virtual:card-arts';
+import { assetUrl } from './assets.ts';
 import { CardInstance } from '../core/CardInstance.ts';
 import { clampLevel, levelBonus, MAX_LEVEL } from '../core/progression.ts';
 import { rarityOf, type CardAttribute, type CardDef } from '../data/types.ts';
@@ -61,7 +62,7 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
     if (backArt !== false) {
       const img = document.createElement('img');
       img.className = 'card__back-art';
-      img.src = BACK_ART;
+      img.src = assetUrl(BACK_ART);
       img.alt = '';
       img.decoding = 'async';
       img.addEventListener('load', () => { backArt = true; el.classList.add('card--back-art'); });
@@ -98,7 +99,8 @@ export function createCardElement(source: CardDef | CardInstance, opts: CardElem
   // textContent (no innerHTML) para los datos: así un nombre raro nunca rompe la página.
   el.querySelector('.card__name')!.textContent = name;
   el.querySelector('.card__glyph')!.textContent = name.charAt(0);
-  const art = def.art ?? CARD_ARTS[def.id];
+  const raw = def.art ?? CARD_ARTS[def.id];
+  const art = raw ? assetUrl(raw) : raw;
   if (art) {
     // Arte de la carta: "art" en cards.json, o un archivo public/cards/<número>.webp|jpg|png
     const img = document.createElement('img');
