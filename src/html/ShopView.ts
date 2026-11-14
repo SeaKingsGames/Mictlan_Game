@@ -5,7 +5,7 @@ import { packOdds, packPool, packs, PACK_COUNTS, PACK_PITY, PACK_SIZE, type Pack
 import { levelOf, owned, type Profile } from '../game/profile.ts';
 import { createCardElement } from './cardElement.ts';
 import { h } from './dom.ts';
-import { appScreen, rarityChip, thumb, wallets } from './shell.ts';
+import { appScreen, rarityChip, thumb, wallets, storeNav } from './shell.ts';
 import { sfx } from './sound.ts';
 
 export interface PackCard { id: number; converted: boolean; cacao?: number; jade?: number }
@@ -40,7 +40,7 @@ export function renderShop(root: HTMLElement, profile: Profile, go: (hash: strin
   const contents = h('section', { class: 'shop__contents panel' });
   const bar = h('div', { class: 'app-bar__wallets' });
 
-  const screen = appScreen({ cls: 'shop', title: 'Tienda de sobres', back: () => go('#/'), right: bar }, list, stage, contents);
+  const screen = appScreen({ cls: 'shop', title: 'Tienda', nav: storeNav('sobres', go), back: () => go('#/'), right: bar }, list, stage, contents);
   root.replaceChildren(screen);
 
   const paintWallets = () => bar.replaceChildren(...wallets(profile));

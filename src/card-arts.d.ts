@@ -7,3 +7,8 @@ declare module 'virtual:duelist-arts' {
   const arts: Record<string, string>;
   export default arts;
 }
+declare module 'virtual:asset-versions' {
+  /** "/cards/12.webp" → [huella, bytes] */
+  const versions: Record<string, [string, number]>;
+  export default versions;
+}
