@@ -1,8 +1,12 @@
+import { assetUrl } from './assets.ts';
+
 /**
  * Efectos de sonido y música.
  *  - Los sonidos de public/sounds/ (los tuyos) suenan cuando ya cargaron; mientras tanto, o si falta un
  *    archivo, suena el efecto generado con Web Audio. Para cambiar un sonido, reemplaza el .mp3 con el mismo nombre.
- *  - Música: public/sounds/musica-menu.mp3 (menús) y musica-duelo.mp3 (duelos), en bucle.
+ *  - Música: public/sounds/musica-menu.mp3 (menús), musica-duelo.mp3 (duelos) y musica-jefe.mp3
+ *    (contra el último duelista de cada capítulo), en bucle.
+ *  - Volumen de efectos y de música (0 a 1), elegido en Opciones. Se recuerda en este navegador.
  *  - setMuted(true) apaga todo; la música tiene además su propio botón. Se recuerda en este navegador.
  */
 export type Sfx =
@@ -25,7 +29,7 @@ function preload(): void {
   for (const name of new Set(Object.values(FILES))) {
     if (buffers.has(name)) continue;
     buffers.set(name, 'loading');
-    fetch(`/sounds/${name}.mp3`)
+    fetch(assetUrl(`/sounds/${name}.mp3`))
       .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('sin archivo'))))
       .then(data => a.decodeAudioData(data))
       .then(buf => buffers.set(name, buf))
@@ -49,6 +53,34 @@ function playFile(name: Sfx): boolean {
 }
 
 const KEY = 'cartas.sonido';
+const SFX_VOL_KEY = 'cartas.volumen.efectos';
+const MUSIC_VOL_KEY = 'cartas.volumen.musica';
+function readVolume(key: string): number {
+  try { const v = Number(localStorage.getItem(key)); return localStorage.getItem(key) === null || !Number.isFinite(v) ? 1 : Math.min(1, Math.max(0, v)); } catch { return 1; }
+}
+let sfxVolume = readVolume(SFX_VOL_KEY);
+let musicVolume = readVolume(MUSIC_VOL_KEY);
+const volumeListeners = new Set<() => void>();
+export const getSfxVolume = (): number => sfxVolume;
+export const getMusicVolume = (): number => musicVolume;
+/** Volumen de los efectos, de 0 a 1. */
+export function setSfxVolume(v: number): void {
+  sfxVolume = Math.min(1, Math.max(0, v));
+  try { localStorage.setItem(SFX_VOL_KEY, String(sfxVolume)); } catch { /* sin almacenamiento */ }
+  if (master) master.gain.value = muted ? 0 : 0.5 * sfxVolume;
+  volumeListeners.forEach(fn => fn());
+}
+/** Volumen de la música, de 0 a 1. */
+export function setMusicVolume(v: number): void {
+  musicVolume = Math.min(1, Math.max(0, v));
+  try { localStorage.setItem(MUSIC_VOL_KEY, String(musicVolume)); } catch { /* sin almacenamiento */ }
+  if (player) player.volume = MUSIC_VOLUME * musicVolume;
+  volumeListeners.forEach(fn => fn());
+}
+export function onVolumeChange(fn: () => void): () => void {
+  volumeListeners.add(fn);
+  return () => volumeListeners.delete(fn);
+}
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = readMuted();
@@ -63,7 +95,7 @@ export const isMuted = (): boolean => muted;
 export function setMuted(m: boolean): void {
   muted = m;
   try { localStorage.setItem(KEY, m ? 'off' : 'on'); } catch { /* sin almacenamiento */ }
-  if (master) master.gain.value = m ? 0 : 0.5;
+  if (master) master.gain.value = m ? 0 : 0.5 * sfxVolume;
   listeners.forEach(fn => fn(m));
   syncMusic();
 }
@@ -81,7 +113,7 @@ function audio(): AudioContext | null {
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = muted ? 0 : 0.5;
+    master.gain.value = muted ? 0 : 0.5 * sfxVolume;
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') void ctx.resume();
@@ -195,7 +227,8 @@ export function muteButton(className = 'link-btn'): HTMLButtonElement {
 
 // ---------------------------------------------------------------- música
 
-export type Track = 'menu' | 'duel';
+export type Track = 'menu' | 'duel' | 'boss';
+const TRACK_FILE: Record<Track, string> = { menu: 'musica-menu', duel: 'musica-duelo', boss: 'musica-jefe' };
 const MUSIC_KEY = 'cartas.musica';
 const MUSIC_VOLUME = 0.35;
 let musicOn = readMusic();
@@ -227,9 +260,9 @@ function syncMusic(): void {
   const should = musicOn && !muted && wanted && !document.hidden ? wanted : null;
   if (!should) { player?.pause(); playing = null; return; }
   if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; }
-  player.volume = MUSIC_VOLUME;
+  player.volume = MUSIC_VOLUME * musicVolume;
   if (playing !== should) {
-    player.src = `/sounds/musica-${should === 'menu' ? 'menu' : 'duelo'}.mp3`;
+    player.src = assetUrl(`/sounds/${TRACK_FILE[should]}.mp3`);
     playing = should;
   }
   void player.play().catch(() => { playing = null; /* el navegador espera a que toques algo */ });

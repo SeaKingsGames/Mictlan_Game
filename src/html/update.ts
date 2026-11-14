@@ -1,4 +1,5 @@
 import { APP_BUILD_ID } from '../version.ts';
+import { RESOURCE_CACHE } from './resources.ts';
 
 /**
  * Actualizaciones del juego (sobre todo en la app de Android, que guarda la versión para abrir rápido):
@@ -20,7 +21,8 @@ export async function checkForUpdate(): Promise<UpdateState> {
 
 export async function applyUpdate(): Promise<void> {
   try {
-    if ('caches' in window) for (const k of await caches.keys()) await caches.delete(k);
+    // Lo descargado en Opciones (arte, música) se queda: cada archivo trae su huella y lo viejo se limpia solo.
+    if ('caches' in window) for (const k of await caches.keys()) if (k !== RESOURCE_CACHE) await caches.delete(k);
     const reg = await navigator.serviceWorker?.getRegistration();
     await reg?.update();
   } catch { /* igual se recarga */ }

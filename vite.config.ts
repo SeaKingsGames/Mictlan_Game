@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 
@@ -40,6 +41,57 @@ function artFolder(name: string, folder: string, key: RegExp): Plugin {
   };
 }
 
+/**
+ * Recursos del juego con su huella (md5 corto) y tamaño: virtual:asset-versions.
+ *   - Cartas y retratos (la misma elección que arriba: .webp antes que .png/.jpg), imágenes del menú y sonidos.
+ *   - El juego pide cada archivo como "/cards/12.webp?v=<huella>": si cambias una imagen, cambia la huella
+ *     y todos bajan la nueva (la vieja se borra sola de lo guardado).
+ *   - "Descargar recursos" (Opciones) baja justo esta lista.
+ */
+function assetVersions(): Plugin {
+  const id = 'virtual:asset-versions';
+  const pub = new URL('./public/', import.meta.url);
+  const order = ['webp', 'png', 'jpg', 'jpeg'];
+  const files = (folder: string) => (existsSync(new URL(`${folder}/`, pub)) ? readdirSync(new URL(`${folder}/`, pub)) : []);
+  const scan = () => {
+    const out: Record<string, [string, number]> = {};
+    const add = (folder: string, f: string) => {
+      const buf = readFileSync(new URL(`${folder}/${f}`, pub));
+      out[`/${folder}/${f}`] = [createHash('md5').update(buf).digest('hex').slice(0, 8), buf.length];
+    };
+    for (const folder of ['cards', 'duelists']) {
+      const best: Record<string, string> = {};
+      for (const f of files(folder)) {
+        const m = /^(.+)\.(webp|png|jpe?g)$/i.exec(f);
+        if (!m) continue;
+        const prev = best[m[1]];
+        if (!prev || order.indexOf(m[2].toLowerCase()) < order.indexOf(prev.split('.').pop()!.toLowerCase())) best[m[1]] = f;
+      }
+      for (const f of Object.values(best)) add(folder, f);
+    }
+    for (const f of files('menu')) if (/\.(webp|png|jpe?g)$/i.test(f)) add('menu', f);
+    for (const f of files('sounds')) if (/\.mp3$/i.test(f)) add('sounds', f);
+    return out;
+  };
+  const watched = /[\\/]public[\\/](cards|duelists|menu|sounds)[\\/]/;
+  return {
+    name: 'asset-versions',
+    resolveId: x => (x === id ? '\0' + id : null),
+    load: x => (x === '\0' + id ? `export default ${JSON.stringify(scan())};` : null),
+    configureServer(server) {
+      const reload = (file: string) => {
+        if (!watched.test(file)) return;
+        const mod = server.moduleGraph.getModuleById('\0' + id);
+        if (mod) server.moduleGraph.invalidateModule(mod);
+        server.ws.send({ type: 'full-reload' });
+      };
+      server.watcher.on('add', reload);
+      server.watcher.on('unlink', reload);
+      server.watcher.on('change', reload);
+    },
+  };
+}
+
 // Versión que se ve en el juego: la de package.json (súbela tú al sacar una versión: 1.0.0 → 1.1.0)
 // + el commit de GitHub que construyó Vercel, para saber exactamente qué está publicado.
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
@@ -61,7 +113,7 @@ function versionFile(): Plugin {
 
 // Páginas: el juego (index.html), la galería de cartas (cartas.html) el editor de fusiones (fusiones.html) y el de cartas (editor-cartas.html).
 export default defineConfig({
-  plugins: [versionFile(), artFolder('card-arts', 'cards', /^\d+$/), artFolder('duelist-arts', 'duelists', /^[a-z0-9-]+$/)],
+  plugins: [versionFile(), artFolder('card-arts', 'cards', /^\d+$/), artFolder('duelist-arts', 'duelists', /^[a-z0-9-]+$/), assetVersions()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_BUILD__: JSON.stringify(commit ? `${built} · ${commit}` : built),

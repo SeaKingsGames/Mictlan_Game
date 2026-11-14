@@ -202,19 +202,87 @@ var duelists_default = [
       },
       {
         card: 21,
-        weight: 3
+        weight: 6
       },
       {
         card: 3,
-        weight: 1
-      },
-      {
-        card: 78,
         weight: 3
       },
       {
+        card: 78,
+        weight: 6
+      },
+      {
         card: 94,
-        weight: 2
+        weight: 6
+      },
+      {
+        card: 10,
+        weight: 6
+      },
+      {
+        card: 12,
+        weight: 6
+      },
+      {
+        card: 18,
+        weight: 6
+      },
+      {
+        card: 26,
+        weight: 6
+      },
+      {
+        card: 28,
+        weight: 6
+      },
+      {
+        card: 29,
+        weight: 6
+      },
+      {
+        card: 31,
+        weight: 6
+      },
+      {
+        card: 33,
+        weight: 6
+      },
+      {
+        card: 35,
+        weight: 6
+      },
+      {
+        card: 66,
+        weight: 6
+      },
+      {
+        card: 70,
+        weight: 6
+      },
+      {
+        card: 15,
+        weight: 3
+      },
+      {
+        card: 16,
+        weight: 3
+      },
+      {
+        card: 22,
+        weight: 3
+      },
+      {
+        card: 40,
+        weight: 3
+      },
+      {
+        card: 80,
+        weight: 3
+      },
+      {
+        card: 53,
+        weight: 1
       }
     ]
   },
@@ -275,7 +343,7 @@ var duelists_default = [
       },
       {
         card: 13,
-        weight: 6
+        weight: 3
       },
       {
         card: 18,
@@ -283,27 +351,95 @@ var duelists_default = [
       },
       {
         card: 24,
-        weight: 6
-      },
-      {
-        card: 14,
         weight: 3
       },
       {
-        card: 6,
+        card: 14,
         weight: 1
       },
       {
         card: 77,
-        weight: 2
+        weight: 3
       },
       {
         card: 87,
-        weight: 2
+        weight: 3
       },
       {
         card: 89,
-        weight: 2
+        weight: 1
+      },
+      {
+        card: 1,
+        weight: 6
+      },
+      {
+        card: 9,
+        weight: 6
+      },
+      {
+        card: 11,
+        weight: 6
+      },
+      {
+        card: 12,
+        weight: 6
+      },
+      {
+        card: 21,
+        weight: 6
+      },
+      {
+        card: 27,
+        weight: 6
+      },
+      {
+        card: 30,
+        weight: 6
+      },
+      {
+        card: 32,
+        weight: 6
+      },
+      {
+        card: 44,
+        weight: 6
+      },
+      {
+        card: 47,
+        weight: 6
+      },
+      {
+        card: 15,
+        weight: 3
+      },
+      {
+        card: 16,
+        weight: 3
+      },
+      {
+        card: 20,
+        weight: 3
+      },
+      {
+        card: 25,
+        weight: 3
+      },
+      {
+        card: 45,
+        weight: 3
+      },
+      {
+        card: 73,
+        weight: 3
+      },
+      {
+        card: 52,
+        weight: 1
+      },
+      {
+        card: 56,
+        weight: 1
       }
     ]
   },
@@ -368,11 +504,11 @@ var duelists_default = [
       },
       {
         card: 22,
-        weight: 6
+        weight: 3
       },
       {
         card: 23,
-        weight: 6
+        weight: 1
       },
       {
         card: 3,
@@ -388,15 +524,71 @@ var duelists_default = [
       },
       {
         card: 76,
-        weight: 2
+        weight: 1
       },
       {
         card: 90,
-        weight: 2
+        weight: 1
       },
       {
         card: 95,
-        weight: 2
+        weight: 3
+      },
+      {
+        card: 9,
+        weight: 6
+      },
+      {
+        card: 11,
+        weight: 6
+      },
+      {
+        card: 21,
+        weight: 6
+      },
+      {
+        card: 38,
+        weight: 6
+      },
+      {
+        card: 39,
+        weight: 6
+      },
+      {
+        card: 13,
+        weight: 3
+      },
+      {
+        card: 16,
+        weight: 3
+      },
+      {
+        card: 19,
+        weight: 3
+      },
+      {
+        card: 20,
+        weight: 3
+      },
+      {
+        card: 43,
+        weight: 3
+      },
+      {
+        card: 46,
+        weight: 3
+      },
+      {
+        card: 79,
+        weight: 3
+      },
+      {
+        card: 54,
+        weight: 1
+      },
+      {
+        card: 71,
+        weight: 1
       }
     ]
   },
@@ -457,11 +649,11 @@ var duelists_default = [
       },
       {
         card: 20,
-        weight: 6
+        weight: 3
       },
       {
         card: 25,
-        weight: 6
+        weight: 3
       },
       {
         card: 15,
@@ -473,14 +665,94 @@ var duelists_default = [
       },
       {
         card: 91,
-        weight: 2
+        weight: 3
       },
       {
         card: 84,
-        weight: 1
+        weight: 3
       },
       {
         card: 92,
+        weight: 1
+      },
+      {
+        card: 2,
+        weight: 6
+      },
+      {
+        card: 9,
+        weight: 6
+      },
+      {
+        card: 10,
+        weight: 6
+      },
+      {
+        card: 18,
+        weight: 6
+      },
+      {
+        card: 36,
+        weight: 6
+      },
+      {
+        card: 37,
+        weight: 6
+      },
+      {
+        card: 4,
+        weight: 3
+      },
+      {
+        card: 13,
+        weight: 3
+      },
+      {
+        card: 19,
+        weight: 3
+      },
+      {
+        card: 22,
+        weight: 3
+      },
+      {
+        card: 42,
+        weight: 3
+      },
+      {
+        card: 48,
+        weight: 3
+      },
+      {
+        card: 67,
+        weight: 3
+      },
+      {
+        card: 72,
+        weight: 3
+      },
+      {
+        card: 81,
+        weight: 3
+      },
+      {
+        card: 23,
+        weight: 1
+      },
+      {
+        card: 50,
+        weight: 1
+      },
+      {
+        card: 51,
+        weight: 1
+      },
+      {
+        card: 68,
+        weight: 1
+      },
+      {
+        card: 69,
         weight: 1
       }
     ]
@@ -534,34 +806,26 @@ var duelists_default = [
       21,
       21
     ],
-    signature: 7,
+    signature: 55,
     rewards: [
       {
         card: 16,
-        weight: 6
+        weight: 3
       },
       {
         card: 25,
-        weight: 6
+        weight: 3
       },
       {
         card: 24,
-        weight: 6
+        weight: 3
       },
       {
         card: 17,
-        weight: 3
-      },
-      {
-        card: 14,
-        weight: 3
-      },
-      {
-        card: 7,
         weight: 1
       },
       {
-        card: 8,
+        card: 14,
         weight: 1
       },
       {
@@ -570,7 +834,7 @@ var duelists_default = [
       },
       {
         card: 93,
-        weight: 2
+        weight: 3
       },
       {
         card: 85,
@@ -585,7 +849,67 @@ var duelists_default = [
         weight: 1
       },
       {
-        card: 83,
+        card: 1,
+        weight: 6
+      },
+      {
+        card: 2,
+        weight: 6
+      },
+      {
+        card: 10,
+        weight: 6
+      },
+      {
+        card: 11,
+        weight: 6
+      },
+      {
+        card: 21,
+        weight: 6
+      },
+      {
+        card: 34,
+        weight: 6
+      },
+      {
+        card: 13,
+        weight: 3
+      },
+      {
+        card: 20,
+        weight: 3
+      },
+      {
+        card: 41,
+        weight: 3
+      },
+      {
+        card: 74,
+        weight: 3
+      },
+      {
+        card: 23,
+        weight: 1
+      },
+      {
+        card: 49,
+        weight: 1
+      },
+      {
+        card: 55,
+        weight: 1
+      },
+      {
+        card: 57,
+        weight: 1
+      },
+      {
+        card: 58,
+        weight: 1
+      },
+      {
+        card: 82,
         weight: 1
       }
     ]
@@ -5654,6 +5978,7 @@ var duelists = [...duelists_default, ...SETS.flatMap((s) => s.duelists)];
 function getDuelist(id) {
   return duelists.find((d) => d.id === id);
 }
+var BOSSES = new Set([duelists_default.at(-1)?.id, ...SETS.map((s) => s.duelists.at(-1)?.id)].filter(Boolean));
 function isUnlocked(id, defeated) {
   const i = duelists.findIndex((d) => d.id === id);
   if (i <= 0) return i === 0;

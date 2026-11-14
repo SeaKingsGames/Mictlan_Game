@@ -21,6 +21,12 @@ export function getDuelist(id: string): Duelist | undefined {
   return duelists.find(d => d.id === id);
 }
 
+/** Jefes: el último duelista de cada capítulo (Mictlantecuhtli, el de cada expansión…). Tienen su propia música. */
+const BOSSES = new Set([(duelistsJson as Duelist[]).at(-1)?.id, ...SETS.map(s => (s.duelists as Duelist[]).at(-1)?.id)].filter(Boolean));
+export function isChapterBoss(id: string): boolean {
+  return BOSSES.has(id);
+}
+
 /** Se desbloquean en orden: el primero siempre; los demás al vencer al anterior. */
 export function isUnlocked(id: string, defeated: readonly string[]): boolean {
   const i = duelists.findIndex(d => d.id === id);
