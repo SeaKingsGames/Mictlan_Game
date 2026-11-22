@@ -1,5 +1,7 @@
 import { cardDb } from '../data/index.ts';
 import { GAME_TITLE } from '../game/config.ts';
+import { cachedPlayerCount, fetchPlayerCount, playersLabel } from '../net/players.ts';
+import { cloudEnabled } from '../net/supabase.ts';
 import { duelists } from '../game/duelists.ts';
 import type { Profile } from '../game/profile.ts';
 import { assetUrl } from './assets.ts';
@@ -77,7 +79,40 @@ export function renderMenu(root: HTMLElement, profile: Profile, go: (hash: strin
         onclick: () => { sfx('click'); openOptions(profile, go, actions); },
       }, '⚙')));
 
-  root.replaceChildren(h('main', { class: 'menu3' }, hud, h('h1', { class: 'menu3__title' }, GAME_TITLE), wheel));
+  root.replaceChildren(h('main', { class: 'menu3' }, hud,
+    h('div', { class: 'menu3__head' }, h('h1', { class: 'menu3__title' }, GAME_TITLE), playersLine()),
+    wheel));
+}
+
+/**
+ * "+50 jugadores" bajo el título: cuántas cuentas ya jugaron (no cuántas están conectadas).
+ * Pinta al instante el último número guardado y luego lo actualiza; con menos de 10 o sin nube no sale nada.
+ */
+function playersLine(): HTMLElement {
+  const text = h('span', {});
+  const line = h('p', { class: 'menu3__players', hidden: true }, peopleIcon(), text);
+  const show = (n: number | null) => {
+    const label = n === null ? null : playersLabel(n);
+    line.hidden = !label;
+    text.textContent = label ?? '';
+  };
+  if (cloudEnabled) {
+    show(cachedPlayerCount());
+    void fetchPlayerCount().then(n => { if (n !== null) show(n); });
+  }
+  return line;
+}
+
+function peopleIcon(): SVGSVGElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'menu3__players-icon');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.5 0a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM9 13c-3.9 0-7 2.1-7 4.7V20h14v-2.3C16 15.1 12.9 13 9 13Zm7.5 0c-.6 0-1.2.1-1.7.2 1.4 1.1 2.2 2.6 2.2 4.5V20h5v-2.6c0-2.4-2.5-4.4-5.5-4.4Z');
+  svg.append(path);
+  return svg;
 }
 
 /** Piedra del sol detrás de los medallones (gira muy lento). */
